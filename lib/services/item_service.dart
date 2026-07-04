@@ -135,13 +135,9 @@ class MockItemService implements ItemService {
         lenderId: 'user_3', // Can Demir
         lenderName: 'Can Demir',
         location: 'Mimarlık Stüdyoları',
-        status: EmanetStatus.pendingApproval,
-        borrowerId: 'user_1', // Ahmet Öz
-        borrowerName: 'Ahmet Öz',
+        status: EmanetStatus.available,
         createdAt: DateTime.now().subtract(const Duration(hours: 1)),
         comments: [],
-        meetingPoint: 'Mimarlık Stüdyo Girişi',
-        deliveryStatus: DeliveryStatus.requestSent,
         mockImageColorValue: 0xFF8B5CF6, // Deep Purple
         pickupLocationTitle: 'Mimarlık Stüdyo Girişi',
         pickupAddressText: 'Mimarlık Fakültesi A Blok stüdyolar giriş turnikesi',

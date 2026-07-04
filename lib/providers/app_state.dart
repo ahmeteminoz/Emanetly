@@ -561,8 +561,8 @@ class AppState extends ChangeNotifier {
   void _initPreAgreementMocks() {
     final now = DateTime.now();
     
-    // Seed Borrow Request
-    final req = BorrowRequestModel(
+    // Seed Borrow Request 1 (Ahmet -> Ayşe for USB-C Charger)
+    final req1 = BorrowRequestModel(
       id: 'req_1',
       itemId: 'item_1',
       ownerId: 'user_2', // Ayşe Yılmaz
@@ -572,10 +572,10 @@ class AppState extends ChangeNotifier {
       proposedMeetingPointId: 'prop_1',
       createdAt: now.subtract(const Duration(minutes: 30)),
     );
-    _borrowRequests.add(req);
+    _borrowRequests.add(req1);
 
-    // Seed Proposal
-    final prop = MeetingPointProposalModel(
+    // Seed Proposal 1
+    final prop1 = MeetingPointProposalModel(
       id: 'prop_1',
       requestId: 'req_1',
       proposedByUserId: 'user_1',
@@ -586,9 +586,9 @@ class AppState extends ChangeNotifier {
       acceptedByOwner: false,
       acceptedByRequester: true,
     );
-    _meetingPointProposals.add(prop);
+    _meetingPointProposals.add(prop1);
 
-    // Seed Chat Messages
+    // Seed Chat Messages 1
     _chatMessages.addAll([
       ChatMessageModel(
         id: 'msg_1',
@@ -635,6 +635,74 @@ class AppState extends ChangeNotifier {
         type: ChatMessageType.meetingPointProposal,
         createdAt: now.subtract(const Duration(minutes: 10)),
         customPayload: 'prop_1',
+      ),
+    ]);
+
+    // Seed Borrow Request 2 (Ahmet -> Can for T-Cetveli)
+    final req2 = BorrowRequestModel(
+      id: 'req_2',
+      itemId: 'item_5',
+      ownerId: 'user_3', // Can Demir
+      requesterId: 'user_1', // Ahmet Öz
+      status: BorrowRequestStatus.pendingDiscussion,
+      requestedDurationText: '1 Günlük',
+      proposedMeetingPointId: 'prop_2',
+      createdAt: now.subtract(const Duration(minutes: 15)),
+    );
+    _borrowRequests.add(req2);
+
+    // Seed Proposal 2
+    final prop2 = MeetingPointProposalModel(
+      id: 'prop_2',
+      requestId: 'req_2',
+      proposedByUserId: 'user_3', // Can Demir proposed
+      title: 'Mimarlık Stüdyo Girişi',
+      addressText: 'Mimarlık Fakültesi A Blok stüdyolar giriş turnikesi',
+      proposedTimeText: '09:30',
+      status: MeetingPointStatus.pending,
+      acceptedByOwner: true,
+      acceptedByRequester: false,
+    );
+    _meetingPointProposals.add(prop2);
+
+    // Seed Chat Messages 2
+    _chatMessages.addAll([
+      ChatMessageModel(
+        id: 'msg_2_1',
+        requestId: 'req_2',
+        senderId: 'system',
+        senderName: 'Sistem',
+        text: 'Ödünç talebi oluşturuldu: Görüşme aşamasında.',
+        type: ChatMessageType.system,
+        createdAt: now.subtract(const Duration(minutes: 15)),
+      ),
+      ChatMessageModel(
+        id: 'msg_2_2',
+        requestId: 'req_2',
+        senderId: 'user_1',
+        senderName: 'Ahmet Öz',
+        text: 'Merhaba Can, T-cetveli mimarlık sınavı için lazım oldu, yarın teslim alabilir miyim?',
+        type: ChatMessageType.text,
+        createdAt: now.subtract(const Duration(minutes: 12)),
+      ),
+      ChatMessageModel(
+        id: 'msg_2_3',
+        requestId: 'req_2',
+        senderId: 'user_3',
+        senderName: 'Can Demir',
+        text: 'Selam Ahmet, tabii alabilirsin. Yarın sabah stüdyolarda olacağım.',
+        type: ChatMessageType.text,
+        createdAt: now.subtract(const Duration(minutes: 8)),
+      ),
+      ChatMessageModel(
+        id: 'msg_2_4',
+        requestId: 'req_2',
+        senderId: 'system',
+        senderName: 'Sistem',
+        text: 'Buluşma noktası önerildi: Mimarlık Stüdyo Girişi (09:30)',
+        type: ChatMessageType.meetingPointProposal,
+        createdAt: now.subtract(const Duration(minutes: 5)),
+        customPayload: 'prop_2',
       ),
     ]);
   }

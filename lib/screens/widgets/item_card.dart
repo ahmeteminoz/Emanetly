@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/item.dart';
+import '../../models/borrow_request.dart';
 import '../../providers/app_state.dart';
 import '../../providers/app_state_provider.dart';
 import '../item_detail_screen.dart';
@@ -58,24 +59,31 @@ class ItemCard extends StatelessWidget {
 
     // Determine status badge color
     Color statusColor = Colors.green;
-    String statusText = 'Ödünç Alınabilir';
-    switch (item.status) {
-      case EmanetStatus.available:
-        statusColor = Colors.green;
-        statusText = 'Açık';
-        break;
-      case EmanetStatus.pendingApproval:
-        statusColor = Colors.orange;
-        statusText = 'Talep Var';
-        break;
-      case EmanetStatus.borrowed:
-        statusColor = Colors.red;
-        statusText = 'Ödünçte';
-        break;
-      case EmanetStatus.pendingReturn:
-        statusColor = Colors.deepPurple;
-        statusText = 'İade Sırada';
-        break;
+    String statusText = 'Açık';
+
+    final activeRequest = appState.getRequestForActiveItem(item.id);
+    if (activeRequest != null && activeRequest.status == BorrowRequestStatus.pendingDiscussion) {
+      statusColor = Colors.orange;
+      statusText = 'Talep Var';
+    } else {
+      switch (item.status) {
+        case EmanetStatus.available:
+          statusColor = Colors.green;
+          statusText = 'Açık';
+          break;
+        case EmanetStatus.pendingApproval:
+          statusColor = Colors.orange;
+          statusText = 'Talep Var';
+          break;
+        case EmanetStatus.borrowed:
+          statusColor = Colors.red;
+          statusText = 'Ödünçte';
+          break;
+        case EmanetStatus.pendingReturn:
+          statusColor = Colors.deepPurple;
+          statusText = 'İade Sırada';
+          break;
+      }
     }
 
     // RENDER LAYOUTS ACCORDING TO VIEW MODE
