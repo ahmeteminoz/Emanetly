@@ -84,7 +84,7 @@ class FavoritesScreen extends StatelessWidget {
                             crossAxisCount: 2,
                             crossAxisSpacing: 8,
                             mainAxisSpacing: 8,
-                            childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 0.8 : 0.64,
+                            childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 1.0 : 0.8,
                           ),
                           itemCount: favoritedItems.length,
                           itemBuilder: (context, index) {

@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Kampüs Emanet',
+                'Emanetly',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
-                        childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 0.8 : 0.64,
+                        childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 1.0 : 0.8,
                       ),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {

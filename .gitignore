@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Gradle files
+.gradle/
+android/.gradle/
+
+# Local properties
+android/local.properties
+
+# Environment files
+.env
+.env.*
+
+# VS Code settings
+.vscode/launch.json

@@ -91,7 +91,7 @@ class ItemCard extends StatelessWidget {
             children: [
               // Image Container
               AspectRatio(
-                aspectRatio: 1.1,
+                aspectRatio: 1.0, // Square photo
                 child: Stack(
                   children: [
                     Container(
@@ -125,51 +125,13 @@ class ItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Body
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
-                        const SizedBox(width: 2),
-                        Text(
-                          rating,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                        const Spacer(),
-                        Expanded(
-                          child: Text(
-                            isOwnItem ? 'Senin' : item.lenderName.split(' ')[0],
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.end,
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
       );
     }
 
-    // 2. STANDARD GRID VIEW
+    // 2. STANDARD GRID VIEW (Dolap Style: Photo & Title)
     if (viewMode == ViewMode.standardGrid) {
       return Card(
         clipBehavior: Clip.antiAlias,
@@ -217,62 +179,17 @@ class ItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Body
+              // Body (Photo and Title Only)
               Padding(
                 padding: const EdgeInsets.all(10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 12, color: theme.colorScheme.primary),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            item.location,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Divider(height: 1),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Lender Name & Trust Rating
-                        Row(
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                            const SizedBox(width: 2),
-                            Text(
-                              rating,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          isOwnItem ? 'Senin İlanın' : item.lenderName.split(' ')[0],
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 10,
-                            fontWeight: isOwnItem ? FontWeight.bold : FontWeight.normal,
-                            color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                  ),
                 ),
               ),
             ],

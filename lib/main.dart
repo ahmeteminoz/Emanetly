@@ -38,7 +38,7 @@ class KampusEmanetApp extends StatelessWidget {
     final appState = AppStateProvider.of(context);
 
     return MaterialApp(
-      title: 'KampüsEmanet',
+      title: 'Emanetly',
       debugShowCheckedModeBanner: false,
       themeMode: appState.themeMode,
       theme: AppTheme.buildTheme(
