@@ -5,6 +5,7 @@ import 'services/auth_service.dart';
 import 'services/item_service.dart';
 import 'services/qr_service.dart';
 import 'screens/main_layout.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,44 +35,19 @@ class KampusEmanetApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = AppStateProvider.of(context);
+
     return MaterialApp(
       title: 'KampüsEmanet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        
-        // Define a beautiful campus-friendly color palette
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E3A8A), // Indigo
-          secondary: const Color(0xFF0D9488), // Teal
-          brightness: Brightness.light,
-        ),
-
-        // Customize card and button default styles
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.grey),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
-          ),
-        ),
+      themeMode: appState.themeMode,
+      theme: AppTheme.buildTheme(
+        isDark: false,
+        paletteIndex: appState.selectedPaletteIndex,
+      ),
+      darkTheme: AppTheme.buildTheme(
+        isDark: true,
+        paletteIndex: appState.selectedPaletteIndex,
       ),
       home: const MainLayout(),
     );

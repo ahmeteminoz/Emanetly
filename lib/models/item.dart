@@ -1,8 +1,19 @@
+import 'comment.dart';
+
 enum EmanetStatus {
   available,
   pendingApproval,
   borrowed,
   pendingReturn,
+}
+
+enum DeliveryStatus {
+  requestSent,
+  accepted,
+  meetingPointSet,
+  routingStarted,
+  delivered,
+  completed,
 }
 
 class EmanetItem {
@@ -18,6 +29,12 @@ class EmanetItem {
   final String? imageUrl;
   final EmanetStatus status;
   final DateTime createdAt;
+  
+  // Marketplace & Delivery timeline extensions
+  final List<EmanetComment> comments;
+  final String? meetingPoint;
+  final DeliveryStatus? deliveryStatus;
+  final int mockImageColorValue; // e.g. 0xFF1E3A8A for rendering card gradient colors
 
   EmanetItem({
     required this.id,
@@ -32,6 +49,10 @@ class EmanetItem {
     this.imageUrl,
     required this.status,
     required this.createdAt,
+    this.comments = const [],
+    this.meetingPoint,
+    this.deliveryStatus,
+    required this.mockImageColorValue,
   });
 
   bool get isAvailable => status == EmanetStatus.available;
@@ -49,6 +70,10 @@ class EmanetItem {
     String? imageUrl,
     EmanetStatus? status,
     DateTime? createdAt,
+    List<EmanetComment>? comments,
+    String? meetingPoint,
+    DeliveryStatus? deliveryStatus,
+    int? mockImageColorValue,
   }) {
     return EmanetItem(
       id: id ?? this.id,
@@ -63,6 +88,10 @@ class EmanetItem {
       imageUrl: imageUrl ?? this.imageUrl,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      comments: comments ?? this.comments,
+      meetingPoint: meetingPoint ?? this.meetingPoint,
+      deliveryStatus: deliveryStatus ?? this.deliveryStatus,
+      mockImageColorValue: mockImageColorValue ?? this.mockImageColorValue,
     );
   }
 
@@ -80,6 +109,10 @@ class EmanetItem {
       'imageUrl': imageUrl,
       'status': status.name,
       'createdAt': createdAt.toIso8601String(),
+      'comments': comments.map((c) => c.toMap()).toList(),
+      'meetingPoint': meetingPoint,
+      'deliveryStatus': deliveryStatus?.name,
+      'mockImageColorValue': mockImageColorValue,
     };
   }
 
@@ -102,6 +135,18 @@ class EmanetItem {
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
+      comments: map['comments'] != null
+          ? List<EmanetComment>.from(
+              (map['comments'] as List).map((c) => EmanetComment.fromMap(c)))
+          : [],
+      meetingPoint: map['meetingPoint'],
+      deliveryStatus: map['deliveryStatus'] != null
+          ? DeliveryStatus.values.firstWhere(
+              (e) => e.name == map['deliveryStatus'],
+              orElse: () => DeliveryStatus.requestSent,
+            )
+          : null,
+      mockImageColorValue: map['mockImageColorValue'] ?? 0xFF1E3A8A,
     );
   }
 }

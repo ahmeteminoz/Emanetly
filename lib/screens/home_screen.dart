@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/item.dart';
+import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
-import 'item_detail_screen.dart';
+import 'widgets/item_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
+        // Header & Settings shortcut
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
@@ -54,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Kampüs içinde eşyaları kolayca paylaş ve ödünç al.',
+                'Görsel odaklı kampüs pazar yeri ve ödünçleşme',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -132,7 +133,59 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // Items List
+        // Layout controller toolbar: "X ilan bulundu" & Grid style buttons
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${filteredItems.length} İlan Listeleniyor',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              // Layout style toggles
+              Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.grid_on, size: 18),
+                      tooltip: 'Compact',
+                      color: appState.gridViewMode == ViewMode.compactGrid
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                      onPressed: () => appState.changeViewMode(ViewMode.compactGrid),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.grid_view, size: 18),
+                      tooltip: 'Standard',
+                      color: appState.gridViewMode == ViewMode.standardGrid
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                      onPressed: () => appState.changeViewMode(ViewMode.standardGrid),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.view_headline, size: 18),
+                      tooltip: 'Large',
+                      color: appState.gridViewMode == ViewMode.largeCards
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outline,
+                      onPressed: () => appState.changeViewMode(ViewMode.largeCards),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Items List or Grid
         Expanded(
           child: filteredItems.isEmpty
               ? Center(
@@ -154,180 +207,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filteredItems.length,
-                  itemBuilder: (context, index) {
-                    final item = filteredItems[index];
-                    return _buildItemCard(context, item);
-                  },
-                ),
+              : appState.gridViewMode == ViewMode.largeCards
+                  ? ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        return ItemCard(
+                          item: filteredItems[index],
+                          viewMode: ViewMode.largeCards,
+                        );
+                      },
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 0.8 : 0.64,
+                      ),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        return ItemCard(
+                          item: filteredItems[index],
+                          viewMode: appState.gridViewMode,
+                        );
+                      },
+                    ),
         ),
       ],
-    );
-  }
-
-  Widget _buildItemCard(BuildContext context, EmanetItem item) {
-    final theme = Theme.of(context);
-    final appState = AppStateProvider.of(context);
-    final isOwnItem = item.lenderId == appState.currentUser?.uid;
-
-    Color statusColor;
-    String statusText;
-
-    switch (item.status) {
-      case EmanetStatus.available:
-        statusColor = Colors.green;
-        statusText = 'Ödünç Alınabilir';
-        break;
-      case EmanetStatus.pendingApproval:
-        statusColor = Colors.orange;
-        statusText = 'Talep Onayı Bekliyor';
-        break;
-      case EmanetStatus.borrowed:
-        statusColor = Colors.red;
-        statusText = 'Ödünç Verildi';
-        break;
-      case EmanetStatus.pendingReturn:
-        statusColor = Colors.deepPurple;
-        statusText = 'İade Onayı Bekliyor';
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ItemDetailScreen(item: item),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row with Category and Status Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      item.category,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor, width: 1),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Title and Lender details
-              Text(
-                item.title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              // Footer row (Location & User info)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.location,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isOwnItem ? Icons.person : Icons.person_outline,
-                          size: 16,
-                          color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.outline,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            isOwnItem ? 'Senin İlanın' : item.lenderName,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.outline,
-                              fontWeight: isOwnItem ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

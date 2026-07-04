@@ -3,6 +3,7 @@ import '../models/item.dart';
 import '../models/user_profile.dart';
 import '../providers/app_state_provider.dart';
 import 'item_detail_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -115,6 +116,18 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.palette_outlined, color: theme.colorScheme.primary),
+                  tooltip: 'Görünüm Ayarları',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

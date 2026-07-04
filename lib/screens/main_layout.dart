@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'favorites_screen.dart';
+import 'active_transactions_screen.dart';
 import 'profile_screen.dart';
 import 'add_item_screen.dart';
 import '../models/item.dart';
@@ -17,6 +19,8 @@ class _MainLayoutState extends State<MainLayout> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
+    const FavoritesScreen(),
+    const ActiveTransactionsScreen(),
     const ProfileScreen(),
   ];
 
@@ -30,6 +34,13 @@ class _MainLayoutState extends State<MainLayout> {
     final pendingCount = myListedItems.where(
       (i) => i.status == EmanetStatus.pendingApproval || i.status == EmanetStatus.pendingReturn
     ).length;
+
+    // Count active deliveries for tracking badge
+    final activeTrackingCount = appState.items.where((item) {
+      final isParticipant = item.borrowerId == appState.currentUser?.uid || item.lenderId == appState.currentUser?.uid;
+      final inProgress = item.status != EmanetStatus.available;
+      return isParticipant && inProgress;
+    }).length;
 
     return Scaffold(
       body: SafeArea(
@@ -94,18 +105,47 @@ class _MainLayoutState extends State<MainLayout> {
               },
               tooltip: 'Keşfet',
             ),
+            IconButton(
+              icon: Icon(
+                _currentIndex == 1 ? Icons.favorite : Icons.favorite_border,
+                color: _currentIndex == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+              ),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 1;
+                });
+              },
+              tooltip: 'Favoriler',
+            ),
             const SizedBox(width: 48), // Space for floating action button
+            Badge(
+              isLabelVisible: activeTrackingCount > 0,
+              label: Text(activeTrackingCount.toString()),
+              backgroundColor: theme.colorScheme.secondary,
+              child: IconButton(
+                icon: Icon(
+                  _currentIndex == 2 ? Icons.local_shipping : Icons.local_shipping_outlined,
+                  color: _currentIndex == 2 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _currentIndex = 2;
+                  });
+                },
+                tooltip: 'Aktif Takip',
+              ),
+            ),
             Badge(
               isLabelVisible: pendingCount > 0,
               label: Text(pendingCount.toString()),
               child: IconButton(
                 icon: Icon(
-                  _currentIndex == 1 ? Icons.person : Icons.person_outline,
-                  color: _currentIndex == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                  _currentIndex == 3 ? Icons.person : Icons.person_outline,
+                  color: _currentIndex == 3 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () {
                   setState(() {
-                    _currentIndex = 1;
+                    _currentIndex = 3;
                   });
                 },
                 tooltip: 'Profilim',

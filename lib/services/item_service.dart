@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../models/item.dart';
+import '../models/comment.dart';
 
 abstract class ItemService {
   Future<List<EmanetItem>> getItems();
@@ -9,6 +10,12 @@ abstract class ItemService {
   Future<void> rejectBorrow(String itemId);
   Future<void> requestReturn(String itemId);
   Future<void> approveReturn(String itemId);
+  
+  // New Delivery & Rota methods
+  Future<void> setMeetingPoint(String itemId, String meetingPoint);
+  Future<void> startRouting(String itemId);
+  Future<void> completeDelivery(String itemId);
+  
   Stream<List<EmanetItem>> get onItemsChanged;
 }
 
@@ -17,7 +24,32 @@ class MockItemService implements ItemService {
   final List<EmanetItem> _items = [];
 
   MockItemService() {
-    // Initial dummy data
+    // Standard mock reviews
+    final List<EmanetComment> dummyComments = [
+      EmanetComment(
+        id: 'c1',
+        authorName: 'Ayşe Yılmaz',
+        rating: 4.8,
+        content: 'Zamanında teslim etti. Çok nazik bir arkadaştı.',
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+      ),
+      EmanetComment(
+        id: 'c2',
+        authorName: 'Can Demir',
+        rating: 5.0,
+        content: 'Eşya son derece temizdi, hiçbir sıkıntı yaşamadan sınavımda kullandım.',
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      ),
+      EmanetComment(
+        id: 'c3',
+        authorName: 'Ahmet Öz',
+        rating: 4.7,
+        content: 'Hızlı ve kolay iletişim kuruldu. Güvenle ödünç alabilirsiniz.',
+        createdAt: DateTime.now().subtract(const Duration(days: 7)),
+      ),
+    ];
+
+    // Initial dummy data with colored container representations
     _items.addAll([
       EmanetItem(
         id: 'item_1',
@@ -29,6 +61,8 @@ class MockItemService implements ItemService {
         location: 'Merkez Kütüphane 2. Kat',
         status: EmanetStatus.available,
         createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        comments: [dummyComments[1], dummyComments[2]],
+        mockImageColorValue: 0xFF3B82F6, // Bright Blue
       ),
       EmanetItem(
         id: 'item_2',
@@ -40,6 +74,8 @@ class MockItemService implements ItemService {
         location: 'Fizik Bölümü Kantini',
         status: EmanetStatus.available,
         createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+        comments: [dummyComments[0]],
+        mockImageColorValue: 0xFFEF4444, // Vibrant Red
       ),
       EmanetItem(
         id: 'item_3',
@@ -51,6 +87,8 @@ class MockItemService implements ItemService {
         location: 'Mühendislik Fakültesi B Blok',
         status: EmanetStatus.available,
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        comments: [dummyComments[0], dummyComments[1]],
+        mockImageColorValue: 0xFFF59E0B, // Amber Orange
       ),
       EmanetItem(
         id: 'item_4',
@@ -64,6 +102,8 @@ class MockItemService implements ItemService {
         borrowerId: 'user_1', // Ahmet Öz
         borrowerName: 'Ahmet Öz',
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        comments: [dummyComments[2]],
+        mockImageColorValue: 0xFF10B981, // Emerald Green
       ),
       EmanetItem(
         id: 'item_5',
@@ -77,6 +117,10 @@ class MockItemService implements ItemService {
         borrowerId: 'user_1', // Ahmet Öz
         borrowerName: 'Ahmet Öz',
         createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        comments: [],
+        meetingPoint: 'Mimarlık Stüdyo Girişi',
+        deliveryStatus: DeliveryStatus.requestSent,
+        mockImageColorValue: 0xFF8B5CF6, // Deep Purple
       ),
     ]);
     _notify();
@@ -88,40 +132,39 @@ class MockItemService implements ItemService {
 
   @override
   Future<List<EmanetItem>> getItems() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 200));
     return List.from(_items);
   }
 
   @override
   Future<void> addItem(EmanetItem item) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     _items.insert(0, item);
     _notify();
   }
 
   @override
   Future<void> requestBorrow(String itemId, String borrowerId, String borrowerName) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.available) {
       _items[index] = _items[index].copyWith(
         status: EmanetStatus.pendingApproval,
         borrowerId: borrowerId,
         borrowerName: borrowerName,
+        deliveryStatus: DeliveryStatus.requestSent,
       );
       _notify();
-    } else {
-      throw Exception('Eşya şu anda ödünç alınamaz durumda.');
     }
   }
 
   @override
   Future<void> approveBorrow(String itemId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.pendingApproval) {
       _items[index] = _items[index].copyWith(
-        status: EmanetStatus.borrowed,
+        deliveryStatus: DeliveryStatus.accepted,
       );
       _notify();
     }
@@ -129,13 +172,15 @@ class MockItemService implements ItemService {
 
   @override
   Future<void> rejectBorrow(String itemId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.pendingApproval) {
       _items[index] = _items[index].copyWith(
         status: EmanetStatus.available,
         borrowerId: null,
         borrowerName: null,
+        deliveryStatus: null,
+        meetingPoint: null,
       );
       _notify();
     }
@@ -143,7 +188,7 @@ class MockItemService implements ItemService {
 
   @override
   Future<void> requestReturn(String itemId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.borrowed) {
       _items[index] = _items[index].copyWith(
@@ -155,13 +200,54 @@ class MockItemService implements ItemService {
 
   @override
   Future<void> approveReturn(String itemId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 300));
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.pendingReturn) {
       _items[index] = _items[index].copyWith(
         status: EmanetStatus.available,
         borrowerId: null,
         borrowerName: null,
+        deliveryStatus: null,
+        meetingPoint: null,
+      );
+      _notify();
+    }
+  }
+
+  // Delivery & Rota methods implementation
+  @override
+  Future<void> setMeetingPoint(String itemId, String meetingPoint) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _items.indexWhere((i) => i.id == itemId);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(
+        meetingPoint: meetingPoint,
+        deliveryStatus: DeliveryStatus.meetingPointSet,
+      );
+      _notify();
+    }
+  }
+
+  @override
+  Future<void> startRouting(String itemId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _items.indexWhere((i) => i.id == itemId);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(
+        deliveryStatus: DeliveryStatus.routingStarted,
+      );
+      _notify();
+    }
+  }
+
+  @override
+  Future<void> completeDelivery(String itemId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _items.indexWhere((i) => i.id == itemId);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(
+        status: EmanetStatus.borrowed,
+        deliveryStatus: DeliveryStatus.completed,
       );
       _notify();
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../providers/app_state_provider.dart';
+import 'mock_route_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final EmanetItem item;
@@ -20,16 +21,93 @@ class ItemDetailScreen extends StatelessWidget {
     final isOwnItem = currentItem.lenderId == appState.currentUser?.uid;
     final isBorrower = currentItem.borrowerId == appState.currentUser?.uid;
 
+    // Determine category icon
+    IconData categoryIcon = Icons.inventory_2_outlined;
+    switch (currentItem.category) {
+      case 'Elektronik':
+        categoryIcon = Icons.devices_other;
+        break;
+      case 'Ders/Kitap':
+        categoryIcon = Icons.menu_book_rounded;
+        break;
+      case 'Kırtasiye':
+        categoryIcon = Icons.edit_note_rounded;
+        break;
+      case 'Yağmurluk/Şemsiye':
+        categoryIcon = Icons.umbrella_rounded;
+        break;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Emanet Detayı'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              appState.isFavorite(currentItem.id) ? Icons.favorite : Icons.favorite_border,
+              color: appState.isFavorite(currentItem.id) ? Colors.red : null,
+            ),
+            onPressed: () => appState.toggleFavorite(currentItem.id),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Part 1: Large Marketplace Category Hero Image
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(currentItem.mockImageColorValue).withOpacity(0.85),
+                      Color(currentItem.mockImageColorValue),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      categoryIcon,
+                      size: 80,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          currentItem.category,
+                          style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Category & Status Header Card
             _buildStatusHeader(context, currentItem),
             const SizedBox(height: 20),
@@ -89,7 +167,94 @@ class ItemDetailScreen extends StatelessWidget {
 
             // Lender Info
             _buildUserInfoSection(context, currentItem, isOwnItem, isBorrower),
-            const SizedBox(height: 40),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            // Comments / Reviews Section
+            Text(
+              'Yorumlar & Değerlendirmeler',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (currentItem.comments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Bu eşya için henüz değerlendirme yapılmamış.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: currentItem.comments.map((comment) {
+                  return Card(
+                    elevation: 0,
+                    color: theme.colorScheme.surfaceContainerLow,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: theme.colorScheme.primaryContainer,
+                                    child: Text(
+                                      comment.authorName[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onPrimaryContainer,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    comment.authorName,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    comment.rating.toString(),
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            comment.content,
+                            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+            const SizedBox(height: 32),
 
             // Action Buttons
             _buildActionsSection(context, currentItem, isOwnItem, isBorrower),
@@ -238,7 +403,7 @@ class ItemDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'Öğrenci Üye', // General label
+                          'Öğrenci Üye',
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
@@ -381,87 +546,88 @@ class ItemDetailScreen extends StatelessWidget {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Case 1: Current User is Lender (Own Item)
-    if (isOwnItem) {
-      if (item.status == EmanetStatus.pendingApproval) {
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => appState.rejectBorrow(item.id),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Talebi Reddet'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  _showQrBottomSheet(context, item, 'borrow', item.borrowerId ?? '');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.qr_code),
-                    SizedBox(width: 8),
-                    Text('QR ile Teslim Et'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      }
+    // If item is currently in active transaction, show Rota Tracking button
+    final isParticipant = isOwnItem || isBorrower;
+    final inProgress = item.status != EmanetStatus.available;
 
-      if (item.status == EmanetStatus.pendingReturn) {
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              _showQrBottomSheet(context, item, 'return', item.borrowerId ?? '');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.secondary,
-              foregroundColor: theme.colorScheme.onSecondary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    if (inProgress && isParticipant) {
+      return Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MockRouteScreen(item: item),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.navigation_rounded),
+              label: const Text('Buluşma & Rota Takibine Git', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          const SizedBox(height: 12),
+          // Fallback direct action button options
+          if (isOwnItem && item.status == EmanetStatus.pendingApproval)
+            Row(
               children: [
-                Icon(Icons.qr_code_scanner),
-                SizedBox(width: 8),
-                Text('QR Doğrula & İade Al'),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => appState.rejectBorrow(item.id),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Reddet'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      _showQrBottomSheet(context, item, 'borrow', item.borrowerId ?? '');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary,
+                      foregroundColor: theme.colorScheme.onSecondary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('QR Teslim Et'),
+                  ),
+                ),
               ],
             ),
-          ),
-        );
-      }
-
-      if (item.status == EmanetStatus.borrowed) {
-        return Center(
-          child: Text(
-            'Bu eşya şu an ödünç verilmiş durumda. İade talebi bekleniyor.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontStyle: FontStyle.italic,
-              color: theme.colorScheme.outline,
+          if (isOwnItem && item.status == EmanetStatus.pendingReturn)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  _showQrBottomSheet(context, item, 'return', item.borrowerId ?? '');
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('QR Doğrula & İade Al'),
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        );
-      }
+        ],
+      );
+    }
 
+    // Case 1: Current User is Lender (Own Item) and it's available
+    if (isOwnItem) {
       return Center(
         child: Text(
           'İlanınız aktif ve ödünç alınmayı bekliyor.',
@@ -474,7 +640,7 @@ class ItemDetailScreen extends StatelessWidget {
       );
     }
 
-    // Case 2: Current User is Borrower / Stranger
+    // Case 2: Current User is Borrower / Stranger and it's available
     if (item.status == EmanetStatus.available) {
       return SizedBox(
         width: double.infinity,
@@ -504,96 +670,7 @@ class ItemDetailScreen extends StatelessWidget {
       );
     }
 
-    if (item.status == EmanetStatus.pendingApproval && isBorrower) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
-            const SizedBox(height: 12),
-            Text(
-              'Ödünç talebiniz onay bekliyor.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.orange[800],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Eşya sahibi onay verdiğinde teslimat QR kodu oluşturulacaktır.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (item.status == EmanetStatus.borrowed && isBorrower) {
-      return Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () async {
-                final success = await appState.requestReturn(item.id);
-                if (context.mounted && success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('İade talebiniz iletildi. Teslim edebilirsiniz.'),
-                      backgroundColor: Colors.deepPurple,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
-                foregroundColor: theme.colorScheme.onSecondary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('İade Talebi Gönder'),
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (item.status == EmanetStatus.pendingReturn && isBorrower) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.deepPurple.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.qr_code, color: Colors.deepPurple, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              'İade Talebi Onay Bekliyor',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple[800],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Sahibi iadeyi onaylayana kadar bekleyiniz.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Someone else borrowed it
+    // Someone else borrowed it and not available
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -615,13 +692,13 @@ class ItemDetailScreen extends StatelessWidget {
   }
 
   void _showQrBottomSheet(
-    BuildContext context,
+    BuildContext parentContext,
     EmanetItem item,
     String action,
     String userId,
   ) {
-    final appState = AppStateProvider.of(context);
-    final theme = Theme.of(context);
+    final appState = AppStateProvider.of(parentContext);
+    final theme = Theme.of(parentContext);
 
     final qrData = appState.qrService.generateQrData(
       itemId: item.id,
@@ -630,12 +707,12 @@ class ItemDetailScreen extends StatelessWidget {
     );
 
     showModalBottomSheet(
-      context: context,
+      context: parentContext,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -703,23 +780,13 @@ class ItemDetailScreen extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () async {
-                    Navigator.pop(context); // Close bottom sheet
+                    Navigator.pop(sheetContext); // Close bottom sheet using sheetContext
                     
-                    // Show progress loader
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-
                     final success = await appState.processQrCode(qrData);
 
-                    if (context.mounted) {
-                      Navigator.pop(context); // Remove progress loader
+                    if (parentContext.mounted) {
                       if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
                           SnackBar(
                             content: Text(
                               action == 'borrow'
@@ -730,7 +797,7 @@ class ItemDetailScreen extends StatelessWidget {
                           ),
                         );
                       } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
                           const SnackBar(
                             content: Text('QR Kod geçersiz veya hata oluştu.'),
                             backgroundColor: Colors.red,
