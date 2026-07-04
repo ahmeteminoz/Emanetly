@@ -115,9 +115,7 @@ class MockItemService implements ItemService {
         lenderId: 'user_2', // Ayşe Yılmaz
         lenderName: 'Ayşe Yılmaz',
         location: 'Merkez Kütüphane',
-        status: EmanetStatus.borrowed,
-        borrowerId: 'user_1', // Ahmet Öz
-        borrowerName: 'Ahmet Öz',
+        status: EmanetStatus.available,
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
         comments: [dummyComments[2]],
         mockImageColorValue: 0xFF10B981, // Emerald Green
