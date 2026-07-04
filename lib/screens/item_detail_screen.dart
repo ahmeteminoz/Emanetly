@@ -673,7 +673,7 @@ class ItemDetailScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: const EdgeInsets.only(bottom: 12.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -690,37 +690,66 @@ class ItemDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final request = await appState.requestBorrow(item.id);
-                if (context.mounted && request != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RequestChatScreen(requestId: request.id),
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Row(
+            children: [
+              // Soru Sor / Chat Button
+              Expanded(
+                flex: 2,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final request = await appState.requestBorrow(item.id);
+                    if (context.mounted && request != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestChatScreen(requestId: request.id),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                  label: const Text('Soru Sor'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ),
-              child: const Text(
-                'Ödünç Talep Et',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(width: 10),
+              // Ödünç Talep Et Button
+              Expanded(
+                flex: 3,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final request = await appState.requestBorrow(item.id);
+                    if (context.mounted && request != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestChatScreen(requestId: request.id),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Ödünç Talep Et',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       );
