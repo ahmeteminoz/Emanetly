@@ -1,5 +1,7 @@
 # Emanetly
 
+[Türkçe README için tıklayın](README_TR.md)
+
 A modern, community-driven campus marketplace and peer-to-peer item sharing mobile application built with Flutter. Emanetly enables university students and staff to lend and borrow low-value items (chargers, umbrellas, calculators, books, etc.) safely and efficiently within their campus ecosystem.
 
 > [!NOTE]
