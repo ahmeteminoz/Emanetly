@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../providers/app_state_provider.dart';
 import 'mock_route_screen.dart';
+import 'request_chat_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final EmanetItem item;
@@ -640,33 +641,88 @@ class ItemDetailScreen extends StatelessWidget {
       );
     }
 
-    // Case 2: Current User is Borrower / Stranger and it's available
-    if (item.status == EmanetStatus.available) {
+    // Case 1.5: Current user has an active request on this item under discussion
+    final activeRequest = appState.getRequestForActiveItem(item.id);
+    if (activeRequest != null && activeRequest.requesterId == appState.currentUser?.uid) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () async {
-            final success = await appState.requestBorrow(item.id);
-            if (context.mounted && success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Ödünç talebiniz iletildi. Onay bekleniyor.'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+              ),
+            );
           },
+          icon: const Icon(Icons.chat_outlined),
+          label: const Text('Ön Görüşme Odasına Git'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text(
-            'Ödünç Talep Et',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
         ),
+      );
+    }
+
+    // Case 2: Current User is Borrower / Stranger and it's available
+    if (item.status == EmanetStatus.available) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 14, color: theme.colorScheme.outline),
+                const SizedBox(width: 4),
+                Text(
+                  'Kesin buluşma noktası talep sonrası chat içinde belirlenir.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                final request = await appState.requestBorrow(item.id);
+                if (context.mounted && request != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RequestChatScreen(requestId: request.id),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                'Ödünç Talep Et',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       );
     }
 

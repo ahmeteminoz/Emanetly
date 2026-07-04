@@ -23,6 +23,8 @@ class MockItemService implements ItemService {
   final _controller = StreamController<List<EmanetItem>>.broadcast();
   final List<EmanetItem> _items = [];
 
+  List<EmanetItem> get items => _items;
+
   MockItemService() {
     // Standard mock reviews
     final List<EmanetComment> dummyComments = [
@@ -63,6 +65,11 @@ class MockItemService implements ItemService {
         createdAt: DateTime.now().subtract(const Duration(hours: 3)),
         comments: [dummyComments[1], dummyComments[2]],
         mockImageColorValue: 0xFF3B82F6, // Bright Blue
+        pickupLocationTitle: 'Kütüphane önü',
+        pickupAddressText: 'Merkez Kütüphane ana giriş kapısı önü',
+        pickupLatitude: 41.0082,
+        pickupLongitude: 28.9784,
+        locationVisibility: true,
       ),
       EmanetItem(
         id: 'item_2',
@@ -76,6 +83,11 @@ class MockItemService implements ItemService {
         createdAt: DateTime.now().subtract(const Duration(hours: 5)),
         comments: [dummyComments[0]],
         mockImageColorValue: 0xFFEF4444, // Vibrant Red
+        pickupLocationTitle: 'Fizik Kantini çevresi',
+        pickupAddressText: 'Fizik Bölümü giriş kat kantin masaları',
+        pickupLatitude: 41.0095,
+        pickupLongitude: 28.9770,
+        locationVisibility: true,
       ),
       EmanetItem(
         id: 'item_3',
@@ -89,6 +101,11 @@ class MockItemService implements ItemService {
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         comments: [dummyComments[0], dummyComments[1]],
         mockImageColorValue: 0xFFF59E0B, // Amber Orange
+        pickupLocationTitle: 'Mühendislik B Blok önü',
+        pickupAddressText: 'Mühendislik Fakültesi B Blok giriş merdivenleri',
+        pickupLatitude: 41.0070,
+        pickupLongitude: 28.9790,
+        locationVisibility: true,
       ),
       EmanetItem(
         id: 'item_4',
@@ -104,6 +121,11 @@ class MockItemService implements ItemService {
         createdAt: DateTime.now().subtract(const Duration(days: 2)),
         comments: [dummyComments[2]],
         mockImageColorValue: 0xFF10B981, // Emerald Green
+        pickupLocationTitle: 'Kütüphane önü',
+        pickupAddressText: 'Merkez Kütüphane iade bankosu',
+        pickupLatitude: 41.0082,
+        pickupLongitude: 28.9784,
+        locationVisibility: true,
       ),
       EmanetItem(
         id: 'item_5',
@@ -121,6 +143,11 @@ class MockItemService implements ItemService {
         meetingPoint: 'Mimarlık Stüdyo Girişi',
         deliveryStatus: DeliveryStatus.requestSent,
         mockImageColorValue: 0xFF8B5CF6, // Deep Purple
+        pickupLocationTitle: 'Mimarlık Stüdyo Girişi',
+        pickupAddressText: 'Mimarlık Fakültesi A Blok stüdyolar giriş turnikesi',
+        pickupLatitude: 41.0065,
+        pickupLongitude: 28.9795,
+        locationVisibility: true,
       ),
     ]);
     _notify();

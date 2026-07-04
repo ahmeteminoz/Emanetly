@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
+import '../models/borrow_request.dart';
+import '../models/chat_message.dart';
+import '../models/meeting_point_proposal.dart';
 import '../services/auth_service.dart';
 import '../services/item_service.dart';
 import '../services/qr_service.dart';
@@ -9,7 +12,7 @@ import '../services/qr_service.dart';
 enum ViewMode {
   compactGrid,
   standardGrid,
-  largeCards,
+  largeCards;
 }
 
 class AppState extends ChangeNotifier {
@@ -26,6 +29,11 @@ class AppState extends ChangeNotifier {
   int _selectedPaletteIndex = 0;
   ViewMode _gridViewMode = ViewMode.standardGrid;
   final Set<String> _favoriteItemIds = {};
+
+  // Pre-agreement negotiation collections
+  final List<BorrowRequestModel> _borrowRequests = [];
+  final List<ChatMessageModel> _chatMessages = [];
+  final List<MeetingPointProposalModel> _meetingPointProposals = [];
 
   StreamSubscription<UserProfile?>? _authSubscription;
   StreamSubscription<List<EmanetItem>>? _itemsSubscription;
@@ -51,6 +59,7 @@ class AppState extends ChangeNotifier {
 
     // Initialize list
     _loadInitialData();
+    _initPreAgreementMocks();
   }
 
   // Getters
@@ -176,18 +185,42 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Request to borrow an item
-  Future<bool> requestBorrow(String itemId) async {
-    if (currentUser == null) return false;
+  // Request to borrow an item (Creates pre-agreement discussion chat flow)
+  Future<BorrowRequestModel?> requestBorrow(String itemId) async {
+    if (currentUser == null) return null;
     _setLoading(true);
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
-      await _itemService.requestBorrow(itemId, currentUser!.uid, currentUser!.name);
-      _addLog('${currentUser!.name}, "${item.title}" için ödünç talebi gönderdi.');
-      return true;
+      
+      final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}';
+      final newRequest = BorrowRequestModel(
+        id: requestId,
+        itemId: itemId,
+        ownerId: item.lenderId,
+        requesterId: currentUser!.uid,
+        status: BorrowRequestStatus.pendingDiscussion,
+        requestedDurationText: '2 Saatlik',
+        createdAt: DateTime.now(),
+      );
+
+      _borrowRequests.add(newRequest);
+
+      // System message
+      _chatMessages.add(ChatMessageModel(
+        id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+        requestId: requestId,
+        senderId: 'system',
+        senderName: 'Sistem',
+        text: 'Ödünç talebi oluşturuldu: Görüşme aşamasında.',
+        type: ChatMessageType.system,
+        createdAt: DateTime.now(),
+      ));
+
+      _addLog('${currentUser!.name}, "${item.title}" için ön görüşme başlattı.');
+      return newRequest;
     } catch (e) {
       _addLog('Ödünç talebi hatası: $e');
-      return false;
+      return null;
     } finally {
       _setLoading(false);
     }
@@ -306,6 +339,304 @@ class AppState extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  // Pre-Agreement Chat and Proposal Getters
+  List<BorrowRequestModel> get borrowRequests => _borrowRequests;
+  
+  List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
+    return _chatMessages.where((msg) => msg.requestId == requestId).toList();
+  }
+  
+  MeetingPointProposalModel? getProposal(String proposalId) {
+    try {
+      return _meetingPointProposals.firstWhere((p) => p.id == proposalId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  BorrowRequestModel? getRequestForActiveItem(String itemId) {
+    try {
+      return _borrowRequests.firstWhere((req) => req.itemId == itemId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Pre-Agreement Actions
+  void sendChatMessage(String requestId, String text) {
+    if (currentUser == null) return;
+    final message = ChatMessageModel(
+      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: requestId,
+      senderId: currentUser!.uid,
+      senderName: currentUser!.name,
+      text: text,
+      type: ChatMessageType.text,
+      createdAt: DateTime.now(),
+    );
+    _chatMessages.add(message);
+    _addLog('Mesaj gönderildi: "$text"');
+    notifyListeners();
+  }
+
+  void proposeMeetingPoint(String requestId, String title, String addressText, String timeText) {
+    if (currentUser == null) return;
+    
+    final proposalId = 'prop_${DateTime.now().millisecondsSinceEpoch}';
+    final requestIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
+    if (requestIndex == -1) return;
+    final request = _borrowRequests[requestIndex];
+
+    final isOwner = currentUser!.uid == request.ownerId;
+
+    final proposal = MeetingPointProposalModel(
+      id: proposalId,
+      requestId: requestId,
+      proposedByUserId: currentUser!.uid,
+      title: title,
+      addressText: addressText,
+      proposedTimeText: timeText,
+      status: MeetingPointStatus.pending,
+      acceptedByOwner: isOwner,
+      acceptedByRequester: !isOwner,
+    );
+
+    _meetingPointProposals.add(proposal);
+    _borrowRequests[requestIndex] = request.copyWith(proposedMeetingPointId: proposalId);
+
+    // Add proposal card as a system message in conversation
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Buluşma noktası önerildi: $title ($timeText)',
+      type: ChatMessageType.meetingPointProposal,
+      createdAt: DateTime.now(),
+      customPayload: proposalId,
+    );
+    _chatMessages.add(message);
+
+    _addLog('Yeni buluşma noktası önerildi: $title');
+    notifyListeners();
+  }
+
+  void acceptMeetingPoint(String proposalId) {
+    final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
+    if (propIndex == -1) return;
+    final proposal = _meetingPointProposals[propIndex];
+
+    _meetingPointProposals[propIndex] = proposal.copyWith(
+      acceptedByOwner: true,
+      acceptedByRequester: true,
+      status: MeetingPointStatus.accepted,
+    );
+
+    // Add system message
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: proposal.requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Buluşma noktası onaylandı: ${proposal.title}',
+      type: ChatMessageType.system,
+      createdAt: DateTime.now(),
+    );
+    _chatMessages.add(message);
+
+    _addLog('Buluşma noktası onaylandı: ${proposal.title}');
+    notifyListeners();
+  }
+
+  void rejectMeetingPoint(String proposalId) {
+    final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
+    if (propIndex == -1) return;
+    final proposal = _meetingPointProposals[propIndex];
+
+    _meetingPointProposals[propIndex] = proposal.copyWith(
+      status: MeetingPointStatus.rejected,
+    );
+
+    // Add system message
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: proposal.requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Buluşma noktası reddedildi: ${proposal.title}',
+      type: ChatMessageType.system,
+      createdAt: DateTime.now(),
+    );
+    _chatMessages.add(message);
+
+    _addLog('Buluşma noktası reddedildi: ${proposal.title}');
+    notifyListeners();
+  }
+
+  void acceptBorrowRequest(String requestId) {
+    final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
+    if (reqIndex == -1) return;
+    final request = _borrowRequests[reqIndex];
+
+    _borrowRequests[reqIndex] = request.copyWith(status: BorrowRequestStatus.accepted);
+
+    // Update item status in ItemService
+    final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
+    if (itemIndex != -1) {
+      final item = _items[itemIndex];
+      
+      // Seed details to make it ready for mock routing
+      UserProfile borrowerProfile;
+      try {
+        borrowerProfile = availableMockUsers.firstWhere((u) => u.uid == request.requesterId);
+      } catch (_) {
+        borrowerProfile = currentUser!;
+      }
+      
+      final meetingPointName = _meetingPointProposals
+          .where((p) => p.requestId == requestId && p.status == MeetingPointStatus.accepted)
+          .map((p) => p.title)
+          .firstWhere((_) => true, orElse: () => item.location);
+
+      final updatedItem = item.copyWith(
+        status: EmanetStatus.pendingApproval,
+        deliveryStatus: DeliveryStatus.accepted,
+        borrowerId: borrowerProfile.uid,
+        borrowerName: borrowerProfile.name,
+        meetingPoint: meetingPointName,
+      );
+
+      // Save item changes locally
+      final mockService = _itemService;
+      if (mockService is MockItemService) {
+        final index = mockService.items.indexWhere((i) => i.id == item.id);
+        if (index != -1) {
+          mockService.items[index] = updatedItem;
+        }
+      }
+    }
+
+    // Add system message
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Talep kabul edildi. Teslimat süreci başladı!',
+      type: ChatMessageType.requestStatusUpdate,
+      createdAt: DateTime.now(),
+    );
+    _chatMessages.add(message);
+
+    _addLog('Ödünç talebi kabul edildi. Rota takibi açılabilir.');
+    notifyListeners();
+  }
+
+  void rejectBorrowRequest(String requestId) {
+    final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
+    if (reqIndex == -1) return;
+    final request = _borrowRequests[reqIndex];
+
+    _borrowRequests[reqIndex] = request.copyWith(status: BorrowRequestStatus.rejected);
+
+    // Add system message
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Talep reddedildi. Görüşme sonlandırıldı.',
+      type: ChatMessageType.requestStatusUpdate,
+      createdAt: DateTime.now(),
+    );
+    _chatMessages.add(message);
+
+    _addLog('Ödünç talebi reddedildi.');
+    notifyListeners();
+  }
+
+  // Pre-Agreement Mocks Initializer
+  void _initPreAgreementMocks() {
+    final now = DateTime.now();
+    
+    // Seed Borrow Request
+    final req = BorrowRequestModel(
+      id: 'req_1',
+      itemId: 'item_1',
+      ownerId: 'user_2', // Ayşe Yılmaz
+      requesterId: 'user_1', // Ahmet Öz
+      status: BorrowRequestStatus.pendingDiscussion,
+      requestedDurationText: '2 Saatlik',
+      proposedMeetingPointId: 'prop_1',
+      createdAt: now.subtract(const Duration(minutes: 30)),
+    );
+    _borrowRequests.add(req);
+
+    // Seed Proposal
+    final prop = MeetingPointProposalModel(
+      id: 'prop_1',
+      requestId: 'req_1',
+      proposedByUserId: 'user_1',
+      title: 'Mühendislik B Blok Önü',
+      addressText: 'B Blok giriş merdivenleri önü',
+      proposedTimeText: '14:30',
+      status: MeetingPointStatus.pending,
+      acceptedByOwner: false,
+      acceptedByRequester: true,
+    );
+    _meetingPointProposals.add(prop);
+
+    // Seed Chat Messages
+    _chatMessages.addAll([
+      ChatMessageModel(
+        id: 'msg_1',
+        requestId: 'req_1',
+        senderId: 'system',
+        senderName: 'Sistem',
+        text: 'Ödünç talebi oluşturuldu: Görüşme aşamasında.',
+        type: ChatMessageType.system,
+        createdAt: now.subtract(const Duration(minutes: 30)),
+      ),
+      ChatMessageModel(
+        id: 'msg_2',
+        requestId: 'req_1',
+        senderId: 'user_1',
+        senderName: 'Ahmet Öz',
+        text: 'Merhaba Ayşe, USB-C şarj aleti bugün 2 saatliğine lazım olabilir, kütüphanede misin?',
+        type: ChatMessageType.text,
+        createdAt: now.subtract(const Duration(minutes: 25)),
+      ),
+      ChatMessageModel(
+        id: 'msg_3',
+        requestId: 'req_1',
+        senderId: 'user_2',
+        senderName: 'Ayşe Yılmaz',
+        text: 'Selam Ahmet! Evet, şu an kütüphanedeyim ama 14:30 gibi Mühendislik B Blok\'a geçeceğim.',
+        type: ChatMessageType.text,
+        createdAt: now.subtract(const Duration(minutes: 20)),
+      ),
+      ChatMessageModel(
+        id: 'msg_4',
+        requestId: 'req_1',
+        senderId: 'user_1',
+        senderName: 'Ahmet Öz',
+        text: 'Benim için de Mühendislik B Blok önü çok uygun. 14:30\'da buluşalım mı?',
+        type: ChatMessageType.text,
+        createdAt: now.subtract(const Duration(minutes: 15)),
+      ),
+      ChatMessageModel(
+        id: 'msg_5',
+        requestId: 'req_1',
+        senderId: 'system',
+        senderName: 'Sistem',
+        text: 'Buluşma noktası önerildi: Mühendislik B Blok Önü (14:30)',
+        type: ChatMessageType.meetingPointProposal,
+        createdAt: now.subtract(const Duration(minutes: 10)),
+        customPayload: 'prop_1',
+      ),
+    ]);
   }
 
   void _setLoading(bool value) {

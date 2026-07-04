@@ -36,6 +36,13 @@ class EmanetItem {
   final DeliveryStatus? deliveryStatus;
   final int mockImageColorValue; // e.g. 0xFF1E3A8A for rendering card gradient colors
 
+  // Custom Pick-up Location Parameters
+  final String pickupLocationTitle;
+  final String pickupAddressText;
+  final double pickupLatitude;
+  final double pickupLongitude;
+  final bool locationVisibility;
+
   EmanetItem({
     required this.id,
     required this.title,
@@ -53,6 +60,11 @@ class EmanetItem {
     this.meetingPoint,
     this.deliveryStatus,
     required this.mockImageColorValue,
+    this.pickupLocationTitle = 'Kampüs Genel',
+    this.pickupAddressText = 'Kampüs içi ortak alanda elden teslim',
+    this.pickupLatitude = 41.0082,
+    this.pickupLongitude = 28.9784,
+    this.locationVisibility = true,
   });
 
   bool get isAvailable => status == EmanetStatus.available;
@@ -74,6 +86,11 @@ class EmanetItem {
     String? meetingPoint,
     DeliveryStatus? deliveryStatus,
     int? mockImageColorValue,
+    String? pickupLocationTitle,
+    String? pickupAddressText,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    bool? locationVisibility,
   }) {
     return EmanetItem(
       id: id ?? this.id,
@@ -92,6 +109,11 @@ class EmanetItem {
       meetingPoint: meetingPoint ?? this.meetingPoint,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
       mockImageColorValue: mockImageColorValue ?? this.mockImageColorValue,
+      pickupLocationTitle: pickupLocationTitle ?? this.pickupLocationTitle,
+      pickupAddressText: pickupAddressText ?? this.pickupAddressText,
+      pickupLatitude: pickupLatitude ?? this.pickupLatitude,
+      pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+      locationVisibility: locationVisibility ?? this.locationVisibility,
     );
   }
 
@@ -113,6 +135,11 @@ class EmanetItem {
       'meetingPoint': meetingPoint,
       'deliveryStatus': deliveryStatus?.name,
       'mockImageColorValue': mockImageColorValue,
+      'pickupLocationTitle': pickupLocationTitle,
+      'pickupAddressText': pickupAddressText,
+      'pickupLatitude': pickupLatitude,
+      'pickupLongitude': pickupLongitude,
+      'locationVisibility': locationVisibility,
     };
   }
 
@@ -147,6 +174,11 @@ class EmanetItem {
             )
           : null,
       mockImageColorValue: map['mockImageColorValue'] ?? 0xFF1E3A8A,
+      pickupLocationTitle: map['pickupLocationTitle'] ?? 'Kampüs Genel',
+      pickupAddressText: map['pickupAddressText'] ?? 'Kampüs içi ortak alanda elden teslim',
+      pickupLatitude: map['pickupLatitude'] ?? 41.0082,
+      pickupLongitude: map['pickupLongitude'] ?? 28.9784,
+      locationVisibility: map['locationVisibility'] ?? true,
     );
   }
 }
