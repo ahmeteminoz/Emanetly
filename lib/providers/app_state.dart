@@ -46,8 +46,13 @@ class AppState extends ChangeNotifier {
   UserProfile? get currentUser => _authService.currentUser;
   bool get isLoading => _isLoading;
   List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
-  List<UserProfile> get availableMockUsers =>
-      _authService is MockAuthService ? (_authService as MockAuthService).availableMockUsers : [];
+  List<UserProfile> get availableMockUsers {
+    final service = _authService;
+    if (service is MockAuthService) {
+      return service.availableMockUsers;
+    }
+    return [];
+  }
 
   AuthService get authService => _authService;
   ItemService get itemService => _itemService;
@@ -75,8 +80,9 @@ class AppState extends ChangeNotifier {
 
   // Swap users for prototype testing
   void switchUser(String uid) {
-    if (_authService is MockAuthService) {
-      (_authService as MockAuthService).switchUser(uid);
+    final service = _authService;
+    if (service is MockAuthService) {
+      service.switchUser(uid);
       _addLog('Aktif kullanıcı değiştirildi: ${currentUser?.name}');
     }
   }

@@ -95,17 +95,21 @@ class _MainLayoutState extends State<MainLayout> {
               tooltip: 'Keşfet',
             ),
             const SizedBox(width: 48), // Space for floating action button
-            IconButton(
-              icon: Icon(
-                _currentIndex == 1 ? Icons.person : Icons.person_outline,
-                color: _currentIndex == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+            Badge(
+              isLabelVisible: pendingCount > 0,
+              label: Text(pendingCount.toString()),
+              child: IconButton(
+                icon: Icon(
+                  _currentIndex == 1 ? Icons.person : Icons.person_outline,
+                  color: _currentIndex == 1 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _currentIndex = 1;
+                  });
+                },
+                tooltip: 'Profilim',
               ),
-              onPressed: () {
-                setState(() {
-                  _currentIndex = 1;
-                });
-              },
-              tooltip: 'Profilim',
             ),
           ],
         ),

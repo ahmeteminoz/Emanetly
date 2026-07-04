@@ -171,65 +171,200 @@ class ItemDetailScreen extends StatelessWidget {
     bool isBorrower,
   ) {
     final theme = Theme.of(context);
-    final lenderText = isOwnItem ? 'Sen (Lider/Sahip)' : item.lenderName;
+    final lenderText = isOwnItem ? 'Sen (Eşya Sahibi)' : item.lenderName;
+
+    // Determine trust score mock values
+    String rating = '4.9';
+    String transactions = '54';
+    String badgeText = 'Güvenilir Üye';
+    Color badgeColor = Colors.teal;
+
+    if (item.lenderId == 'user_1') {
+      rating = '4.8';
+      transactions = '32';
+      badgeText = 'Popüler Paylaşımcı';
+      badgeColor = Colors.indigo;
+    } else if (item.lenderId == 'user_3') {
+      rating = '4.7';
+      transactions = '15';
+      badgeText = 'Hızlı Yanıt';
+      badgeColor = Colors.orange;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Taraflar',
+          'Eşya Sahibi',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 12),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              item.lenderName[0].toUpperCase(),
-              style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
             ),
           ),
-          title: Text(lenderText),
-          subtitle: const Text('Eşya Sahibi'),
-          trailing: isOwnItem
-              ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Text(
+                      item.lenderName[0].toUpperCase(),
+                      style: TextStyle(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lenderText,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Öğrenci Üye', // General label
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isOwnItem)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'İlanım',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              // Trust Score and Transaction details
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Trust Rating
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '($transactions işlem)',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Badge status
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: badgeColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: badgeColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (item.borrowerName != null) ...[
+          const SizedBox(height: 20),
+          Text(
+            item.status == EmanetStatus.pendingApproval
+                ? 'Ödünç Almak İsteyen'
+                : item.status == EmanetStatus.pendingReturn
+                    ? 'İade Etmek İsteyen'
+                    : 'Ödünç Alan Öğrenci',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: theme.colorScheme.secondaryContainer,
                   child: Text(
-                    'Senin İlanın',
+                    item.borrowerName![0].toUpperCase(),
                     style: TextStyle(
-                      fontSize: 10,
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.onSecondaryContainer,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                )
-              : null,
-        ),
-        if (item.borrowerName != null) ...[
-          const SizedBox(height: 8),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: CircleAvatar(
-              backgroundColor: theme.colorScheme.secondaryContainer,
-              child: Text(
-                item.borrowerName![0].toUpperCase(),
-                style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
-              ),
-            ),
-            title: Text(isBorrower ? 'Sen (Ödünç Alan)' : item.borrowerName!),
-            subtitle: Text(
-              item.status == EmanetStatus.pendingApproval
-                  ? 'Ödünç Almak İstiyor'
-                  : item.status == EmanetStatus.pendingReturn
-                      ? 'İade Etmek İstiyor'
-                      : 'Ödünç Alan',
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isBorrower ? 'Sen' : item.borrowerName!,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Öğrenci',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

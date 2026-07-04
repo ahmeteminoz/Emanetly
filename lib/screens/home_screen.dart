@@ -279,35 +279,48 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_outlined,
-                          size: 16, color: theme.colorScheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.location,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_on_outlined,
+                            size: 16, color: theme.colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            item.location,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        isOwnItem ? Icons.person : Icons.person_outline,
-                        size: 16,
-                        color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.outline,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        isOwnItem ? 'Senin İlanın' : item.lenderName,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                  const SizedBox(width: 16),
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isOwnItem ? Icons.person : Icons.person_outline,
+                          size: 16,
                           color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.outline,
-                          fontWeight: isOwnItem ? FontWeight.bold : FontWeight.normal,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            isOwnItem ? 'Senin İlanın' : item.lenderName,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isOwnItem ? theme.colorScheme.primary : theme.colorScheme.outline,
+                              fontWeight: isOwnItem ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

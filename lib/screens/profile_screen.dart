@@ -126,16 +126,22 @@ class ProfileScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.swap_horizontal_circle_outlined, color: theme.colorScheme.secondary, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Test Kullanıcısı Değiştir:',
-                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.swap_horizontal_circle_outlined, color: theme.colorScheme.secondary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Test Kullanıcısı Değiştir:',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: user.uid,
                   underline: const SizedBox(),
