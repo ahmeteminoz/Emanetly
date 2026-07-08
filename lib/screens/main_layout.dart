@@ -5,6 +5,7 @@ import 'active_transactions_screen.dart';
 import 'profile_screen.dart';
 import 'add_item_screen.dart';
 import '../models/item.dart';
+import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
 
 class MainLayout extends StatefulWidget {
@@ -35,12 +36,20 @@ class _MainLayoutState extends State<MainLayout> {
       (i) => i.status == EmanetStatus.pendingApproval || i.status == EmanetStatus.pendingReturn
     ).length;
 
+    // Count active discussions (chats) where the current user is a participant
+    final discussionRequestsCount = appState.borrowRequests.where((req) {
+      final isParticipant = req.ownerId == appState.currentUser?.uid || req.requesterId == appState.currentUser?.uid;
+      return isParticipant && req.status == BorrowRequestStatus.pendingDiscussion;
+    }).length;
+
     // Count active deliveries for tracking badge
     final activeTrackingCount = appState.items.where((item) {
       final isParticipant = item.borrowerId == appState.currentUser?.uid || item.lenderId == appState.currentUser?.uid;
       final inProgress = item.status != EmanetStatus.available;
       return isParticipant && inProgress;
     }).length;
+
+    final totalMessagesAndTrackingCount = activeTrackingCount + discussionRequestsCount;
 
     return Scaffold(
       body: SafeArea(
@@ -119,12 +128,12 @@ class _MainLayoutState extends State<MainLayout> {
             ),
             const SizedBox(width: 48), // Space for floating action button
             Badge(
-              isLabelVisible: activeTrackingCount > 0,
-              label: Text(activeTrackingCount.toString()),
+              isLabelVisible: totalMessagesAndTrackingCount > 0,
+              label: Text(totalMessagesAndTrackingCount.toString()),
               backgroundColor: theme.colorScheme.secondary,
               child: IconButton(
                 icon: Icon(
-                  _currentIndex == 2 ? Icons.local_shipping : Icons.local_shipping_outlined,
+                  _currentIndex == 2 ? Icons.forum : Icons.forum_outlined,
                   color: _currentIndex == 2 ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () {
@@ -132,7 +141,7 @@ class _MainLayoutState extends State<MainLayout> {
                     _currentIndex = 2;
                   });
                 },
-                tooltip: 'Aktif Takip',
+                tooltip: 'Mesajlar & Takip',
               ),
             ),
             Badge(

@@ -153,13 +153,14 @@ class AppState extends ChangeNotifier {
     required String description,
     required String category,
     required String location,
+    String? imageUrl,
   }) async {
     if (currentUser == null) return false;
     _setLoading(true);
     try {
       // Pick a random mock color for the grid photo placeholders
       final colorOptions = [0xFF3B82F6, 0xFFEF4444, 0xFFF59E0B, 0xFF10B981, 0xFF8B5CF6, 0xFFEC4899];
-      final mockColor = colorOptions[DateTime.now().millisecond % colorOptions.length];
+      final finalColor = colorOptions[DateTime.now().millisecond % colorOptions.length];
 
       final newItem = EmanetItem(
         id: 'item_${DateTime.now().millisecondsSinceEpoch}',
@@ -169,10 +170,11 @@ class AppState extends ChangeNotifier {
         lenderId: currentUser!.uid,
         lenderName: currentUser!.name,
         location: location,
+        imageUrl: imageUrl,
         status: EmanetStatus.available,
         createdAt: DateTime.now(),
         comments: [],
-        mockImageColorValue: mockColor,
+        mockImageColorValue: finalColor,
       );
       await _itemService.addItem(newItem);
       _addLog('${currentUser!.name}, yeni bir ilan yayınladı: "$title"');

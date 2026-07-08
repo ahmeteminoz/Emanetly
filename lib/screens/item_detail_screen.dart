@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../providers/app_state_provider.dart';
@@ -63,14 +64,6 @@ class ItemDetailScreen extends StatelessWidget {
               aspectRatio: 1.5,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(currentItem.mockImageColorValue).withOpacity(0.85),
-                      Color(currentItem.mockImageColorValue),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
@@ -80,30 +73,69 @@ class ItemDetailScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      categoryIcon,
-                      size: 80,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          currentItem.category,
-                          style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned.fill(
+                        child: (() {
+                          final imageUrl = currentItem.imageUrl;
+                          final gradient = LinearGradient(
+                            colors: [
+                              Color(currentItem.mockImageColorValue).withOpacity(0.85),
+                              Color(currentItem.mockImageColorValue),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          );
+                          
+                          Widget fallback() => Container(
+                                decoration: BoxDecoration(gradient: gradient),
+                                child: Center(
+                                  child: Icon(
+                                    categoryIcon,
+                                    size: 80,
+                                    color: Colors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              );
+
+                          if (imageUrl != null && imageUrl.isNotEmpty) {
+                            if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
+                              return Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => fallback(),
+                              );
+                            } else {
+                              return Image.file(
+                                File(imageUrl),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => fallback(),
+                              );
+                            }
+                          }
+                          return fallback();
+                        })(),
+                      ),
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            currentItem.category,
+                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

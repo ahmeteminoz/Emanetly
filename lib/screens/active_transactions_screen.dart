@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../providers/app_state_provider.dart';
-import '../providers/app_state.dart';
 import '../models/item.dart';
 import '../models/borrow_request.dart';
 import 'mock_route_screen.dart';
@@ -38,7 +37,7 @@ class ActiveTransactionsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Aktif Takip & Teslimatlar'),
+        title: const Text('Mesajlar & Aktif Takip'),
         centerTitle: true,
       ),
       body: isEmpty
@@ -47,13 +46,13 @@ class ActiveTransactionsScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.local_shipping_outlined,
+                    Icons.forum_outlined,
                     size: 80,
                     color: theme.colorScheme.outlineVariant,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Aktif işlem bulunmuyor',
+                    'Mesaj veya aktif işlem bulunmuyor',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.outline,
                       fontWeight: FontWeight.bold,
@@ -63,7 +62,7 @@ class ActiveTransactionsScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      'Ödünç verdiğiniz ya da ödünç aldığınız eşyaların teslimat ve iade rotalarını buradan canlı olarak takip edebilirsiniz.',
+                      'İlanlarınıza gelen soruları, mesajları veya aktif ödünç teslimat/iade rotalarını buradan takip edebilirsiniz.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -76,22 +75,22 @@ class ActiveTransactionsScreen extends StatelessWidget {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // SECTION 1: PRE-AGREEMENT DISCUSSIONS
+                // SECTION 1: Gelen Kutusu (Sohbetler)
                 if (discussionRequests.isNotEmpty) ...[
                   Row(
                     children: [
-                      Icon(Icons.chat_bubble_outline_rounded, size: 18, color: theme.colorScheme.primary),
+                      Icon(Icons.mail_outline_rounded, size: 20, color: theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Ön Görüşme Talepleri (Chat)',
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        'Gelen Kutusu (Sohbetler)',
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   ...discussionRequests.map((request) {
                     // Find matching item details
                     EmanetItem? matchingItem;
@@ -104,105 +103,117 @@ class ActiveTransactionsScreen extends StatelessWidget {
                     if (matchingItem == null) return const SizedBox.shrink();
 
                     final isLender = request.ownerId == currentUser.uid;
-                    String partyLabel = 'Ödünç Veren: Siz';
+                    String partyName = 'Bilinmeyen Kullanıcı';
+                    String roleLabel = '';
                     if (isLender) {
-                      // Requester name
-                      String requesterName = 'Talep Eden: Ahmet Öz';
-                      if (request.requesterId == 'user_2') requesterName = 'Talep Eden: Ayşe Yılmaz';
-                      if (request.requesterId == 'user_3') requesterName = 'Talep Eden: Can Demir';
-                      partyLabel = requesterName;
+                      roleLabel = 'Eşyanızı İstiyor';
+                      if (request.requesterId == 'user_1') partyName = 'Ahmet Öz';
+                      if (request.requesterId == 'user_2') partyName = 'Ayşe Yılmaz';
+                      if (request.requesterId == 'user_3') partyName = 'Can Demir';
                     } else {
-                      partyLabel = 'Sahibi: ${matchingItem.lenderName}';
+                      roleLabel = 'Eşya Sahibi';
+                      partyName = matchingItem.lenderName;
+                    }
+
+                    // Get last message
+                    final messages = appState.getChatMessagesForRequest(request.id);
+                    String lastMessageText = 'Henüz mesaj yok';
+                    String lastMessageTime = '';
+                    if (messages.isNotEmpty) {
+                      final lastMsg = messages.last;
+                      final senderName = lastMsg.senderId == currentUser.uid ? 'Siz' : lastMsg.senderName;
+                      lastMessageText = '$senderName: ${lastMsg.text}';
+                      lastMessageTime = lastMsg.createdAt.toLocal().toString().substring(11, 16);
                     }
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.orange.withOpacity(0.3)),
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                       ),
-                      color: Colors.orange.shade50.withOpacity(0.1),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            // Product Mini image color container
-                            Container(
-                              width: 45,
-                              height: 45,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(matchingItem.mockImageColorValue).withOpacity(0.8),
-                                    Color(matchingItem.mockImageColorValue),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: Icon(Icons.inventory_2_outlined, size: 20, color: Colors.white),
-                              ),
+                      color: Colors.orange.shade50.withOpacity(0.08),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RequestChatScreen(requestId: request.id),
                             ),
-                            const SizedBox(width: 12),
-                            // Details
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    matchingItem.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              // Avatar
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: theme.colorScheme.primaryContainer,
+                                child: Text(
+                                  partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    partyLabel,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.shade100,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'Görüşme Aşaması',
-                                          style: TextStyle(
-                                            color: Colors.orange.shade900,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          partyName,
+                                          style: theme.textTheme.titleSmall?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 9,
                                           ),
                                         ),
+                                        if (lastMessageTime.isNotEmpty)
+                                          Text(
+                                            lastMessageTime,
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.outline,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${matchingItem.title} ($roleLabel)',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    ],
-                                  ),
-                                ],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      lastMessageText,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Open Chat button
-                            IconButton.filledTonal(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => RequestChatScreen(requestId: request.id),
-                                  ),
-                                );
-                              },
-                              style: IconButton.styleFrom(
-                                backgroundColor: theme.colorScheme.primaryContainer,
-                                foregroundColor: theme.colorScheme.onPrimaryContainer,
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: theme.colorScheme.outline,
                               ),
-                              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );

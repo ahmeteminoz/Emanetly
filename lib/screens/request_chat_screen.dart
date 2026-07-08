@@ -377,42 +377,82 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             ),
 
           if (isAccepted)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                border: Border(top: BorderSide(color: Colors.green.shade200)),
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MockRouteScreen(item: item!),
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Talep kabul edildi! Teslimat süreci başladı.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                icon: const Icon(Icons.map_outlined),
-                label: const Text('Teslim / Rota Ekranına Geç'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  elevation: 0,
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MockRouteScreen(item: item!),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.directions_run_rounded),
+                      label: const Text('Teslimat & Rota Takibine Git'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
           if (isRejected)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: Colors.red.shade50,
-              child: Text(
-                'Bu talep reddedildiği için yeni mesaj gönderilemez.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red.shade900, fontSize: 12, fontWeight: FontWeight.bold),
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.cancel_rounded, color: theme.colorScheme.error, size: 22),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Bu talep reddedildiği için görüşme sonlandırıldı.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

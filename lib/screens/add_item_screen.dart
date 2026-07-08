@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/app_state_provider.dart';
 
 class AddItemScreen extends StatefulWidget {
@@ -15,6 +18,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   String _selectedCategory = 'Elektronik';
+  String? _selectedImagePath;
 
   final List<String> _categories = [
     'Elektronik',
@@ -32,6 +36,77 @@ class _AddItemScreenState extends State<AddItemScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImagePath = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      debugPrint("Görsel seçme hatası: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Görsel seçilirken bir hata oluştu: $e")),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Ürün Fotoğrafı Ekle',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Galeriden Fotoğraf Seç'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Kamera ile Fotoğraf Çek'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -41,6 +116,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       description: _descriptionController.text.trim(),
       category: _selectedCategory,
       location: _locationController.text.trim(),
+      imageUrl: _selectedImagePath,
     );
 
     if (mounted) {
@@ -104,6 +180,83 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Photo Picker Placeholder Widget
+                GestureDetector(
+                  onTap: _showImageSourceSheet,
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: _selectedImagePath != null
+                          ? Colors.transparent
+                          : theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: _selectedImagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.file(
+                                  File(_selectedImagePath!),
+                                  fit: BoxFit.cover,
+                                ),
+                                // Remove button
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: Colors.black.withOpacity(0.4),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedImagePath = null;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : CustomPaint(
+                            painter: DashRectPainter(color: theme.colorScheme.outlineVariant),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo_outlined,
+                                    size: 40,
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Ürün Fotoğrafı / Görsel Ekle',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Galeriden seçmek veya fotoğraf çekmek için dokunun',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -231,4 +384,47 @@ class _AddItemScreenState extends State<AddItemScreen> {
       ),
     );
   }
+}
+
+class DashRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+
+  DashRectPainter({
+    this.color = Colors.grey,
+    this.strokeWidth = 1.5,
+    this.gap = 5.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final Path path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        const Radius.circular(16),
+      ));
+
+    // Draw dashed lines
+    final Path dashPath = Path();
+    double distance = 0.0;
+    for (final PathMetric metric in path.computeMetrics()) {
+      while (distance < metric.length) {
+        dashPath.addPath(
+          metric.extractPath(distance, distance + gap),
+          Offset.zero,
+        );
+        distance += gap * 2;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

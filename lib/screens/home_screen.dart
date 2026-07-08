@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/item.dart';
+import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'widgets/item_card.dart';
+import 'request_chat_screen.dart';
+import 'active_transactions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,12 +31,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Filter items based on search and category
+    // Filter items based on search, category and owner (exclude current user's own items)
     final filteredItems = appState.items.where((item) {
+      final isNotOwnItem = appState.currentUser == null || item.lenderId != appState.currentUser!.uid;
       final matchesSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.description.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory = _selectedCategory == 'Hepsi' || item.category == _selectedCategory;
-      return matchesSearch && matchesCategory;
+      return isNotOwnItem && matchesSearch && matchesCategory;
     }).toList();
 
     return Column(
@@ -63,6 +66,64 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+
+        // Active incoming chat alerts banner
+        (() {
+          if (appState.currentUser == null) return const SizedBox.shrink();
+          final myIncomingRequests = appState.borrowRequests.where((req) {
+            return req.ownerId == appState.currentUser!.uid && req.status == BorrowRequestStatus.pendingDiscussion;
+          }).toList();
+
+          if (myIncomingRequests.isEmpty) return const SizedBox.shrink();
+
+          final count = myIncomingRequests.length;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Card(
+              elevation: 0,
+              color: theme.colorScheme.primaryContainer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.2)),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.mark_chat_unread, color: theme.colorScheme.onPrimaryContainer),
+                title: Text(
+                  'Yeni Görüşme Talebi ($count)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                subtitle: Text(
+                  'Eşyalarınız için gelen soruları yanıtlayın.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                  ),
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: theme.colorScheme.onPrimaryContainer),
+                onTap: () {
+                  if (count == 1) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RequestChatScreen(requestId: myIncomingRequests.first.id),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ActiveTransactionsScreen(),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          );
+        })(),
 
         // Search Bar
         Padding(

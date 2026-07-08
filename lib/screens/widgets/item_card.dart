@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/item.dart';
 import '../../models/borrow_request.dart';
@@ -102,11 +103,11 @@ class ItemCard extends StatelessWidget {
                 aspectRatio: 1.0, // Square photo
                 child: Stack(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(gradient: gradient),
-                      child: Center(
-                        child: Icon(categoryIcon, size: 36, color: Colors.white.withOpacity(0.9)),
-                      ),
+                    _buildItemImage(
+                      imageUrl: item.imageUrl,
+                      iconSize: 36,
+                      categoryIcon: categoryIcon,
+                      gradient: gradient,
                     ),
                     // Favorite Heart Button (Top-Right)
                     Positioned(
@@ -153,11 +154,11 @@ class ItemCard extends StatelessWidget {
                 aspectRatio: 1.0, // Square image
                 child: Stack(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(gradient: gradient),
-                      child: Center(
-                        child: Icon(categoryIcon, size: 48, color: Colors.white.withOpacity(0.9)),
-                      ),
+                    _buildItemImage(
+                      imageUrl: item.imageUrl,
+                      iconSize: 48,
+                      categoryIcon: categoryIcon,
+                      gradient: gradient,
                     ),
                     // Favorite Heart Button (Top-Right)
                     Positioned(
@@ -220,11 +221,11 @@ class ItemCard extends StatelessWidget {
               aspectRatio: 1.7, // Wide banner image
               child: Stack(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(gradient: gradient),
-                    child: Center(
-                      child: Icon(categoryIcon, size: 64, color: Colors.white.withOpacity(0.9)),
-                    ),
+                  _buildItemImage(
+                    imageUrl: item.imageUrl,
+                    iconSize: 64,
+                    categoryIcon: categoryIcon,
+                    gradient: gradient,
                   ),
                   // Favorite Heart Button
                   Positioned(
@@ -377,6 +378,50 @@ class ItemCard extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => ItemDetailScreen(item: item),
+      ),
+    );
+  }
+
+  Widget _buildItemImage({
+    required String? imageUrl,
+    required double iconSize,
+    required IconData categoryIcon,
+    required Gradient gradient,
+  }) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
+        return Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) => Container(
+            decoration: BoxDecoration(gradient: gradient),
+            child: Center(
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+            ),
+          ),
+        );
+      } else {
+        return Image.file(
+          File(imageUrl),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) => Container(
+            decoration: BoxDecoration(gradient: gradient),
+            child: Center(
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+            ),
+          ),
+        );
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(gradient: gradient),
+      child: Center(
+        child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
       ),
     );
   }
