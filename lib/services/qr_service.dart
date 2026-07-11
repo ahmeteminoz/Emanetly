@@ -23,7 +23,7 @@ abstract class QrService {
 class MockQrService implements QrService {
   @override
   String generateQrData({required String itemId, required String action, required String userId}) {
-    return 'kampusemanet://item/$itemId/$action/$userId';
+    return 'kampusemanet:///item/$itemId/$action/$userId';
   }
 
   @override
