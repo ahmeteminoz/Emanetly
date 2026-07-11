@@ -154,13 +154,14 @@ class AppState extends ChangeNotifier {
     required String category,
     required String location,
     String? imageUrl,
+    int? mockColorValue,
   }) async {
     if (currentUser == null) return false;
     _setLoading(true);
     try {
-      // Pick a random mock color for the grid photo placeholders
+      // Pick a random mock color for the grid photo placeholders if not selected
       final colorOptions = [0xFF3B82F6, 0xFFEF4444, 0xFFF59E0B, 0xFF10B981, 0xFF8B5CF6, 0xFFEC4899];
-      final finalColor = colorOptions[DateTime.now().millisecond % colorOptions.length];
+      final finalColor = mockColorValue ?? colorOptions[DateTime.now().millisecond % colorOptions.length];
 
       final newItem = EmanetItem(
         id: 'item_${DateTime.now().millisecondsSinceEpoch}',
