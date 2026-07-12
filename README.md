@@ -35,7 +35,7 @@ Emanetly is currently an in-memory MVP prototype for university students. Below 
 *   **Database**: Mock in-memory data (resets on hot restart)
 *   **State management**: Provider / ChangeNotifier
 *   **Backend**: Planned (not integrated yet)
-*   **Firebase Auth**: Planned (not integrated yet)
+*   **Firebase Auth**: Integrated (login, register, reset, verification)
 *   **Firestore**: Planned (not integrated yet)
 *   **Firebase Storage**: Planned (not integrated yet)
 *   **Maps**: Planned (custom painted simulation currently)
@@ -67,7 +67,7 @@ Emanetly is currently an in-memory MVP prototype for university students. Below 
 
 *   **No Real Backend**: All transactions, users, and listings are volatile and stored in local RAM.
 *   **Data Resets on Hot Restart**: Restarting the app clears all simulated chat rooms, requests, and listings to standard mock states.
-*   **No Real Authentication**: Logged-in profiles can be swapped at the bottom of the profile tab to simulate lender/borrower chats, but there is no auth barrier.
+*   **No Real Authentication**: Authentic sessions are managed via Firebase, but other collections (items, chats) remain simulated mock data.
 *   **No Real Maps**: Path drawing uses custom painters on mock canvas assets.
 *   **Simulated QR & Chat**: Camera scans and message streams are local time-delayed mock tasks.
 *   **No Real Image Picker**: Adding items or profile pictures uses fallback asset placeholders.

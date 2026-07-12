@@ -35,7 +35,7 @@ Emanetly şu anda üniversite öğrencileri için geliştirilmiş bir bellek iç
 *   **Veritabanı**: Mock bellek içi veri (Hot restart atıldığında sıfırlanır)
 *   **Durum Yönetimi (State)**: Provider / ChangeNotifier
 *   **Sunucu / Backend**: Planlandı (henüz entegre edilmedi)
-*   **Firebase Auth**: Planlandı (henüz entegre edilmedi)
+*   **Firebase Auth**: Entegre Edildi (giriş, kayıt, e-posta doğrulama)
 *   **Firestore**: Planlandı (henüz entegre edilmedi)
 *   **Firebase Storage**: Planlandı (henüz entegre edilmedi)
 *   **Harita / Konum**: Planlandı (şu anda custom painter çizimiyle simüle edilmiştir)
@@ -67,7 +67,7 @@ Emanetly şu anda üniversite öğrencileri için geliştirilmiş bir bellek iç
 
 *   **Gerçek Sunucu Yok**: Tüm işlemler, kullanıcılar ve ilanlar geçicidir ve RAM üzerinde tutulur.
 *   **Hot Restart Sırasında Veri Sıfırlanır**: Uygulamayı yeniden başlatmak tüm aktif sohbetleri, talepleri ve ilanları varsayılan mock durumuna geri döndürür.
-*   **Gerçek Yetkilendirme Yok**: Profil sekmesinin altındaki menüden test kullanıcıları arasında geçiş yapılabilir ancak gerçek bir üyelik bariyeri yoktur.
+*   **Gerçek Yetkilendirme Yok**: Oturum yönetimi Firebase ile gerçek zamanlı yönetilmektedir ancak diğer veriler (ilanlar, sohbetler) mock kalmaya devam etmektedir.
 *   **Gerçek Harita Entegrasyonu Yok**: Rota çizimleri mock harita görselleri üzerinde CustomPainter ile yapılmaktadır.
 *   **Simüle Edilmiş QR & Sohbet**: Kamera taramaları ve mesajlaşma akışları yerel zaman geciktiricili mock işlevlerdir.
 *   **Fotoğraf Yükleme UI Placeholder'dır**: İlan veya profil resmi ekleme alanlarında galeriden resim seçmek yerine hazır yer tutucu görseller kullanılır.
