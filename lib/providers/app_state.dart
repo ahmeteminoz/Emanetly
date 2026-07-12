@@ -188,20 +188,24 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Request to borrow an item (Creates pre-agreement discussion chat flow)
-  Future<BorrowRequestModel?> requestBorrow(String itemId) async {
+  // Request to borrow an item (Creates pre-agreement discussion chat flow or inquiry)
+  Future<BorrowRequestModel?> requestBorrow(String itemId, {bool isOfficialRequest = true}) async {
     if (currentUser == null) return null;
     _setLoading(true);
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
       
       final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}';
+      final status = isOfficialRequest 
+          ? BorrowRequestStatus.pendingDiscussion 
+          : BorrowRequestStatus.onlyInquiry;
+      
       final newRequest = BorrowRequestModel(
         id: requestId,
         itemId: itemId,
         ownerId: item.lenderId,
         requesterId: currentUser!.uid,
-        status: BorrowRequestStatus.pendingDiscussion,
+        status: status,
         requestedDurationText: '2 Saatlik',
         createdAt: DateTime.now(),
       );
@@ -214,7 +218,9 @@ class AppState extends ChangeNotifier {
         requestId: requestId,
         senderId: 'system',
         senderName: 'Sistem',
-        text: 'Ödünç talebi oluşturuldu: Görüşme aşamasında.',
+        text: isOfficialRequest 
+            ? 'Ödünç talebi oluşturuldu: Görüşme aşamasında.'
+            : 'Eşya hakkında soru soruldu: Bilgi alınıyor.',
         type: ChatMessageType.system,
         createdAt: DateTime.now(),
       ));
@@ -224,6 +230,36 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       _addLog('Ödünç talebi hatası: $e');
       return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Upgrade inquiry to official borrow request
+  Future<void> upgradeToOfficialRequest(String requestId) async {
+    _setLoading(true);
+    try {
+      final index = _borrowRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        final req = _borrowRequests[index];
+        _borrowRequests[index] = req.copyWith(status: BorrowRequestStatus.pendingDiscussion);
+        
+        // Add a system message in the chat
+        _chatMessages.add(ChatMessageModel(
+          id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+          requestId: requestId,
+          senderId: 'system',
+          senderName: 'Sistem',
+          text: 'Kullanıcı ödünç alma talebi gönderdi.',
+          type: ChatMessageType.system,
+          createdAt: DateTime.now(),
+        ));
+        
+        _addLog('Ödünç talebi resmiyete döküldü.');
+        notifyListeners();
+      }
+    } catch (e) {
+      _addLog('Talep resmiyete dökülürken hata: $e');
     } finally {
       _setLoading(false);
     }

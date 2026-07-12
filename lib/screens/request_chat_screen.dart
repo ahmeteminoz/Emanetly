@@ -174,6 +174,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
 
     final isOwner = appState.currentUser?.uid == request.ownerId;
     final messages = appState.getChatMessagesForRequest(widget.requestId);
+    final isOnlyInquiry = request.status == BorrowRequestStatus.onlyInquiry;
     final isPendingDiscussion = request.status == BorrowRequestStatus.pendingDiscussion;
     final isAccepted = request.status == BorrowRequestStatus.accepted;
     final isRejected = request.status == BorrowRequestStatus.rejected;
@@ -184,7 +185,9 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isOwner ? 'Ödünç Alma Talebi' : 'Ön Görüşme Chat',
+          isOnlyInquiry 
+              ? (isOwner ? 'Soru / Bilgi Talebi' : 'Bilgi Al / Soru Sor')
+              : (isOwner ? 'Ödünç Alma Talebi' : 'Ön Görüşme Chat'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
@@ -326,7 +329,72 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             ),
           ),
 
-          // 3. ACTIONS PANEL DRAWER (Accept/Reject, Rota redirect)
+          // 3. ACTIONS PANEL DRAWER (Accept/Reject, Rota redirect, Upgrade Inquiry)
+          if (isOnlyInquiry)
+            if (isOwner)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Ödünç talebi henüz gönderilmedi. Soruları yanıtlayabilirsiniz.',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainer,
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await appState.upgradeToOfficialRequest(widget.requestId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ödünç talebi başarıyla gönderildi!'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.shopping_bag_outlined),
+                      label: const Text('Ödünç Talep Et', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
           if (isPendingDiscussion && isOwner)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

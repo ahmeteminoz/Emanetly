@@ -23,6 +23,13 @@ class BorrowRequestStatusCard extends StatelessWidget {
     IconData icon;
 
     switch (status) {
+      case BorrowRequestStatus.onlyInquiry:
+        cardColor = Colors.blue.shade50;
+        textColor = Colors.blue.shade900;
+        statusTitle = 'Soru Soruluyor / Bilgi Alınıyor';
+        statusSubtitle = 'Ödünç talebi göndermeden önce eşya sahibine sorularınızı iletebilirsiniz.';
+        icon = Icons.info_outline;
+        break;
       case BorrowRequestStatus.pendingDiscussion:
         cardColor = Colors.orange.shade50;
         textColor = Colors.orange.shade900;

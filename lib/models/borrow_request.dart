@@ -1,4 +1,5 @@
 enum BorrowRequestStatus {
+  onlyInquiry,
   pendingDiscussion,
   accepted,
   rejected,

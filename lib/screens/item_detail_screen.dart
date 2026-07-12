@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/item.dart';
+import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
@@ -676,6 +677,65 @@ class ItemDetailScreen extends StatelessWidget {
     // Case 1.5: Current user has an active request on this item under discussion
     final activeRequest = appState.getRequestForActiveItem(item.id);
     if (activeRequest != null && activeRequest.requesterId == appState.currentUser?.uid) {
+      if (activeRequest.status == BorrowRequestStatus.onlyInquiry) {
+        return Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                label: const Text('Soru Sor'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 3,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await appState.upgradeToOfficialRequest(activeRequest.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ödünç talebi başarıyla iletildi!'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Ödünç Talep Et',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+
       return SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
@@ -729,7 +789,7 @@ class ItemDetailScreen extends StatelessWidget {
                 flex: 2,
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    final request = await appState.requestBorrow(item.id);
+                    final request = await appState.requestBorrow(item.id, isOfficialRequest: false);
                     if (context.mounted && request != null) {
                       Navigator.push(
                         context,
@@ -753,7 +813,7 @@ class ItemDetailScreen extends StatelessWidget {
                 flex: 3,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final request = await appState.requestBorrow(item.id);
+                    final request = await appState.requestBorrow(item.id, isOfficialRequest: true);
                     if (context.mounted && request != null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
