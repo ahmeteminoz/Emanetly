@@ -73,13 +73,7 @@ class AppState extends ChangeNotifier {
   ViewMode get gridViewMode => _gridViewMode;
   Set<String> get favoriteItemIds => _favoriteItemIds;
 
-  List<UserProfile> get availableMockUsers {
-    final service = _authService;
-    if (service is MockAuthService) {
-      return service.availableMockUsers;
-    }
-    return [];
-  }
+  List<UserProfile> get availableMockUsers => _authService.availableMockUsers;
 
   AuthService get authService => _authService;
   ItemService get itemService => _itemService;
@@ -613,9 +607,79 @@ class AppState extends ChangeNotifier {
       dateText: 'Bugün',
     );
 
-    if (_authService is MockAuthService) {
-      (_authService as MockAuthService).addReviewToUser(targetUserId, review);
+    _authService.addReviewToUser(targetUserId, review);
+    notifyListeners();
+  }
+
+  // Wrapper Authentication Methods for the entire application
+  Future<UserProfile?> signIn(String email, String password) async {
+    _setLoading(true);
+    try {
+      final user = await _authService.signIn(email, password);
+      _addLog('Giriş yapıldı: ${user?.name}');
+      return user;
+    } catch (e) {
+      _addLog('Giriş hatası: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<UserProfile?> signUp(String email, String password, String name) async {
+    _setLoading(true);
+    try {
+      final user = await _authService.signUp(email, password, name);
+      _addLog('Yeni üye kaydedildi: ${user?.name}');
+      return user;
+    } catch (e) {
+      _addLog('Kayıt hatası: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> signOut() async {
+    _setLoading(true);
+    try {
+      await _authService.signOut();
+      _addLog('Oturum kapatıldı.');
+    } catch (e) {
+      _addLog('Çıkış hatası: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> sendEmailVerification() async {
+    try {
+      await _authService.sendEmailVerification();
+      _addLog('E-posta doğrulama bağlantısı gönderildi.');
+    } catch (e) {
+      _addLog('Doğrulama maili gönderme hatası: $e');
+      rethrow;
+    }
+  }
+
+  bool get isEmailVerified => _authService.isEmailVerified;
+
+  Future<void> reloadUser() async {
+    try {
+      await _authService.reloadUser();
       notifyListeners();
+    } catch (e) {
+      _addLog('Kullanıcı güncelleme hatası: $e');
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      _addLog('Şifre sıfırlama e-postası gönderildi: $email');
+    } catch (e) {
+      _addLog('Şifre sıfırlama hatası: $e');
+      rethrow;
     }
   }
 

@@ -190,13 +190,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Çıkış yap', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   trailing: const Icon(Icons.chevron_right, color: Colors.red),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Çıkış yapma özelliği sonraki sürümde eklenecek.'),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
+                    appState.signOut();
+                    // Go back to the root of navigation (which will drop into AuthGate login)
+                    Navigator.popUntil(context, (route) => route.isFirst);
                   },
                 ),
               ],

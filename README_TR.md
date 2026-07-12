@@ -170,17 +170,26 @@ flutter analyze
 
 ---
 
+## Mevcut Durum & Sınırlar (Limitations)
+
+*   **Firebase Yetkilendirme (Auth)**: Entegre edildi (`firebase_core` & `firebase_auth`). Kayıt ol, giriş yap, şifre sıfırlama ve e-posta doğrulama süreçlerini destekler.
+*   **Üniversite E-posta Kısıtlaması**: Sadece `.edu.tr` uzantılı e-postalara izin verilir. Bu kontrol şu an için MVP seviyesinde istemci tarafında (client-side) yapılmaktadır.
+*   **Uygulama Verisi**: Tüm ürün ilanları, mesajlaşmalar, buluşma yerleri ve değerlendirmeler bellek içi (in-memory) mock veriler olarak kalmaya devam etmektedir (Firestore/Storage entegrasyonları henüz yapılmamıştır).
+*   **Firestore, Storage ve Canlı Sohbet**: Planlanmaktadır (Aşağıdaki Yol Haritasına bakınız).
+
+---
+
 ## Yol Haritası (Roadmap)
 
 1.  **Kamuya Açık Profil Ekranı & Navigasyon**: İlan sahibinin kartından salt okunur profil görünümüne ve yorumlarına yönlendirme. *(Tamamlandı)*
 2.  **README ve GitHub Temizliği**: Proje ismi referanslarının Emanetly olarak güncellenmesi. *(Tamamlandı)*
-3.  **Firebase Yetkilendirme (Auth)**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik sistemi.
-4.  **Firestore Entegrasyonu**: Bellek içi listenin canlı Firestore koleksiyonlarına taşınması.
-5.  **Firebase Storage Entegrasyonu**: İlan ve profil resimlerinin saklanması.
-6.  **Firestore ile Canlı Sohbet**: Mesaj akışlarının gerçek zamanlı veritabanı kanallarına taşınması.
-7.  **Google Haritalar Entegrasyonu**: Simüle haritaların gerçek harita API'si ile değiştirilmesi.
-8.  **Gerçek QR Teslimat Akışı**: Mobil kamera ile QR okuma ve teslimat/iade hash doğrulaması.
-9.  **Anlık Bildirimler (FCM)**: Teslimat gecikmeleri ve yeni talepler için push bildirimleri.
+3.  **Firebase Yetkilendirme (Auth)**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik sistemi. *(Tamamlandı - Yapılandırma dosyaları yoksa otomatik Mock Auth moduna döner)*
+4.  **Firestore Entegrasyonu**: Bellek içi listenin canlı Firestore koleksiyonlarına taşınması. *(Planlandı)*
+5.  **Firebase Storage Entegrasyonu**: İlan ve profil resimlerinin saklanması. *(Planlandı)*
+6.  **Firestore ile Canlı Sohbet**: Mesaj akışlarının gerçek zamanlı veritabanı kanallarına taşınması. *(Planlandı)*
+7.  **Google Haritalar Entegrasyonu**: Simüle haritaların gerçek harita API'si ile değiştirilmesi. *(Planlandı)*
+8.  **Gerçek QR Teslimat Akışı**: Mobil kamera ile QR okuma ve teslimat/iade hash doğrulaması. *(Planlandı)*
+9.  **Anlık Bildirimler (FCM)**: Teslimat gecikmeleri ve yeni talepler için push bildirimleri. *(Planlandı)*
 10. **Üretim Cilası & Yayına Hazırlık**: Performans iyileştirmeleri ve App Store / Play Store yayını.
 
 ---

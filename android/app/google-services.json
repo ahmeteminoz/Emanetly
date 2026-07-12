@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "967934651517",
+    "project_id": "emanetly",
+    "storage_bucket": "emanetly.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:967934651517:android:7baf664fa87ee88fe91514",
+        "android_client_info": {
+          "package_name": "com.ahmeteminoz.emanetly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8wQahsmQrRS2qpkD7CSYnPDMjYfPUgwo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

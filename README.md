@@ -175,17 +175,26 @@ flutter analyze
 
 ---
 
+## Current Status & Limitations
+
+*   **Firebase Authentication**: Integrated (`firebase_core` & `firebase_auth`). Supports login, register, password reset, and email verification.
+*   **University Email Check**: Restricted to `.edu.tr` domains. Note that this is currently MVP-level client-side validation.
+*   **App Data**: All listings, chat messages, meetings, and reviews remain in-memory mock data (not persisted in Firestore/Storage yet).
+*   **Firestore, Storage, Real-time Chat**: Planned (see Roadmap below).
+
+---
+
 ## Roadmap
 
 1.  **Public Profile Screen & Owner Navigation**: Clickable owner cards on item details routing to read-only user metrics and comments. *(Completed)*
 2.  **README and GitHub Cleanup**: Consolidating repository information and renaming KampusEmanet references to Emanetly. *(Completed)*
-3.  **Firebase Authentication**: Implement actual campus student email (`.edu.tr`) verification flows.
-4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections.
-5.  **Firebase Storage**: Store item images and profile pictures in Storage buckets.
-6.  **Real-time Chat with Firestore**: Replace simulated streams with real Firestore listener channels.
-7.  **Real Google Maps Integration**: Replace painter simulations with live geofenced meeting coordinates.
-8.  **Real QR Handover Flow**: Implement device camera scanning and hash checks on meetup.
-9.  **Notifications and Reminders**: Set up FCM (Firebase Cloud Messaging) for handover and return alerts.
+3.  **Firebase Authentication**: Implement actual campus student email (`.edu.tr`) verification flows. *(Completed - Fallback to Mock Auth enabled if options are not configured)*
+4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections. *(Planned)*
+5.  **Firebase Storage**: Store item images and profile pictures in Storage buckets. *(Planned)*
+6.  **Real-time Chat with Firestore**: Replace simulated streams with real Firestore listener channels. *(Planned)*
+7.  **Real Google Maps Integration**: Replace painter simulations with live geofenced meeting coordinates. *(Planned)*
+8.  **Real QR Handover Flow**: Implement device camera scanning and hash checks on meetup. *(Planned)*
+9.  **Notifications and Reminders**: Set up FCM (Firebase Cloud Messaging) for handover and return alerts. *(Planned)*
 10. **Production Polish**: Performance optimization, clean visual feedback animations, and App Store / Google Play prep.
 
 ---

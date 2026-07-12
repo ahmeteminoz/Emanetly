@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
 import '../providers/app_state_provider.dart';
+import '../services/auth_service.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
 
@@ -435,45 +436,47 @@ class ProfileScreen extends StatelessWidget {
           }),
         const SizedBox(height: 24),
 
-        // 6. Test Prototype Account Switcher (For Demo purposes)
-        const Divider(),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.swap_horizontal_circle_outlined, color: theme.colorScheme.secondary, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  'Demo: Kullanıcı Değiştir',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ],
-            ),
-            DropdownButton<String>(
-              value: user.uid,
-              underline: const SizedBox(),
-              icon: const Icon(Icons.arrow_drop_down),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+        // 6. Test Prototype Account Switcher (For Demo purposes - Hidden in real FirebaseAuth mode)
+        if (appState.authService is MockAuthService) ...[
+          const Divider(),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.swap_horizontal_circle_outlined, color: theme.colorScheme.secondary, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Demo: Kullanıcı Değiştir',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ],
               ),
-              items: appState.availableMockUsers.map<DropdownMenuItem<String>>((UserProfile u) {
-                return DropdownMenuItem<String>(
-                  value: u.uid,
-                  child: Text(u.name),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value != null) {
-                  appState.switchUser(value);
-                }
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 32),
+              DropdownButton<String>(
+                value: user.uid,
+                underline: const SizedBox(),
+                icon: const Icon(Icons.arrow_drop_down),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+                items: appState.availableMockUsers.map<DropdownMenuItem<String>>((UserProfile u) {
+                  return DropdownMenuItem<String>(
+                    value: u.uid,
+                    child: Text(u.name),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  if (value != null) {
+                    appState.switchUser(value);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+        ],
       ],
     );
   }

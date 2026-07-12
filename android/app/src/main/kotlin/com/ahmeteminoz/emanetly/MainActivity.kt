@@ -1,4 +1,4 @@
-package com.example.kampus_emanet
+package com.ahmeteminoz.emanetly
 
 import io.flutter.embedding.android.FlutterActivity
 

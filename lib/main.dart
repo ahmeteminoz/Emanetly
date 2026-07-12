@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'providers/app_state.dart';
 import 'providers/app_state_provider.dart';
 import 'services/auth_service.dart';
 import 'services/item_service.dart';
 import 'services/qr_service.dart';
-import 'screens/main_layout.dart';
+import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  AuthService authService;
+
+  try {
+    // Attempt to initialize Firebase using platform options (overwritten by flutterfire configure)
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    authService = FirebaseAuthService();
+    debugPrint('Emanetly: Firebase Authentication initialized successfully.');
+  } catch (e) {
+    // Fallback if firebase options are not configured yet or throws UnimplementedError
+    authService = MockAuthService();
+    debugPrint('Emanetly: Firebase config fallback to MockAuthService. Notice: $e');
+  }
+
   // Instantiate services
-  final authService = MockAuthService();
   final itemService = MockItemService();
   final qrService = MockQrService();
 
@@ -49,7 +65,7 @@ class EmanetlyApp extends StatelessWidget {
         isDark: true,
         paletteIndex: appState.selectedPaletteIndex,
       ),
-      home: const MainLayout(),
+      home: const AuthGate(),
     );
   }
 }
