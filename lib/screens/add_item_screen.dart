@@ -25,9 +25,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   final List<String> _categories = [
     'Elektronik',
-    'Ders/Kitap',
-    'Kırtasiye',
-    'Yağmurluk/Şemsiye',
+    'Ders & Kırtasiye',
+    'Spor & Hobi',
+    'Günlük Eşya & Yaşam',
     'Diğer'
   ];
 

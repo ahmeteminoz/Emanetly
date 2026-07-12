@@ -703,22 +703,24 @@ class ItemDetailScreen extends StatelessWidget {
             Expanded(
               flex: 3,
               child: ElevatedButton(
-                onPressed: () async {
-                  await appState.upgradeToOfficialRequest(activeRequest.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ödünç talebi başarıyla iletildi!'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RequestChatScreen(requestId: activeRequest.id),
-                      ),
-                    );
-                  }
+                onPressed: () {
+                  _showDurationSelectionSheet(context, (selectedDuration) async {
+                    await appState.upgradeToOfficialRequest(activeRequest.id, requestedDurationText: selectedDuration);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ödünç talebi başarıyla iletildi!'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                        ),
+                      );
+                    }
+                  });
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -812,22 +814,28 @@ class ItemDetailScreen extends StatelessWidget {
               Expanded(
                 flex: 3,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final request = await appState.requestBorrow(item.id, isOfficialRequest: true);
-                    if (context.mounted && request != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
-                          backgroundColor: Colors.orange,
-                        ),
+                  onPressed: () {
+                    _showDurationSelectionSheet(context, (selectedDuration) async {
+                      final request = await appState.requestBorrow(
+                        item.id,
+                        isOfficialRequest: true,
+                        requestedDurationText: selectedDuration,
                       );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RequestChatScreen(requestId: request.id),
-                        ),
-                      );
-                    }
+                      if (context.mounted && request != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RequestChatScreen(requestId: request.id),
+                          ),
+                        );
+                      }
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -865,6 +873,47 @@ class ItemDetailScreen extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ),
+    );
+  }
+
+  void _showDurationSelectionSheet(BuildContext context, Function(String duration) onSelected) {
+    final theme = Theme.of(context);
+    final options = ['1 Saat', '2 Saat', '6 Saat', '1 Gün', '3 Gün', '1 Hafta'];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Ödünç Alma Süresi Seçin',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ...options.map((option) {
+                  return ListTile(
+                    leading: const Icon(Icons.timer_outlined),
+                    title: Text(option),
+                    onTap: () {
+                      Navigator.pop(context);
+                      onSelected(option);
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

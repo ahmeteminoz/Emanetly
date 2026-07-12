@@ -75,7 +75,7 @@ class MockItemService implements ItemService {
         id: 'item_2',
         title: 'Büyük Boy Siyah Şemsiye',
         description: 'Sağlam rüzgara dayanıklı şemsiye. Yağmurlu günlerde ders bitimine kadar ödünç verebilirim.',
-        category: 'Yağmurluk/Şemsiye',
+        category: 'Günlük Eşya & Yaşam',
         lenderId: 'user_3', // Can Demir
         lenderName: 'Can Demir',
         location: 'Fizik Bölümü Kantini',
@@ -111,7 +111,7 @@ class MockItemService implements ItemService {
         id: 'item_4',
         title: 'Sineklerin Tanrısı - William Golding',
         description: 'Edebiyat dersi için almıştım, okumak isteyen öğrenci arkadaşlara 2 hafta süreliğine emanet edebilirim.',
-        category: 'Ders/Kitap',
+        category: 'Ders & Kırtasiye',
         lenderId: 'user_2', // Ayşe Yılmaz
         lenderName: 'Ayşe Yılmaz',
         location: 'Merkez Kütüphane',
@@ -129,7 +129,7 @@ class MockItemService implements ItemService {
         id: 'item_5',
         title: 'Çizim Cetveli T-Cetveli 60cm',
         description: 'Mimarlık öğrencileri için T-cetveli. 1-2 günlüğüne ödünç alabilirsiniz.',
-        category: 'Kırtasiye',
+        category: 'Ders & Kırtasiye',
         lenderId: 'user_3', // Can Demir
         lenderName: 'Can Demir',
         location: 'Mimarlık Stüdyoları',
@@ -141,6 +141,42 @@ class MockItemService implements ItemService {
         pickupAddressText: 'Mimarlık Fakültesi A Blok stüdyolar giriş turnikesi',
         pickupLatitude: 41.0065,
         pickupLongitude: 28.9795,
+        locationVisibility: true,
+      ),
+      EmanetItem(
+        id: 'item_6',
+        title: 'Logitech Kablosuz Sessiz Fare',
+        description: 'Mühendislik laboratuvarında çalışırken kullanmak için sessiz tıklamalı ergonomik kablosuz mouse.',
+        category: 'Elektronik',
+        lenderId: 'user_1', // Ahmet Öz
+        lenderName: 'Ahmet Öz',
+        location: 'Mühendislik B Blok',
+        status: EmanetStatus.available,
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        comments: [],
+        mockImageColorValue: 0xFF10B981, // Emerald Green
+        pickupLocationTitle: 'Mühendislik B Blok',
+        pickupAddressText: 'Mühendislik B Blok giriş kapısı önü',
+        pickupLatitude: 41.0070,
+        pickupLongitude: 28.9790,
+        locationVisibility: true,
+      ),
+      EmanetItem(
+        id: 'item_7',
+        title: 'Python Programlamaya Giriş Kitabı',
+        description: 'Temel Python kavramları ve örnek projeler içeren ders kitabı. 2 hafta süreliğine verebilirim.',
+        category: 'Ders & Kırtasiye',
+        lenderId: 'user_1', // Ahmet Öz
+        lenderName: 'Ahmet Öz',
+        location: 'Merkez Kütüphane',
+        status: EmanetStatus.available,
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        comments: [],
+        mockImageColorValue: 0xFF3B82F6, // Bright Blue
+        pickupLocationTitle: 'Kütüphane önü',
+        pickupAddressText: 'Merkez Kütüphane ana giriş merdivenleri',
+        pickupLatitude: 41.0082,
+        pickupLongitude: 28.9784,
         locationVisibility: true,
       ),
     ]);

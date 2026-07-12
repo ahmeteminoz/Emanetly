@@ -189,7 +189,11 @@ class AppState extends ChangeNotifier {
   }
 
   // Request to borrow an item (Creates pre-agreement discussion chat flow or inquiry)
-  Future<BorrowRequestModel?> requestBorrow(String itemId, {bool isOfficialRequest = true}) async {
+  Future<BorrowRequestModel?> requestBorrow(
+    String itemId, {
+    bool isOfficialRequest = true,
+    String requestedDurationText = 'Belirtilmedi',
+  }) async {
     if (currentUser == null) return null;
     _setLoading(true);
     try {
@@ -206,7 +210,7 @@ class AppState extends ChangeNotifier {
         ownerId: item.lenderId,
         requesterId: currentUser!.uid,
         status: status,
-        requestedDurationText: '2 Saatlik',
+        requestedDurationText: requestedDurationText,
         createdAt: DateTime.now(),
       );
 
@@ -219,7 +223,7 @@ class AppState extends ChangeNotifier {
         senderId: 'system',
         senderName: 'Sistem',
         text: isOfficialRequest 
-            ? 'Ödünç talebi oluşturuldu: Görüşme aşamasında.'
+            ? 'Ödünç talebi oluşturuldu: Görüşme aşamasında (Süre: $requestedDurationText).'
             : 'Eşya hakkında soru soruldu: Bilgi alınıyor.',
         type: ChatMessageType.system,
         createdAt: DateTime.now(),
@@ -236,13 +240,16 @@ class AppState extends ChangeNotifier {
   }
 
   // Upgrade inquiry to official borrow request
-  Future<void> upgradeToOfficialRequest(String requestId) async {
+  Future<void> upgradeToOfficialRequest(String requestId, {required String requestedDurationText}) async {
     _setLoading(true);
     try {
       final index = _borrowRequests.indexWhere((r) => r.id == requestId);
       if (index != -1) {
         final req = _borrowRequests[index];
-        _borrowRequests[index] = req.copyWith(status: BorrowRequestStatus.pendingDiscussion);
+        _borrowRequests[index] = req.copyWith(
+          status: BorrowRequestStatus.pendingDiscussion,
+          requestedDurationText: requestedDurationText,
+        );
         
         // Add a system message in the chat
         _chatMessages.add(ChatMessageModel(
@@ -250,7 +257,7 @@ class AppState extends ChangeNotifier {
           requestId: requestId,
           senderId: 'system',
           senderName: 'Sistem',
-          text: 'Kullanıcı ödünç alma talebi gönderdi.',
+          text: 'Kullanıcı ödünç alma talebi gönderdi (Süre: $requestedDurationText).',
           type: ChatMessageType.system,
           createdAt: DateTime.now(),
         ));

@@ -1,44 +1,45 @@
 import 'package:flutter/material.dart';
-import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
-import '../theme/app_theme.dart';
-import '../models/item.dart';
-import 'widgets/item_card.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  // Privacy states
+  bool _approxLocation = true;
+  bool _exactLocationPostRequest = true;
+
+  // Notification states
+  bool _notifyRequests = true;
+  bool _notifyMessages = true;
+  bool _notifyReminders = true;
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Sample mock item for live preview
-    final previewItem = EmanetItem(
-      id: 'preview_1',
-      title: 'Önizleme Eşyası',
-      description: 'Renk paleti ve görünüm modunu canlı önizlemek için örnek karttır.',
-      category: 'Elektronik',
-      lenderId: 'user_2',
-      lenderName: 'Ayşe Yılmaz',
-      location: 'Kütüphane',
-      status: EmanetStatus.available,
-      createdAt: DateTime.now(),
-      mockImageColorValue: AppTheme.palettes[appState.selectedPaletteIndex]['seed'].value,
-    );
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Görünüm Ayarları'),
+        title: const Text('Ayarlar'),
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // Section 1: Dark Mode Option
-          _buildSectionHeader(context, 'Tema Modu', Icons.brightness_6_outlined),
-          const SizedBox(height: 12),
+          // Section 1: Theme selection
+          _buildSectionHeader(context, 'Görünüm ve Tema', Icons.brightness_6_outlined),
+          const SizedBox(height: 8),
           Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
             child: Column(
               children: [
                 _buildRadioListTile<ThemeMode>(
@@ -72,125 +73,136 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Section 2: Color Palettes Choice
-          _buildSectionHeader(context, 'Renk Paleti', Icons.palette_outlined),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: AppTheme.palettes.length,
-              itemBuilder: (context, index) {
-                final palette = AppTheme.palettes[index];
-                final isSelected = appState.selectedPaletteIndex == index;
-                final seedColor = palette['seed'] as Color;
-                final secondary = palette['secondary'] as Color;
-
-                return GestureDetector(
-                  onTap: () => appState.changePalette(index),
-                  child: Container(
-                    width: 90,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected 
-                            ? theme.colorScheme.primary 
-                            : theme.colorScheme.outlineVariant.withOpacity(0.5),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Circle representation
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [seedColor, secondary],
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            if (isSelected)
-                              const Icon(Icons.check, color: Colors.white, size: 18),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          palette['name'],
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Section 3: View Mode Configuration
-          _buildSectionHeader(context, 'Ürün Akış Modu', Icons.grid_view_outlined),
-          const SizedBox(height: 12),
+          // Section 2: Privacy Settings
+          _buildSectionHeader(context, 'Gizlilik Ayarları', Icons.security_outlined),
+          const SizedBox(height: 8),
           Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
             child: Column(
               children: [
-                _buildRadioListTile<ViewMode>(
-                  context: context,
-                  title: 'Standard Grid (Geniş 2\'li)',
-                  value: ViewMode.standardGrid,
-                  groupValue: appState.gridViewMode,
-                  onChanged: (mode) => appState.changeViewMode(mode!),
-                  icon: Icons.grid_view,
+                SwitchListTile(
+                  title: const Text('Yaklaşık konum göster'),
+                  subtitle: const Text('Diğer öğrenciler eşyalarınızın yaklaşık bölgesini görebilir.', style: TextStyle(fontSize: 12)),
+                  value: _approxLocation,
+                  onChanged: (val) {
+                    setState(() {
+                      _approxLocation = val;
+                    });
+                  },
+                  activeColor: theme.colorScheme.primary,
                 ),
                 const Divider(height: 1),
-                _buildRadioListTile<ViewMode>(
-                  context: context,
-                  title: 'Compact Grid (Yoğun 2\'li)',
-                  value: ViewMode.compactGrid,
-                  groupValue: appState.gridViewMode,
-                  onChanged: (mode) => appState.changeViewMode(mode!),
-                  icon: Icons.grid_on,
-                ),
-                const Divider(height: 1),
-                _buildRadioListTile<ViewMode>(
-                  context: context,
-                  title: 'Large Cards (Geniş Tek İlan)',
-                  value: ViewMode.largeCards,
-                  groupValue: appState.gridViewMode,
-                  onChanged: (mode) => appState.changeViewMode(mode!),
-                  icon: Icons.view_headline,
+                SwitchListTile(
+                  title: const Text('Tam konumu sadece talep sonrası göster'),
+                  subtitle: const Text('Buluşma noktası tam adresi sadece talep kabul edilirse paylaşılır.', style: TextStyle(fontSize: 12)),
+                  value: _exactLocationPostRequest,
+                  onChanged: (val) {
+                    setState(() {
+                      _exactLocationPostRequest = val;
+                    });
+                  },
+                  activeColor: theme.colorScheme.primary,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-          // Section 4: Live Preview box
-          _buildSectionHeader(context, 'Canlı Önizleme', Icons.visibility_outlined),
-          const SizedBox(height: 12),
-          Center(
-            child: SizedBox(
-              width: appState.gridViewMode == ViewMode.largeCards ? double.infinity : 200,
-              child: IgnorePointer(
-                child: ItemCard(
-                  item: previewItem,
-                  viewMode: appState.gridViewMode,
+          // Section 3: Notification Settings
+          _buildSectionHeader(context, 'Bildirimler', Icons.notifications_none_rounded),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('Yeni talep bildirimleri'),
+                  value: _notifyRequests,
+                  onChanged: (val) {
+                    setState(() {
+                      _notifyRequests = val;
+                    });
+                  },
+                  activeColor: theme.colorScheme.primary,
                 ),
-              ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Yeni mesaj bildirimleri'),
+                  value: _notifyMessages,
+                  onChanged: (val) {
+                    setState(() {
+                      _notifyMessages = val;
+                    });
+                  },
+                  activeColor: theme.colorScheme.primary,
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Teslim / iade hatırlatmaları'),
+                  value: _notifyReminders,
+                  onChanged: (val) {
+                    setState(() {
+                      _notifyReminders = val;
+                    });
+                  },
+                  activeColor: theme.colorScheme.primary,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
+
+          // Section 4: Account Actions
+          _buildSectionHeader(context, 'Hesap Ayarları', Icons.person_outline_rounded),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
+                  title: const Text('Profil bilgilerini düzenle'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Profil düzenleme özelliği sonraki sürümde eklenecek.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded, color: Colors.red),
+                  title: const Text('Çıkış yap', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Çıkış yapma özelliği sonraki sürümde eklenecek.'),
+                        duration: Duration(seconds: 2),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -198,17 +210,20 @@ class SettingsScreen extends StatelessWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: theme.colorScheme.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

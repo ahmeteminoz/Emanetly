@@ -12,28 +12,106 @@ class MockAuthService implements AuthService {
   final _controller = StreamController<UserProfile?>.broadcast();
   UserProfile? _currentUser;
 
-  // Pre-configured mock students
+  // Pre-configured mock students with extended trust data
   final List<UserProfile> _mockUsers = [
     UserProfile(
       uid: 'user_1',
       name: 'Ahmet Öz',
+      username: '@ahmetoz',
       studentId: '20220101001',
       email: 'ahmet@kampus.edu.tr',
       department: 'Bilgisayar Mühendisliği',
+      bio: 'Bilgisayar Mühendisliği 3. sınıf öğrencisi. Kampüste yardımlaşmayı ve sürdürülebilirliği destekliyorum.',
+      trustScore: 94,
+      averageRating: 4.8,
+      reviewCount: 12,
+      successfulBorrows: 8,
+      successfulLends: 5,
+      onTimeReturnRate: 100.0,
+      avgResponseTime: '12 dk',
+      lateReturnsCount: 0,
+      verificationBadges: ['E-posta doğrulandı', 'Telefon doğrulandı', 'Öğrenci profili'],
+      userBadges: ['Güvenilir ödünç veren', 'Zamanında iade', 'Hızlı yanıt'],
+      reviews: [
+        UserReview(
+          authorName: 'Ayşe Yılmaz',
+          rating: '5.0',
+          comment: 'HDMI dönüştürücüyü zamanında ve sorunsuz teslim etti.',
+          dateText: '2 gün önce',
+        ),
+        UserReview(
+          authorName: 'Can Demir',
+          rating: '4.8',
+          comment: 'İletişimi hızlıydı, buluşma noktasına zamanında geldi.',
+          dateText: '1 hafta önce',
+        ),
+        UserReview(
+          authorName: 'Melis Kaya',
+          rating: '4.5',
+          comment: 'Eşyayı temiz kullandı ve vaktinde iade etti.',
+          dateText: '2 hafta önce',
+        ),
+      ],
     ),
     UserProfile(
       uid: 'user_2',
       name: 'Ayşe Yılmaz',
+      username: '@ayseyilmaz',
       studentId: '20230202042',
       email: 'ayse@kampus.edu.tr',
       department: 'Endüstri Tasarımı',
+      bio: 'Endüstriyel Tasarım öğrencisiyim. İhtiyacınız olan maket malzemelerini veya cetvelleri sorabilirsiniz.',
+      trustScore: 97,
+      averageRating: 4.9,
+      reviewCount: 8,
+      successfulBorrows: 4,
+      successfulLends: 9,
+      onTimeReturnRate: 100.0,
+      avgResponseTime: '8 dk',
+      lateReturnsCount: 0,
+      verificationBadges: ['E-posta doğrulandı', 'Öğrenci profili'],
+      userBadges: ['Aktif paylaşımcı', 'Hızlı yanıt'],
+      reviews: [
+        UserReview(
+          authorName: 'Ahmet Öz',
+          rating: '5.0',
+          comment: 'USB-C kablosunu çok temiz teslim etti, çok teşekkürler.',
+          dateText: '3 gün önce',
+        ),
+        UserReview(
+          authorName: 'Can Demir',
+          rating: '4.8',
+          comment: 'Gereksiz uzatmadan hemen teslim etti.',
+          dateText: '3 hafta önce',
+        ),
+      ],
     ),
     UserProfile(
       uid: 'user_3',
       name: 'Can Demir',
+      username: '@candemir',
       studentId: '20210303077',
       email: 'can@kampus.edu.tr',
       department: 'Fizik Bölümü',
+      bio: 'Fizik Bölümü öğrencisiyim. Genelde merkez kütüphane veya fizik kantini çevresindeyim.',
+      trustScore: 89,
+      averageRating: 4.5,
+      reviewCount: 5,
+      successfulBorrows: 6,
+      successfulLends: 3,
+      onTimeReturnRate: 92.0,
+      avgResponseTime: '25 dk',
+      lateReturnsCount: 1,
+      verificationBadges: ['E-posta doğrulandı', 'Telefon doğrulandı'],
+      userBadges: ['Yardımsever'],
+      reviews: [
+        UserReview(
+          authorName: 'Ahmet Öz',
+          rating: '4.0',
+          comment: 'T-cetvelini aldım, iletişimi iyiydi ama teslimatta 5 dk gecikti.',
+          dateText: '5 gün önce',
+        ),
+      ],
     ),
   ];
 

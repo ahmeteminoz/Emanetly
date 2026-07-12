@@ -28,14 +28,14 @@ class ItemCard extends StatelessWidget {
       case 'Elektronik':
         categoryIcon = Icons.devices_other;
         break;
-      case 'Ders/Kitap':
+      case 'Ders & Kırtasiye':
         categoryIcon = Icons.menu_book_rounded;
         break;
-      case 'Kırtasiye':
-        categoryIcon = Icons.edit_note_rounded;
+      case 'Spor & Hobi':
+        categoryIcon = Icons.sports_volleyball_outlined;
         break;
-      case 'Yağmurluk/Şemsiye':
-        categoryIcon = Icons.umbrella_rounded;
+      case 'Günlük Eşya & Yaşam':
+        categoryIcon = Icons.shopping_bag_outlined;
         break;
     }
 
@@ -89,7 +89,7 @@ class ItemCard extends StatelessWidget {
 
     // RENDER LAYOUTS ACCORDING TO VIEW MODE
     
-    // 1. COMPACT GRID VIEW
+    // 1. COMPACT GRID VIEW (Very clean and dense)
     if (viewMode == ViewMode.compactGrid) {
       return Card(
         clipBehavior: Clip.antiAlias,
@@ -140,10 +140,15 @@ class ItemCard extends StatelessWidget {
       );
     }
 
-    // 2. STANDARD GRID VIEW (Dolap Style: Photo & Title)
+    // 2. STANDARD GRID VIEW (Dolap Style: Photo & Detailed Info)
     if (viewMode == ViewMode.standardGrid) {
       return Card(
         clipBehavior: Clip.antiAlias,
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+        ),
         child: InkWell(
           onTap: () => _navigateToDetails(context),
           child: Column(
@@ -185,20 +190,84 @@ class ItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Trust Rating Badge (Bottom-Right)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
+                            const SizedBox(width: 2),
+                            Text(
+                              rating,
+                              style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              // Body (Photo and Title Only)
+              // Body
               Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12.5,
-                  ),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.category,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 12, color: theme.colorScheme.outline),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            item.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 10.5,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Maks: 3g',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            color: theme.colorScheme.outline,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -207,10 +276,14 @@ class ItemCard extends StatelessWidget {
       );
     }
 
-    // 3. LARGE CARDS VIEW
+    // 3. LARGE CARDS VIEW (Full Details banner style)
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+      ),
       child: InkWell(
         onTap: () => _navigateToDetails(context),
         child: Column(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
+import '../models/item.dart';
+import '../models/borrow_request.dart';
 import 'widgets/item_card.dart';
 import 'request_chat_screen.dart';
-import 'active_transactions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,13 +16,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'Hepsi';
+  ViewMode _selectedViewMode = ViewMode.standardGrid;
 
   final List<String> _categories = [
     'Hepsi',
     'Elektronik',
-    'Ders/Kitap',
-    'Kırtasiye',
-    'Yağmurluk/Şemsiye',
+    'Ders & Kırtasiye',
+    'Spor & Hobi',
+    'Günlük Eşya & Yaşam',
     'Diğer'
   ];
 
@@ -33,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Filter items based on search, category and owner (exclude current user's own items)
     final filteredItems = appState.items.where((item) {
-      final isNotOwnItem = appState.currentUser == null || item.lenderId != appState.currentUser!.uid;
+      final isNotOwnItem = item.lenderId != appState.currentUser?.uid;
       final matchesSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.description.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory = _selectedCategory == 'Hepsi' || item.category == _selectedCategory;
@@ -112,11 +113,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     );
                   } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ActiveTransactionsScreen(),
-                      ),
+                    // Navigate to chat list index
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tüm sohbetleri görmek için alttaki Mesajlar sekmesine geçebilirsiniz.')),
                     );
                   }
                 },
@@ -125,9 +124,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         })(),
 
-        // Search Bar
+        // Search Bar Row
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
             onChanged: (value) {
               setState(() {
@@ -135,18 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
             decoration: InputDecoration(
-              hintText: 'Eşya ara...',
+              hintText: 'Kampüste ne arıyorsunuz?',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
-                    )
-                  : null,
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
               border: OutlineInputBorder(
@@ -158,95 +147,89 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // Horizontal Categories List
-        SizedBox(
-          height: 50,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: _categories.length,
-            itemBuilder: (context, index) {
-              final cat = _categories[index];
-              final isSelected = _selectedCategory == cat;
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: FilterChip(
-                  label: Text(cat),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedCategory = cat;
-                    });
-                  },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  selectedColor: theme.colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? theme.colorScheme.onPrimaryContainer
-                        : theme.colorScheme.onSurface,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        // Layout controller toolbar: "X ilan bulundu" & Grid style buttons
+        // Horizontal Categories List & View Mode Buttons
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.only(right: 8.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${filteredItems.length} İlan Listeleniyor',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurfaceVariant,
+              Expanded(
+                child: SizedBox(
+                  height: 50,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = _categories[index];
+                      final isSelected = _selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: FilterChip(
+                          label: Text(cat),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedCategory = cat;
+                            });
+                          },
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          selectedColor: theme.colorScheme.primaryContainer,
+                          labelStyle: TextStyle(
+                            color: isSelected
+                                ? theme.colorScheme.onPrimaryContainer
+                                : theme.colorScheme.onSurface,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-              // Layout style toggles
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
+              const VerticalDivider(width: 8, indent: 12, endIndent: 12),
+              // Compact Grid Button
+              IconButton(
+                icon: Icon(
+                  Icons.grid_on_rounded,
+                  size: 20,
+                  color: _selectedViewMode == ViewMode.compactGrid
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
                 ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.grid_on, size: 18),
-                      tooltip: 'Compact',
-                      color: appState.gridViewMode == ViewMode.compactGrid
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outline,
-                      onPressed: () => appState.changeViewMode(ViewMode.compactGrid),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.grid_view, size: 18),
-                      tooltip: 'Standard',
-                      color: appState.gridViewMode == ViewMode.standardGrid
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outline,
-                      onPressed: () => appState.changeViewMode(ViewMode.standardGrid),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.view_headline, size: 18),
-                      tooltip: 'Large',
-                      color: appState.gridViewMode == ViewMode.largeCards
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outline,
-                      onPressed: () => appState.changeViewMode(ViewMode.largeCards),
-                    ),
-                  ],
+                tooltip: 'Yoğun Görünüm',
+                onPressed: () => setState(() => _selectedViewMode = ViewMode.compactGrid),
+              ),
+              // Standard Grid Button
+              IconButton(
+                icon: Icon(
+                  Icons.grid_view_rounded,
+                  size: 20,
+                  color: _selectedViewMode == ViewMode.standardGrid
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
                 ),
+                tooltip: 'Standart Görünüm',
+                onPressed: () => setState(() => _selectedViewMode = ViewMode.standardGrid),
+              ),
+              // Large Cards Button
+              IconButton(
+                icon: Icon(
+                  Icons.view_headline_rounded,
+                  size: 20,
+                  color: _selectedViewMode == ViewMode.largeCards
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ),
+                tooltip: 'Geniş Kartlar',
+                onPressed: () => setState(() => _selectedViewMode = ViewMode.largeCards),
               ),
             ],
           ),
         ),
 
-        // Items List or Grid
+        // Product Listings Feed Area
         Expanded(
           child: filteredItems.isEmpty
               ? Center(
@@ -268,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : appState.gridViewMode == ViewMode.largeCards
+              : _selectedViewMode == ViewMode.largeCards
                   ? ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                       itemCount: filteredItems.length,
@@ -285,13 +268,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
-                        childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 1.0 : 0.8,
+                        childAspectRatio: _selectedViewMode == ViewMode.compactGrid ? 1.0 : 0.72,
                       ),
                       itemCount: filteredItems.length,
                       itemBuilder: (context, index) {
                         return ItemCard(
                           item: filteredItems[index],
-                          viewMode: appState.gridViewMode,
+                          viewMode: _selectedViewMode,
                         );
                       },
                     ),
