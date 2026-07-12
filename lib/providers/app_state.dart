@@ -603,6 +603,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addUserReview(String targetUserId, String comment, double ratingRating) {
+    if (currentUser == null) return;
+    
+    final review = UserReview(
+      authorName: currentUser!.name,
+      rating: ratingRating.toStringAsFixed(1),
+      comment: comment,
+      dateText: 'Bugün',
+    );
+
+    if (_authService is MockAuthService) {
+      (_authService as MockAuthService).addReviewToUser(targetUserId, review);
+      notifyListeners();
+    }
+  }
+
   // Pre-Agreement Mocks Initializer
   void _initPreAgreementMocks() {
     // Starting with empty mock data for clean prototype testing as requested.

@@ -306,6 +306,144 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     );
   }
 
+  void _showFeedbackDialog(
+    BuildContext context,
+    String targetUserId,
+    String targetName,
+    AppState appState,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        double currentRating = 5.0;
+        final commentController = TextEditingController();
+        final List<String> availableTags = ['Zamanında Teslim', 'Hızlı İletişim', 'Temiz Kullanım', 'Güvenilir'];
+        final List<String> selectedTags = [];
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final theme = Theme.of(context);
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Icon(Icons.rate_review_outlined, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('$targetName Değerlendir')),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Lütfen emanet süreç kalitesini değerlendirin:'),
+                    const SizedBox(height: 12),
+                    // Row of stars
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starVal = index + 1.0;
+                        return IconButton(
+                          icon: Icon(
+                            starVal <= currentRating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: Colors.amber,
+                            size: 32,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              currentRating = starVal;
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        hintText: 'Yorumunuzu yazın (örn: zamanında teslim etti)...',
+                        labelText: 'Yorum Yaz',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Etiketler:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: availableTags.map((tag) {
+                        final isSel = selectedTags.contains(tag);
+                        return ChoiceChip(
+                          label: Text(tag, style: const TextStyle(fontSize: 10)),
+                          selected: isSel,
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              if (selected) {
+                                selectedTags.add(tag);
+                              } else {
+                                selectedTags.remove(tag);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Close route screen
+                  },
+                  child: const Text('Atla'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final comment = commentController.text.trim();
+                    // Append selected tags to comments if present
+                    String finalComment = comment.isNotEmpty ? comment : 'Sorunsuz ve güvenilir işlem.';
+                    if (selectedTags.isNotEmpty) {
+                      finalComment += ' (${selectedTags.join(', ')})';
+                    }
+
+                    appState.addUserReview(
+                      targetUserId,
+                      finalComment,
+                      currentRating,
+                    );
+
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Close route screen
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                  ),
+                  child: const Text('Gönder'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildSimulationControls(
     BuildContext context,
     EmanetItem item,
@@ -315,8 +453,8 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
   ) {
     final theme = Theme.of(context);
 
-    // If status is not in progress, don't show controls
-    if (item.status == EmanetStatus.available || item.status == EmanetStatus.borrowed) {
+    // If status is available (not active process), don't show controls
+    if (item.status == EmanetStatus.available) {
       return const SizedBox();
     }
 
@@ -334,6 +472,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
           backgroundColor: color ?? theme.colorScheme.primary,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       );
     }
@@ -375,10 +514,9 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
           label: 'QR Göster & Teslim Et',
           icon: Icons.qr_code,
           onPressed: () {
-            // Generate standard mock scan event
             appState.completeDelivery(item.id);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Eşya teslim edildi, işlem tamamlandı!'), backgroundColor: Colors.green),
+              const SnackBar(content: Text('Eşya teslim edildi! Ödünç süreci başladı.'), backgroundColor: Colors.green),
             );
           },
           color: Colors.green,
@@ -390,11 +528,77 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
         onPressed: () {
           appState.completeDelivery(item.id);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Eşya teslim alındı, işlem tamamlandı!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Eşya teslim alındı! Ödünç süreci başladı.'), backgroundColor: Colors.green),
           );
         },
         color: theme.colorScheme.secondary,
       );
+    }
+
+    // 1. Handover Complete / Active Borrow State Controls
+    if (item.status == EmanetStatus.borrowed) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (isBorrower) ...[
+            buildButton(
+              label: 'İade Talebi Gönder (QR Göster)',
+              icon: Icons.settings_backup_restore_rounded,
+              onPressed: () {
+                appState.requestReturn(item.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('İade talebi gönderildi. Eşya sahibinin onaylaması bekleniyor.')),
+                );
+              },
+              color: Colors.deepPurple,
+            ),
+            const SizedBox(height: 8),
+            buildButton(
+              label: 'Eşya Sahibi ${item.lenderName}\'i Değerlendir',
+              icon: Icons.rate_review_outlined,
+              onPressed: () => _showFeedbackDialog(context, item.lenderId, item.lenderName, appState),
+              color: theme.colorScheme.secondary,
+            ),
+          ] else if (isLender) ...[
+            const Center(
+              child: Text(
+                'Eşya şu an ödünçte. İade talebi bekleniyor...',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (item.borrowerId != null)
+              buildButton(
+                label: 'Ödünç Alan ${item.borrowerName ?? "Öğrenci"}\'yi Değerlendir',
+                icon: Icons.rate_review_outlined,
+                onPressed: () => _showFeedbackDialog(context, item.borrowerId!, item.borrowerName ?? "Öğrenci", appState),
+                color: theme.colorScheme.secondary,
+              ),
+          ],
+        ],
+      );
+    }
+
+    // 2. Return Request Submitted State Controls
+    if (item.status == EmanetStatus.pendingReturn) {
+      if (isLender) {
+        return buildButton(
+          label: 'İadeyi Onayla & Kapat',
+          icon: Icons.done_all_rounded,
+          onPressed: () {
+            final borrowerId = item.borrowerId;
+            final borrowerName = item.borrowerName;
+            appState.approveReturn(item.id);
+            if (borrowerId != null && borrowerName != null) {
+              _showFeedbackDialog(context, borrowerId, borrowerName, appState);
+            } else {
+              Navigator.pop(context);
+            }
+          },
+          color: Colors.green,
+        );
+      }
+      return const Center(child: Text('İade talebi iletildi. Eşya sahibinin onaylaması bekleniyor...'));
     }
 
     return const SizedBox();

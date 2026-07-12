@@ -89,58 +89,52 @@ class ItemCard extends StatelessWidget {
 
     // RENDER LAYOUTS ACCORDING TO VIEW MODE
     
-    // 1. COMPACT GRID VIEW (Very clean and dense)
+    // 1. COMPACT GRID VIEW (Very clean and dense - Overflow-proof)
     if (viewMode == ViewMode.compactGrid) {
       return Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _navigateToDetails(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Image Container
-              AspectRatio(
-                aspectRatio: 1.0, // Square photo
-                child: Stack(
-                  children: [
-                    _buildItemImage(
-                      imageUrl: item.imageUrl,
-                      iconSize: 36,
-                      categoryIcon: categoryIcon,
-                      gradient: gradient,
-                    ),
-                    // Favorite Heart Button (Top-Right)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: _buildFavoriteButton(appState, context),
-                    ),
-                    // Status Badge (Bottom-Left)
-                    Positioned(
-                      bottom: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          statusText,
-                          style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
+          child: AspectRatio(
+            aspectRatio: 1.0, // Square photo
+            child: Stack(
+              children: [
+                _buildItemImage(
+                  imageUrl: item.imageUrl,
+                  iconSize: 36,
+                  categoryIcon: categoryIcon,
+                  gradient: gradient,
                 ),
-              ),
-            ],
+                // Favorite Heart Button (Top-Right)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: _buildFavoriteButton(appState, context),
+                ),
+                // Status Badge (Bottom-Left)
+                Positioned(
+                  bottom: 4,
+                  left: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    // 2. STANDARD GRID VIEW (Dolap Style: Photo & Detailed Info)
+    // 2. STANDARD GRID VIEW (Dolap Style: Photo & Detailed Info - Overflow-proof)
     if (viewMode == ViewMode.standardGrid) {
       return Card(
         clipBehavior: Clip.antiAlias,
@@ -216,58 +210,63 @@ class ItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Body
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.category,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
+              // Body (Clean & Overflow-proof Layout)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.location_on_outlined, size: 12, color: theme.colorScheme.outline),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            item.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 10.5,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                        Text(
+                          item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 1),
                         Text(
-                          'Maks: 3g',
+                          item.category,
                           style: TextStyle(
                             fontSize: 9.5,
-                            color: theme.colorScheme.outline,
+                            color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 11, color: theme.colorScheme.outline),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                item.location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Maks: 3g',
+                              style: TextStyle(
+                                      fontSize: 9,
+                                color: theme.colorScheme.outline,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],

@@ -67,33 +67,22 @@ class FavoritesScreen extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: appState.gridViewMode == ViewMode.largeCards
-                      ? ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: favoritedItems.length,
-                          itemBuilder: (context, index) {
-                            return ItemCard(
-                              item: favoritedItems[index],
-                              viewMode: ViewMode.largeCards,
-                            );
-                          },
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(12),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: appState.gridViewMode == ViewMode.compactGrid ? 1.0 : 0.8,
-                          ),
-                          itemCount: favoritedItems.length,
-                          itemBuilder: (context, index) {
-                            return ItemCard(
-                              item: favoritedItems[index],
-                              viewMode: appState.gridViewMode,
-                            );
-                          },
-                        ),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio: 0.72, // Matches standardGrid card design ratio exactly
+                    ),
+                    itemCount: favoritedItems.length,
+                    itemBuilder: (context, index) {
+                      return ItemCard(
+                        item: favoritedItems[index],
+                        viewMode: ViewMode.standardGrid,
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

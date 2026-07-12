@@ -154,4 +154,55 @@ class MockAuthService implements AuthService {
   }
 
   List<UserProfile> get availableMockUsers => _mockUsers;
+
+  void addReviewToUser(String targetUserId, UserReview review) {
+    final index = _mockUsers.indexWhere((u) => u.uid == targetUserId);
+    if (index != -1) {
+      final user = _mockUsers[index];
+      
+      // Calculate new reviews list
+      final updatedReviews = List<UserReview>.from(user.reviews)..add(review);
+      
+      // Calculate new average rating
+      double totalRating = 0.0;
+      for (final r in updatedReviews) {
+        totalRating += double.tryParse(r.rating) ?? 5.0;
+      }
+      final double newAvg = updatedReviews.isEmpty ? 5.0 : (totalRating / updatedReviews.length);
+
+      // Calculate new trust score dynamically (base 90 + rating weight)
+      int newTrustScore = (newAvg * 20).round();
+      if (newTrustScore > 100) newTrustScore = 100;
+      if (newTrustScore < 0) newTrustScore = 0;
+
+      // Update in memory list
+      _mockUsers[index] = UserProfile(
+        uid: user.uid,
+        name: user.name,
+        username: user.username,
+        studentId: user.studentId,
+        email: user.email,
+        department: user.department,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        trustScore: newTrustScore,
+        averageRating: double.parse(newAvg.toStringAsFixed(1)),
+        reviewCount: updatedReviews.length,
+        successfulBorrows: user.successfulBorrows + (review.comment.contains('iade') ? 1 : 0),
+        successfulLends: user.successfulLends,
+        onTimeReturnRate: user.onTimeReturnRate,
+        avgResponseTime: user.avgResponseTime,
+        lateReturnsCount: user.lateReturnsCount,
+        verificationBadges: user.verificationBadges,
+        userBadges: user.userBadges,
+        reviews: updatedReviews,
+      );
+
+      // If this is also the current user, notify auth stream
+      if (_currentUser?.uid == targetUserId) {
+        _currentUser = _mockUsers[index];
+        _controller.add(_currentUser);
+      }
+    }
+  }
 }
