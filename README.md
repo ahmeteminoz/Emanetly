@@ -2,16 +2,13 @@
 
 [Türkçe README için tıklayın](README_TR.md)
 
-A modern, community-driven campus marketplace and peer-to-peer item sharing mobile application built with Flutter. Emanetly enables university students and staff to lend and borrow low-value items (chargers, umbrellas, calculators, books, etc.) safely and efficiently within their campus ecosystem.
-
-> [!NOTE]
-> **MVP/Prototype Status**: This project is currently a Flutter UI/MVP prototype. Firebase integration, real QR scanning, real maps, and production backend features are simulated and planned for future versions.
+A modern, community-driven campus marketplace and peer-to-peer item sharing mobile application built with Flutter. Emanetly enables university students and staff to lend and borrow everyday items (chargers, calculators, books, tools, etc.) safely and efficiently within their campus ecosystem.
 
 ---
 
 ## Overview
 
-Emanetly is designed to digitize trust and sharing on university campuses. By creating a visual, modern marketplace format (similar to popular local shopping applications like Dolap), it allows users to view listings, mark favorites, leave trust rating reviews, customize theme aesthetics, and follow simulated routing maps for item handovers.
+Emanetly is designed to digitize trust and sharing on university campuses. By creating a visual, modern marketplace format (similar to popular local shopping applications like Dolap), it allows users to view listings, filter by categories, mark favorites, chat about handovers, and track simulated meetup routes. It places a major emphasis on community trust with a dedicated **Trust Dashboard**.
 
 ---
 
@@ -31,29 +28,56 @@ Emanetly offers a specialized campus-sharing marketplace:
 
 ---
 
-## Features
+## Current MVP Status
 
-*   **Modern Flutter UI**: Polished, responsive layout built using Material 3 guidelines.
-*   **Customizer System (Appearance)**: Live-switch between Light and Dark modes and 4 custom-tailored color palettes (Kampüs Klasik, Zümrüt Ormanı, Derin Okyanus, Lavanta Bahçesi).
-*   **Flexible Feed Densities**: Select between **Compact Grid** (pure visuals, image-only), **Standard Grid** (Dolap-style visual + title), and **Large Cards** (full summary and description).
-*   **Favorites & Search**: Instantly filter listings by query or category chips, and toggle items to a dedicated Favorites tab.
-*   **Granular Reviews & Ratings**: Display owner profiles with calculated trust scores and a history of transaction comments.
-*   **Simulated Route Tracking**: An interactive campus map using a custom painter showing active delivery coordinates, meeting points, and linear order progress.
+Emanetly is currently an in-memory MVP prototype for university students. Below is the checklist of the current technical state:
+*   **Current version**: in-memory MVP prototype
+*   **Database**: Mock in-memory data (resets on hot restart)
+*   **State management**: Provider / ChangeNotifier
+*   **Backend**: Planned (not integrated yet)
+*   **Firebase Auth**: Planned (not integrated yet)
+*   **Firestore**: Planned (not integrated yet)
+*   **Firebase Storage**: Planned (not integrated yet)
+*   **Maps**: Planned (custom painted simulation currently)
+*   **QR Code Handover**: Simulated (in-memory validation)
+*   **Real-time chat**: Planned (local mock simulation currently)
+*   **Push notifications**: Planned (not integrated yet)
 
 ---
 
-## Screenshots
+## Features
 
-| Explore Feed (Large View) | Item Details Screen | Profile & Listings |
-| :---: | :---: | :---: |
-| ![Explore Feed](screenshots/home.png) | ![Item Details](screenshots/item-detail.png) | ![Profile Details](screenshots/profile.png) |
+*   **Visual Item Discovery**: Polished, responsive layout built using Material 3 guidelines.
+*   **Category Filtering**: Collapsible, scrollable category filter bar with support for **multi-selecting** categories.
+*   **Flexible Feed Densities**: Select between **Compact Grid** (image-only), **Standard Grid** (Dolap-style visual + details), and **Large Cards** (full summary). 
+*   **Expandable View Selector**: Premium micro-interaction that expands to show choices, collapses after 5 seconds of inactivity, or collapses instantly when the active icon is clicked.
+*   **Favorites & Search**: Instantly filter listings by query or categories, and toggle items to a dedicated Favorites tab.
+*   **Ask Question / Inquiry Chat Flow**: Ask questions about an item (`BorrowRequestStatus.onlyInquiry`) without initiating a formal borrow request. The owner can accept/reject once the request is formally upgraded.
+*   **Borrow Request Flow**: Send official requests with a duration selector sheet (1 hour, 2 hours, 6 hours, 1 day, 3 days, 1 week) that updates status to `pendingDiscussion`.
+*   **Meeting Point Proposals**: Suggest specific campus coordinates and times within the chat thread.
+*   **Simulated Route Tracking**: An interactive campus map using a custom painter showing active delivery coordinates, meeting points, and linear order progress.
+*   **QR Handover Simulation**: Authenticate handovers by simulating scans supporting both `emanetly://` and legacy `kampusemanet://` deep link URL structures.
+*   **Trust Dashboard Profile**: View your own profile with calculated trust scores, verification statuses (email, phone, student status), transaction statistics, achievements, active listings, and reviews.
+*   **Public User Profile**: View other users' profiles in a read-only format showing only public safety metrics, preferred meetup locations, listings, and commented reviews with quick tags ("Zamanında teslim", "Hızlı iletişim"). Includes simulated Report/Block buttons.
+*   **Settings Screen**: Clean settings screen supporting Light, Dark, and System theme selectors linked to `AppState` alongside toggles for privacy and notifications.
+
+---
+
+## Current Limitations
+
+*   **No Real Backend**: All transactions, users, and listings are volatile and stored in local RAM.
+*   **Data Resets on Hot Restart**: Restarting the app clears all simulated chat rooms, requests, and listings to standard mock states.
+*   **No Real Authentication**: Logged-in profiles can be swapped at the bottom of the profile tab to simulate lender/borrower chats, but there is no auth barrier.
+*   **No Real Maps**: Path drawing uses custom painters on mock canvas assets.
+*   **Simulated QR & Chat**: Camera scans and message streams are local time-delayed mock tasks.
+*   **No Real Image Picker**: Adding items or profile pictures uses fallback asset placeholders.
 
 ---
 
 ## Tech Stack
 
 *   **Framework**: [Flutter](https://flutter.dev) (Dart)
-*   **State Management**: `InheritedNotifier` provider architecture for light, reactive rebuilding.
+*   **State Management**: `AppState` ChangeNotifier provider architecture for light, reactive rebuilding.
 *   **UI System**: Material 3 theme configurations, custom path drawing (`CustomPainter`), and fluid micro-animations.
 
 ---
@@ -63,14 +87,18 @@ Emanetly offers a specialized campus-sharing marketplace:
 ```mermaid
 graph TD
     A[Launch App] --> B[Explore Feed]
-    B -->|Search/Filter| C[Filtered Listings]
+    B -->|Search/Multi-Filter| C[Filtered Listings]
     B -->|Click Item| D[Item Details]
     D -->|Add Favorite| E[Favorites Tab]
-    D -->|Request Item| F[Create Active Delivery]
-    F --> G[Active Transactions Tab]
-    G -->|Click Track| H[Mock Route Map & Timeline Stepper]
-    H -->|Complete Process| I[Add Transaction Review/Rating]
-    B -->|Settings/Aesthetic| J[Theme Palette Customizer]
+    D -->|Ask Question| F[Inquiry Chat Flow]
+    D -->|Request Item| G[Select Duration Sheet]
+    G --> H[Formal Borrow Request]
+    H --> I[Active Transactions Tab]
+    I -->|Click Chat| J[Negotiate / Propose Meeting Point]
+    J -->|Accept Request| K[Mock Route Map & Timeline Stepper]
+    K -->|Scan Handover QR| L[Borrowed State]
+    L -->|Scan Return QR| M[Review & Rating Screen]
+    M --> N[Update User Trust Score]
 ```
 
 ---
@@ -79,26 +107,31 @@ graph TD
 
 ```text
 lib/
-├── main.dart                 # Application entry point
+├── main.dart                 # Application entry point (EmanetlyApp)
 ├── models/
-│   ├── comment.dart          # Review and rating data model
-│   └── item.dart             # EmanetItem model with delivery statuses
+│   ├── borrow_request.dart   # Request metadata and chat states
+│   ├── chat_message.dart     # Text, system, and proposal messages
+│   ├── comment.dart          # Simple comment data
+│   ├── item.dart             # EmanetItem details and statuses
+│   ├── meeting_point_proposal.dart # Propose coordinates inside chats
+│   └── user_profile.dart     # Trust metrics, badges, and reviews
 ├── providers/
 │   ├── app_state.dart        # Core provider managing app-wide local state
 │   └── app_state_provider.dart
 ├── screens/
 │   ├── main_layout.dart      # Bottom navigation shell coordinator
-│   ├── home_screen.dart      # Discovery feed screen with view switchers
-│   ├── item_detail_screen.dart # Hero headers, ratings, and comments list
+│   ├── home_screen.dart      # Discovery feed with view density selectors
+│   ├── item_detail_screen.dart # Details page with interactive owner cards
 │   ├── favorites_screen.dart # Favorite items grid
-│   ├── settings_screen.dart  # Palette customizer and live preview
-│   ├── active_transactions_screen.dart # Lists active lendings
+│   ├── settings_screen.dart  # Theme selector and privacy switches
+│   ├── active_transactions_screen.dart # Separated Gelen Kutusu / Taleplerim tabs
 │   ├── mock_route_screen.dart # Custom Paint campus maps and simulator
-│   └── profile_screen.dart   # Profile details and owner's active listings
+│   ├── profile_screen.dart   # Private Trust Dashboard and demo switcher
+│   └── public_profile_screen.dart # Read-only public profiles, comments, and items
 ├── services/
-│   ├── auth_service.dart     # Mock Authentication
+│   ├── auth_service.dart     # Mock Authentication and seeded users
 │   ├── item_service.dart     # Seed data and state actions
-│   └── qr_service.dart       # Mock QR handler
+│   └── qr_service.dart       # Mock QR handler with emanetly:// scheme
 └── theme/
     └── app_theme.dart        # M3 light/dark seeds and palettes
 ```
@@ -135,14 +168,25 @@ To run built-in widget smoke tests:
 flutter test
 ```
 
+To run static analysis check:
+```bash
+flutter analyze
+```
+
 ---
 
-## Roadmap & Future Improvements
+## Roadmap
 
-*   [ ] **Firebase Integration**: Authenticate users using campus mail addresses (`.edu.tr`) and persist listings in Firestore.
-*   [ ] **Real QR Scanning**: Utilize device camera packages to scan handovers secure and complete.
-*   [ ] **Google Maps Integration**: Replace simulated path painters with live coordinates and geopins.
-*   [ ] **Push Notifications**: Notify users when an item request is accepted or return deadlines approach.
+1.  **Public Profile Screen & Owner Navigation**: Clickable owner cards on item details routing to read-only user metrics and comments. *(Completed)*
+2.  **README and GitHub Cleanup**: Consolidating repository information and renaming KampusEmanet references to Emanetly. *(Completed)*
+3.  **Firebase Authentication**: Implement actual campus student email (`.edu.tr`) verification flows.
+4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections.
+5.  **Firebase Storage**: Store item images and profile pictures in Storage buckets.
+6.  **Real-time Chat with Firestore**: Replace simulated streams with real Firestore listener channels.
+7.  **Real Google Maps Integration**: Replace painter simulations with live geofenced meeting coordinates.
+8.  **Real QR Handover Flow**: Implement device camera scanning and hash checks on meetup.
+9.  **Notifications and Reminders**: Set up FCM (Firebase Cloud Messaging) for handover and return alerts.
+10. **Production Polish**: Performance optimization, clean visual feedback animations, and App Store / Google Play prep.
 
 ---
 

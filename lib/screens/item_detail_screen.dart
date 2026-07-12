@@ -5,6 +5,7 @@ import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
+import 'public_profile_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final EmanetItem item;
@@ -370,6 +371,7 @@ class ItemDetailScreen extends StatelessWidget {
     bool isBorrower,
   ) {
     final theme = Theme.of(context);
+    final appState = AppStateProvider.of(context);
     final lenderText = isOwnItem ? 'Sen (Eşya Sahibi)' : item.lenderName;
 
     // Determine trust score mock values
@@ -400,115 +402,146 @@ class ItemDetailScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withOpacity(0.3),
-            ),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      item.lenderName[0].toUpperCase(),
-                      style: TextStyle(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
+        (() {
+          final lenderUser = appState.availableMockUsers.firstWhere(
+            (u) => u.uid == item.lenderId,
+            orElse: () => appState.availableMockUsers.first,
+          );
+
+          return GestureDetector(
+            onTap: isOwnItem
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PublicProfileScreen(userId: item.lenderId),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          lenderText,
-                          style: theme.textTheme.titleMedium?.copyWith(
+                    );
+                  },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        child: Text(
+                          item.lenderName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Öğrenci Üye',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isOwnItem)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
-                        'İlanım',
-                        style: TextStyle(
-                          fontSize: 10,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lenderText,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  '${lenderUser.department} • Öğrenci',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                                if (!isOwnItem) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '•   Profili Gör',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isOwnItem)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'İlanım',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  // Trust Score and Transaction details
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Trust Rating
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                          const SizedBox(width: 4),
+                          Text(
+                            lenderUser.averageRating.toString(),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(Güven Skoru: ${lenderUser.trustScore})',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Response Time & Location
+                      Text(
+                        'Yanıt: ${lenderUser.avgResponseTime}',
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              // Trust Score and Transaction details
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Trust Rating
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        rating,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '($transactions işlem)',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
                     ],
                   ),
-                  // Badge status
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: badgeColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      badgeText,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: badgeColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        })(),
         if (item.borrowerName != null) ...[
           const SizedBox(height: 20),
           Text(

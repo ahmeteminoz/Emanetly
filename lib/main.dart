@@ -25,13 +25,13 @@ void main() {
   runApp(
     AppStateProvider(
       notifier: appState,
-      child: const KampusEmanetApp(),
+      child: const EmanetlyApp(),
     ),
   );
 }
 
-class KampusEmanetApp extends StatelessWidget {
-  const KampusEmanetApp({super.key});
+class EmanetlyApp extends StatelessWidget {
+  const EmanetlyApp({super.key});
 
   @override
   Widget build(BuildContext context) {

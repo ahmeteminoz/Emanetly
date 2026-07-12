@@ -22,7 +22,7 @@ void main() {
     await tester.pumpWidget(
       AppStateProvider(
         notifier: appState,
-        child: const KampusEmanetApp(),
+        child: const EmanetlyApp(),
       ),
     );
 

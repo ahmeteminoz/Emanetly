@@ -23,7 +23,7 @@ abstract class QrService {
 class MockQrService implements QrService {
   @override
   String generateQrData({required String itemId, required String action, required String userId}) {
-    return 'kampusemanet:///item/$itemId/$action/$userId';
+    return 'emanetly:///item/$itemId/$action/$userId';
   }
 
   @override
@@ -31,7 +31,7 @@ class MockQrService implements QrService {
     await Future.delayed(const Duration(milliseconds: 800)); // Simulating camera scanning
     try {
       final uri = Uri.parse(code);
-      if (uri.scheme == 'kampusemanet') {
+      if (uri.scheme == 'emanetly' || uri.scheme == 'kampusemanet') {
         final segments = uri.pathSegments;
         if (segments.length >= 4 && segments[0] == 'item') {
           final itemId = segments[1];

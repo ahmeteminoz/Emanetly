@@ -2,16 +2,13 @@
 
 [Click here for English README](README.md)
 
-Emanetly, üniversite kampüslerinde öğrencilerin ve çalışanların günlük ihtiyaç duydukları düşük değerli eşyaları (şarj aletleri, şemsiyeler, hesap makineleri, kitaplar vb.) kampüs ekosistemi içinde güvenli ve verimli bir şekilde ödünç alıp verebilmelerini sağlayan, Flutter ile geliştirilmiş modern, topluluk odaklı bir mobil pazar yeri ve paylaşım uygulamasıdır.
-
-> [!NOTE]
-> **MVP/Prototip Durumu**: Bu proje şu anda bir Flutter UI/MVP prototipidir. Firebase entegrasyonu, gerçek QR tarama, gerçek haritalar ve canlı sunucu özellikleri gelecek sürümler için planlanmış olup, şu anki sürümde yerel durum (state) ile simüle edilmektedir.
+Üniversite kampüslerinde öğrencilerin ve çalışanların günlük ihtiyaç duydukları eşyaları (şarj aletleri, hesap makineleri, kitaplar, aletler vb.) kampüs ekosistemi içinde güvenli ve verimli bir şekilde ödünç alıp verebilmelerini sağlayan, Flutter ile geliştirilmiş modern, topluluk odaklı bir mobil pazar yeri ve paylaşım uygulamasıdır.
 
 ---
 
 ## Genel Bakış
 
-Emanetly, üniversite kampüslerinde güveni ve paylaşımı dijitalleştirmek için tasarlanmıştır. Popüler ikinci el alışveriş uygulamalarına (Dolap gibi) benzer, görsel ve modern bir pazar yeri formatı sunarak kullanıcıların ilanları incelemesine, favorilere eklemesine, güven puanı yorumları bırakmasına, tema estetiğini kişiselleştirmesine ve eşya teslimatları için simüle edilmiş rota haritalarını takip etmesine olanak tanır.
+Emanetly, üniversite kampüslerinde güveni ve paylaşımı dijitalleştirmek için tasarlanmıştır. Popüler ikinci el alışveriş uygulamalarına (Dolap gibi) benzer, görsel ve modern bir pazar yeri formatı sunarak kullanıcıların ilanları incelemesine, kategorilere göre filtrelemesine, favorilere eklemesine, teslimatlar için sohbet etmesine ve simüle edilmiş rota haritalarını takip etmesine olanak tanır. Uygulama, özel bir **Güven Paneli** ile topluluk güvenliğine büyük önem verir.
 
 ---
 
@@ -23,54 +20,85 @@ Emanetly, üniversite kampüslerinde güveni ve paylaşımı dijitalleştirmek i
 
 ## Çözüm
 
-Emanetly, kampüse özel organize bir paylaşım pazar yeri sunar:
-*   **Yapılandırılmış İlanlar**: Karmaşık sohbet satırları yerine görsel kategoriler (Elektronik, Kitap, Kırtasiye vb.).
-*   **Güven Puanları**: Güvenilir paylaşımı teşvik eden, geri bildirim odaklı bir puanlama sistemi.
-*   **Gerçek Zamanlı Teslimat Akışı**: İstek gönderme, buluşma ve teslimatı tamamlama adımlarını gösteren net bir zaman çizelgesi (timeline).
-*   **Etkileşimli Kampüs Haritası**: Ödünç alan kişinin ödünç veren kişiyi kolayca bulabilmesi için kampüs binaları arasındaki yolları simüle eder.
+Emanetly, kampüse özel yapılandırılmış bir paylaşım pazar yeri sunar:
+*   **Yapılandırılmış İlanlar**: Karmaşık sohbet satırları yerine görsel kategoriler (Elektronik, Kitaplar, Kırtasiye vb.).
+*   **Güven Puanları**: Güvenilir paylaşımı teşvik eden geri bildirime dayalı bir değerlendirme sistemi.
+*   **Gerçek Zamanlı Teslimat Zaman Çizelgesi**: İstek gönderme, buluşma ve teslimat adımları için net süreç takibi.
+*   **Etkileşimli Rota Çizimi**: Ödünç alanların ödünç verenleri kolayca bulabilmesi için kampüs binaları arasındaki yolları simüle eder.
+
+---
+
+## Mevcut MVP Durumu
+
+Emanetly şu anda üniversite öğrencileri için geliştirilmiş bir bellek içi (in-memory) MVP prototipidir. Mevcut teknik durum çeklistesi şu şekildedir:
+*   **Mevcut Sürüm**: Bellek içi (in-memory) MVP prototipi
+*   **Veritabanı**: Mock bellek içi veri (Hot restart atıldığında sıfırlanır)
+*   **Durum Yönetimi (State)**: Provider / ChangeNotifier
+*   **Sunucu / Backend**: Planlandı (henüz entegre edilmedi)
+*   **Firebase Auth**: Planlandı (henüz entegre edilmedi)
+*   **Firestore**: Planlandı (henüz entegre edilmedi)
+*   **Firebase Storage**: Planlandı (henüz entegre edilmedi)
+*   **Harita / Konum**: Planlandı (şu anda custom painter çizimiyle simüle edilmiştir)
+*   **QR Kod Doğrulama**: Simüle edildi (bellek içi doğrulama)
+*   **Gerçek Zamanlı Sohbet**: Planlandı (şu anda gecikmeli yerel simülasyon)
+*   **Anlık Bildirimler (Push)**: Planlandı (henüz entegre edilmedi)
 
 ---
 
 ## Özellikler
 
-*   **Modern Flutter Arayüzü**: Material 3 yönergelerine uygun, duyarlı ve şık düzenler.
-*   **Tema Kişiselleştirme**: Açık ve Koyu mod ile 4 farklı özel renk paleti (Kampüs Klasik, Zümrüt Ormanı, Derin Okyanus, Lavanta Bahçesi) arasında canlı geçiş.
-*   **Esnek Akış Görünümleri**: **Compact Grid** (sadece görsel odaklı), **Standard Grid** (Dolap tarzı görsel + başlık) ve **Large Cards** (açıklama ve detaylar dahil büyük kartlar) seçenekleri.
-*   **Favoriler ve Arama**: Arama çubuğu veya kategori butonları ile anında filtreleme; ilanları favoriler sekmesine kaydedebilme.
-*   **Değerlendirme ve Yorumlar**: Profil sayfalarında hesaplanan güven puanları ve geçmiş işlemlerin yorum geçmişi.
-*   **Simüle Edilmiş Rota Takibi**: CustomPainter ile çizilmiş, teslimat konumlarını, buluşma noktalarını ve işlem adımlarını gösteren etkileşimli kampüs haritası.
+*   **Görsel İlan Keşfi**: Material 3 yönergelerine uygun, şık ve duyarlı arayüz tasarımı.
+*   **Kategori Filtreleme**: Sağa doğru kaydırılabilen ve **birden fazla kategori** seçilmesini destekleyen minimalist kategori çubukları.
+*   **Esnek Akış Yoğunluğu**: **Yoğun Izgara** (sadece görsel), **Standart Izgara** (Dolap tarzı görsel + detaylar) ve **Geniş Kartlar** (tam özet) arasında geçiş.
+*   **Yumuşak Görünüm Seçici Animasyonu**: Seçenekleri göstermek için genişleyen, 5 saniye işlem yapılmadığında veya aktif ikona tekrar basıldığında otomatik olarak daralan `AnimatedCrossFade` seçici paneli.
+*   **Favoriler & Arama**: İlanları kelimeye veya kategorilere göre anında filtreleme, ilanları favoriler sekmesine ekleme/çıkarma.
+*   **Soru Sor / Bilgi Edinme Sohbeti**: Bir ilan için resmi talep oluşturmadan soru sorma akışı (`BorrowRequestStatus.onlyInquiry`). İlan resmi talebe yükseltildiğinde onay/red butonları aktifleşir.
+*   **Ödünç Talebi Akışı**: Süre seçici paneli (1 saat, 2 saat, 6 saat, 1 gün, 3 gün, 1 hafta) ile resmi talep gönderimi ve durumun `pendingDiscussion` olarak güncellenmesi.
+*   **Buluşma Noktası Önerileri**: Sohbet ekranında doğrudan kampüs koordinatları ve saat teklif etme.
+*   **Simüle Edilmiş Rota Takibi**: Custom Painter ile çizilen, buluşma noktalarını ve işlem aşamalarını gösteren etkileşimli kampüs haritası.
+*   **QR Doğrulama Simülasyonu**: `emanetly://` ve eski `kampusemanet://` şemalarını destekleyen QR tarama simülasyonu ile teslimat onaylama.
+*   **Güven Paneli (Kişisel Profil)**: Güven skorunuzu, doğrulama durumlarınızı (e-posta, telefon, öğrenci kimliği), işlem istatistiklerinizi, rozetlerinizi ve gelen yorumları gösteren arayüz.
+*   **Kamuya Açık Profil (Public Profile)**: Diğer kullanıcıların profillerini inceleyebileceğiniz, güvenlik aksiyonları (Bildir/Engelle) ve kullanıcının sadece aktif ilanları ile tag'li yorumlarını gösteren gizlilik odaklı salt okunur arayüz.
+*   **Ayarlar Ekranı**: `AppState` ile entegre Açık/Koyu/Sistem teması seçici, bildirim ve konum gizliliği switchleri.
 
 ---
 
-## Ekran Görüntüleri
+## Mevcut Kısıtlamalar
 
-| Keşfet Akışı (Geniş Kartlar) | İlan Detay Ekranı | Profil ve İlanlarım |
-| :---: | :---: | :---: |
-| ![Explore Feed](screenshots/home.png) | ![Item Details](screenshots/item-detail.png) | ![Profile Details](screenshots/profile.png) |
-
----
-
-## Kullanılan Teknolojiler
-
-*   **Framework**: [Flutter](https://flutter.dev) (Dart)
-*   **Durum Yönetimi (State Management)**: Hafif ve reaktif veri güncellemeleri için `InheritedNotifier` mimarisi.
-*   **Arayüz Bileşenleri**: Material 3 tema yapılandırmaları, özel çizimler (`CustomPainter`) ve akıcı mikro-animasyonlar.
+*   **Gerçek Sunucu Yok**: Tüm işlemler, kullanıcılar ve ilanlar geçicidir ve RAM üzerinde tutulur.
+*   **Hot Restart Sırasında Veri Sıfırlanır**: Uygulamayı yeniden başlatmak tüm aktif sohbetleri, talepleri ve ilanları varsayılan mock durumuna geri döndürür.
+*   **Gerçek Yetkilendirme Yok**: Profil sekmesinin altındaki menüden test kullanıcıları arasında geçiş yapılabilir ancak gerçek bir üyelik bariyeri yoktur.
+*   **Gerçek Harita Entegrasyonu Yok**: Rota çizimleri mock harita görselleri üzerinde CustomPainter ile yapılmaktadır.
+*   **Simüle Edilmiş QR & Sohbet**: Kamera taramaları ve mesajlaşma akışları yerel zaman geciktiricili mock işlevlerdir.
+*   **Fotoğraf Yükleme UI Placeholder'dır**: İlan veya profil resmi ekleme alanlarında galeriden resim seçmek yerine hazır yer tutucu görseller kullanılır.
 
 ---
 
-## Uygulama Akış Şeması
+## Teknoloji Altyapısı
+
+*   **Çerçeve (Framework)**: [Flutter](https://flutter.dev) (Dart)
+*   **Durum Yönetimi (State)**: Reaktif ve hafif yeniden derleme için `AppState` ChangeNotifier Provider mimarisi.
+*   **Arayüz (UI)**: Material 3 tema yapılandırmaları, özel çizimler (`CustomPainter`) ve akıcı mikro-animasyonlar.
+
+---
+
+## Proje Akışı
 
 ```mermaid
 graph TD
     A[Uygulamayı Başlat] --> B[Keşfet Akışı]
-    B -->|Arama/Filtreleme| C[Filtrelenmiş İlanlar]
-    B -->|İlana Tıkla| D[İlan Detayları]
+    B -->|Arama/Çoklu Filtre| C[Filtrelenmiş İlanlar]
+    B -->|İlana Tıkla| D[İlan Detayı]
     D -->|Favorilere Ekle| E[Favoriler Sekmesi]
-    D -->|Eşyayı Talep Et| F[Aktif Teslimat Oluştur]
-    F --> G[Aktif Takip Sekmesi]
-    G -->|Haritada Takip Et| H[Simüle Rota Haritası ve Stepper]
-    H -->|İşlemi Tamamla| I[İşlem Değerlendirmesi Ekle]
-    B -->|Ayarlar/Görünüm| J[Tema Paleti Kişiselleştirici]
+    D -->|Soru Sor| F[Bilgi Edinme Sohbeti]
+    D -->|Ödünç Talep Et| G[Süre Seçim Paneli]
+    G --> H[Resmi Ödünç Talebi]
+    H --> I[Aktif Süreçler Sekmesi]
+    I -->|Sohbete Tıkla| J[Pazarlık / Buluşma Noktası Önerisi]
+    J -->|Talebi Kabul Et| K[Mock Rota Haritası & Süreç Takibi]
+    K -->|Teslimat QR Kodunu Tara| L[Ödünç Alındı Durumu]
+    L -->|İade QR Kodunu Tara| M[Değerlendirme & Yorum Ekranı]
+    M --> N[Güven Skorunu Güncelle]
 ```
 
 ---
@@ -79,39 +107,44 @@ graph TD
 
 ```text
 lib/
-├── main.dart                 # Uygulama giriş noktası
+├── main.dart                 # Uygulama giriş noktası (EmanetlyApp)
 ├── models/
-│   ├── comment.dart          # Kullanıcı yorumları ve değerlendirme modeli
-│   └── item.dart             # EmanetItem veri modeli ve teslimat durumları
+│   ├── borrow_request.dart   # Talep bilgileri ve sohbet durumları
+│   ├── chat_message.dart     # Metin, sistem ve teklif mesajları
+│   ├── comment.dart          # Basit yorum verisi
+│   ├── item.dart             # EmanetItem detayları ve durumları
+│   ├── meeting_point_proposal.dart # Sohbet içi buluşma teklifleri
+│   └── user_profile.dart     # Güven metrikleri, rozetler ve yorumlar
 ├── providers/
-│   ├── app_state.dart        # Uygulama geneli durum (state) yöneticisi
+│   ├── app_state.dart        # Uygulama genelindeki yerel durumu yöneten provider
 │   └── app_state_provider.dart
 ├── screens/
-│   ├── main_layout.dart      # Alt navigasyon barı koordinatörü
-│   ├── home_screen.dart      # Keşfet akışı ve görünüm geçişleri
-│   ├── item_detail_screen.dart # Görsel alanı, puanlar ve yorumlar listesi
-│   ├── favorites_screen.dart # Favorilere eklenen ilanların ızgarası
-│   ├── settings_screen.dart  # Canlı önizlemeli görünüm ayarları
-│   ├── active_transactions_screen.dart # Aktif işlemleri listeler
-│   ├── mock_route_screen.dart # Özel çizim harita ve teslimat simülatörü
-│   └── profile_screen.dart   # Profil detayları ve kullanıcının kendi ilanları
+│   ├── main_layout.dart      # Alt navigasyon paneli koordinatörü
+│   ├── home_screen.dart      # Keşfet akışı ve görünüm modu butonları
+│   ├── item_detail_screen.dart # Tıklanabilir sahip kartı içeren detay sayfası
+│   ├── favorites_screen.dart # Favori ilanlar listesi
+│   ├── settings_screen.dart  # Tema seçici ve gizlilik ayarları
+│   ├── active_transactions_screen.dart # Gelen Kutusu / Taleplerim sekmeli görünümü
+│   ├── mock_route_screen.dart # Custom Paint kampüs haritası simülatörü
+│   ├── profile_screen.dart   # Kişisel Güven Paneli ve demo kullanıcı değiştirici
+│   └── public_profile_screen.dart # Salt okunur kamu profili, ilanlar ve yorumlar
 ├── services/
-│   ├── auth_service.dart     # Mock Kimlik Doğrulama Servisi
-│   ├── item_service.dart     # Mock veriler ve teslimat durumu güncellemeleri
-│   └── qr_service.dart       # Mock QR kod doğrulama servisi
+│   ├── auth_service.dart     # Mock yetkilendirme ve ön tanımlı kullanıcılar
+│   ├── item_service.dart     # Hazır ilan verileri ve durum aksiyonları
+│   └── qr_service.dart       # emanetly:// şemalı mock QR servisi
 └── theme/
-    └── app_theme.dart        # M3 açık/koyu tema tohumları ve paletleri
+    └── app_theme.dart        # M3 açık/koyu renk ve palet şemaları
 ```
 
 ---
 
-## Kurulum
+## Kurulum ve Çalıştırma
 
 ### Gereksinimler
-Sisteminizde [Flutter SDK](https://docs.flutter.dev/get-started/install) kurulu olduğundan emin olun.
+Sisteminizde [Flutter SDK](https://docs.flutter.dev/get-started/install) yüklü olduğundan emin olun.
 
 ### Adımlar
-1.  **Projeyi Klonlayın**:
+1.  **Depoyu Klonlayın**:
     ```bash
     git clone https://github.com/ahmeteminoz/Emanetly.git
     cd Emanetly
@@ -120,32 +153,38 @@ Sisteminizde [Flutter SDK](https://docs.flutter.dev/get-started/install) kurulu 
     ```bash
     flutter pub get
     ```
+3.  **Projeyi Çalıştırın**:
+    ```bash
+    flutter run
+    ```
 
----
-
-## Uygulamayı Çalıştırma
-
-Uygulamayı emülatörünüzde veya bağlı fiziksel cihazınızda başlatın:
-```bash
-flutter run
-```
-
-Yerleşik widget testlerini çalıştırmak için:
+Ssmoke testleri çalıştırmak için:
 ```bash
 flutter test
 ```
 
+Statik kod analizi yapmak için:
+```bash
+flutter analyze
+```
+
 ---
 
-## Yol Haritası ve Gelecek Geliştirmeler
+## Yol Haritası (Roadmap)
 
-*   [ ] **Firebase Entegrasyonu**: Kullanıcıları okul e-postaları (`.edu.tr`) ile doğrulamak ve ilanları Firestore üzerinde barındırmak.
-*   [ ] **Gerçek QR Tarayıcı**: Teslimat doğrulamalarını kameradan QR okutarak güvenli hale getirmek.
-*   [ ] **Google Haritalar**: Simüle çizim harita yerine gerçek harita SDK entegrasyonu ve pin yerleştirme.
-*   [ ] **Anlık Bildirimler (Push Notifications)**: İsteklerin kabul edilmesi veya iade sürelerinin yaklaşması durumunda kullanıcıya bildirim göndermek.
+1.  **Kamuya Açık Profil Ekranı & Navigasyon**: İlan sahibinin kartından salt okunur profil görünümüne ve yorumlarına yönlendirme. *(Tamamlandı)*
+2.  **README ve GitHub Temizliği**: Proje ismi referanslarının Emanetly olarak güncellenmesi. *(Tamamlandı)*
+3.  **Firebase Yetkilendirme (Auth)**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik sistemi.
+4.  **Firestore Entegrasyonu**: Bellek içi listenin canlı Firestore koleksiyonlarına taşınması.
+5.  **Firebase Storage Entegrasyonu**: İlan ve profil resimlerinin saklanması.
+6.  **Firestore ile Canlı Sohbet**: Mesaj akışlarının gerçek zamanlı veritabanı kanallarına taşınması.
+7.  **Google Haritalar Entegrasyonu**: Simüle haritaların gerçek harita API'si ile değiştirilmesi.
+8.  **Gerçek QR Teslimat Akışı**: Mobil kamera ile QR okuma ve teslimat/iade hash doğrulaması.
+9.  **Anlık Bildirimler (FCM)**: Teslimat gecikmeleri ve yeni talepler için push bildirimleri.
+10. **Üretim Cilası & Yayına Hazırlık**: Performans iyileştirmeleri ve App Store / Play Store yayını.
 
 ---
 
 ## Lisans
 
-Bu proje MIT Lisansı ile lisanslanmıştır - detaylar için LICENSE dosyasına göz atabilirsiniz.
+Bu proje MIT Lisansı ile lisanslanmıştır - detaylar için LICENSE dosyasına bakabilirsiniz.
