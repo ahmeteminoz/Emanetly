@@ -507,14 +507,19 @@ class ItemDetailScreen extends StatelessWidget {
                     const Divider(height: 1),
                     const SizedBox(height: 12),
                     // Trust Score and Transaction details
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         // Trust Rating
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-                            const SizedBox(width: 4),
                             Text(
                               lenderUser.reviewCount == 0
                                   ? 'Henüz değerlendirilmedi'
@@ -523,7 +528,6 @@ class ItemDetailScreen extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 6),
                             Text(
                               '(Güven Skoru: ${lenderUser.trustScore})',
                               style: theme.textTheme.bodySmall?.copyWith(

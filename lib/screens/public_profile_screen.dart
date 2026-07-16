@@ -183,10 +183,12 @@ class PublicProfileScreen extends StatelessWidget {
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
                             Text(
                               user.reviewCount == 0
                                   ? 'Henüz değerlendirilmedi'
@@ -195,7 +197,7 @@ class PublicProfileScreen extends StatelessWidget {
                             ),
                             if (user.reviewCount > 0)
                               Text(
-                                ' (${user.reviewCount} Değerlendirme)',
+                                '(${user.reviewCount} Değerlendirme)',
                                 style: TextStyle(color: theme.colorScheme.outline, fontSize: 11),
                               ),
                           ],
