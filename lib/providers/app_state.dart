@@ -8,6 +8,7 @@ import '../models/meeting_point_proposal.dart';
 import '../services/auth_service.dart';
 import '../services/item_service.dart';
 import '../services/qr_service.dart';
+import '../services/borrow_request_service.dart';
 
 enum ViewMode {
   compactGrid,
@@ -19,6 +20,7 @@ class AppState extends ChangeNotifier {
   final AuthService _authService;
   final ItemService _itemService;
   final QrService _qrService;
+  final BorrowRequestService _borrowRequestService;
 
   List<EmanetItem> _items = [];
   bool _isLoading = false;
@@ -37,19 +39,33 @@ class AppState extends ChangeNotifier {
 
   StreamSubscription<UserProfile?>? _authSubscription;
   StreamSubscription<List<EmanetItem>>? _itemsSubscription;
+  StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
 
   AppState({
     required AuthService authService,
     required ItemService itemService,
     required QrService qrService,
+    required BorrowRequestService borrowRequestService,
   })  : _authService = authService,
         _itemService = itemService,
-        _qrService = qrService {
+        _qrService = qrService,
+        _borrowRequestService = borrowRequestService {
     
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
+      if (user != null) {
+        _startRequestsSubscription(user.uid);
+      } else {
+        _cancelRequestsSubscription();
+      }
       notifyListeners();
     });
+
+    // Handle initial state if user is already logged in on startup
+    final initialUser = _authService.currentUser;
+    if (initialUser != null) {
+      _startRequestsSubscription(initialUser.uid);
+    }
 
     // Listen to Items changes
     _itemsSubscription = _itemService.onItemsChanged.listen((newItems) {
@@ -233,7 +249,7 @@ class AppState extends ChangeNotifier {
         createdAt: DateTime.now(),
       );
 
-      _borrowRequests.add(newRequest);
+      await _borrowRequestService.addBorrowRequest(newRequest);
 
       // System message
       _chatMessages.add(ChatMessageModel(
@@ -265,10 +281,12 @@ class AppState extends ChangeNotifier {
       final index = _borrowRequests.indexWhere((r) => r.id == requestId);
       if (index != -1) {
         final req = _borrowRequests[index];
-        _borrowRequests[index] = req.copyWith(
+        final updatedReq = req.copyWith(
           status: BorrowRequestStatus.pendingDiscussion,
           requestedDurationText: requestedDurationText,
         );
+        
+        await _borrowRequestService.addBorrowRequest(updatedReq);
         
         // Add a system message in the chat
         _chatMessages.add(ChatMessageModel(
@@ -540,12 +558,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void acceptBorrowRequest(String requestId) {
+  void acceptBorrowRequest(String requestId) async {
     final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
     if (reqIndex == -1) return;
     final request = _borrowRequests[reqIndex];
 
-    _borrowRequests[reqIndex] = request.copyWith(status: BorrowRequestStatus.accepted);
+    await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.accepted);
 
     // Update item status in ItemService
     final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
@@ -573,14 +591,8 @@ class AppState extends ChangeNotifier {
         meetingPoint: meetingPointName,
       );
 
-      // Save item changes locally
-      final mockService = _itemService;
-      if (mockService is MockItemService) {
-        final index = mockService.items.indexWhere((i) => i.id == item.id);
-        if (index != -1) {
-          mockService.items[index] = updatedItem;
-        }
-      }
+      // Save item changes via service
+      await _itemService.updateItem(updatedItem);
     }
 
     // Add system message
@@ -599,12 +611,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void rejectBorrowRequest(String requestId) {
+  void rejectBorrowRequest(String requestId) async {
     final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
     if (reqIndex == -1) return;
-    final request = _borrowRequests[reqIndex];
 
-    _borrowRequests[reqIndex] = request.copyWith(status: BorrowRequestStatus.rejected);
+    await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.rejected);
 
     // Add system message
     final message = ChatMessageModel(
@@ -718,10 +729,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _startRequestsSubscription(String userId) {
+    _requestsSubscription?.cancel();
+    _requestsSubscription = _borrowRequestService.listenToBorrowRequests(userId).listen((newRequests) {
+      _borrowRequests.clear();
+      _borrowRequests.addAll(newRequests);
+      notifyListeners();
+    }, onError: (e) {
+      _addLog('Talep verisi dinleme hatası: $e');
+    });
+  }
+
+  void _cancelRequestsSubscription() {
+    _requestsSubscription?.cancel();
+    _requestsSubscription = null;
+    _borrowRequests.clear();
+  }
+
   @override
   void dispose() {
     _authSubscription?.cancel();
     _itemsSubscription?.cancel();
+    _requestsSubscription?.cancel();
     super.dispose();
   }
 }

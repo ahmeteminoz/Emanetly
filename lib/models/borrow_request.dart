@@ -49,4 +49,35 @@ class BorrowRequestModel {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'itemId': itemId,
+      'ownerId': ownerId,
+      'requesterId': requesterId,
+      'status': status.name,
+      'requestedDurationText': requestedDurationText,
+      'proposedMeetingPointId': proposedMeetingPointId,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory BorrowRequestModel.fromMap(Map<String, dynamic> map) {
+    return BorrowRequestModel(
+      id: map['id'] ?? '',
+      itemId: map['itemId'] ?? '',
+      ownerId: map['ownerId'] ?? '',
+      requesterId: map['requesterId'] ?? '',
+      status: BorrowRequestStatus.values.firstWhere(
+        (e) => e.name == map['status'],
+        orElse: () => BorrowRequestStatus.onlyInquiry,
+      ),
+      requestedDurationText: map['requestedDurationText'] ?? '',
+      proposedMeetingPointId: map['proposedMeetingPointId'],
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+    );
+  }
 }

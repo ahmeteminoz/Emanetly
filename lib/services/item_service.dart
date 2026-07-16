@@ -16,6 +16,7 @@ abstract class ItemService {
   Future<void> setMeetingPoint(String itemId, String meetingPoint);
   Future<void> startRouting(String itemId);
   Future<void> completeDelivery(String itemId);
+  Future<void> updateItem(EmanetItem item);
   
   Stream<List<EmanetItem>> get onItemsChanged;
 }
@@ -312,6 +313,15 @@ class MockItemService implements ItemService {
   }
 
   @override
+  Future<void> updateItem(EmanetItem item) async {
+    final index = _items.indexWhere((i) => i.id == item.id);
+    if (index != -1) {
+      _items[index] = item;
+      _notify();
+    }
+  }
+
+  @override
   Stream<List<EmanetItem>> get onItemsChanged => _controller.stream;
 }
 
@@ -464,81 +474,118 @@ class FirestoreItemService implements ItemService {
     }
   }
 
-  // Local Memory fallback handlers for other Stage 2+ features so they continue to work in Stage 1
-  void _updateLocalItem(String itemId, EmanetItem Function(EmanetItem) updater) {
-    final index = _cachedItems.indexWhere((u) => u.id == itemId);
-    if (index != -1) {
-      _cachedItems[index] = updater(_cachedItems[index]);
-      _controller.add(_cachedItems);
+  @override
+  Future<void> updateItem(EmanetItem item) async {
+    try {
+      await _firestore
+          .collection('items')
+          .doc(item.id)
+          .set(item.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      print('Emanetly: Firestore updateItem error: $e');
     }
   }
 
   @override
   Future<void> requestBorrow(String itemId, String borrowerId, String borrowerName) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.pendingApproval,
-      borrowerId: borrowerId,
-      borrowerName: borrowerName,
-      deliveryStatus: DeliveryStatus.requestSent,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.pendingApproval.name,
+        'borrowerId': borrowerId,
+        'borrowerName': borrowerName,
+        'deliveryStatus': DeliveryStatus.requestSent.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore requestBorrow error: $e');
+    }
   }
 
   @override
   Future<void> approveBorrow(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.borrowed,
-      deliveryStatus: DeliveryStatus.delivered,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.borrowed.name,
+        'deliveryStatus': DeliveryStatus.delivered.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore approveBorrow error: $e');
+    }
   }
 
   @override
   Future<void> rejectBorrow(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.available,
-      borrowerId: null,
-      borrowerName: null,
-      deliveryStatus: null,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.available.name,
+        'borrowerId': FieldValue.delete(),
+        'borrowerName': FieldValue.delete(),
+        'deliveryStatus': FieldValue.delete(),
+        'meetingPoint': FieldValue.delete(),
+      });
+    } catch (e) {
+      print('Emanetly: Firestore rejectBorrow error: $e');
+    }
   }
 
   @override
   Future<void> requestReturn(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.pendingReturn,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.pendingReturn.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore requestReturn error: $e');
+    }
   }
 
   @override
   Future<void> approveReturn(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.available,
-      borrowerId: null,
-      borrowerName: null,
-      deliveryStatus: null,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.available.name,
+        'borrowerId': FieldValue.delete(),
+        'borrowerName': FieldValue.delete(),
+        'deliveryStatus': FieldValue.delete(),
+        'meetingPoint': FieldValue.delete(),
+      });
+    } catch (e) {
+      print('Emanetly: Firestore approveReturn error: $e');
+    }
   }
 
   @override
   Future<void> setMeetingPoint(String itemId, String meetingPoint) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      meetingPoint: meetingPoint,
-      deliveryStatus: DeliveryStatus.meetingPointSet,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'meetingPoint': meetingPoint,
+        'deliveryStatus': DeliveryStatus.meetingPointSet.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore setMeetingPoint error: $e');
+    }
   }
 
   @override
   Future<void> startRouting(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      deliveryStatus: DeliveryStatus.routingStarted,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'deliveryStatus': DeliveryStatus.routingStarted.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore startRouting error: $e');
+    }
   }
 
   @override
   Future<void> completeDelivery(String itemId) async {
-    _updateLocalItem(itemId, (item) => item.copyWith(
-      status: EmanetStatus.borrowed,
-      deliveryStatus: DeliveryStatus.completed,
-    ));
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'status': EmanetStatus.borrowed.name,
+        'deliveryStatus': DeliveryStatus.completed.name,
+      });
+    } catch (e) {
+      print('Emanetly: Firestore completeDelivery error: $e');
+    }
   }
 
   @override
