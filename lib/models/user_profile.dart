@@ -52,6 +52,7 @@ class UserProfile {
   final List<String> verificationBadges;
   final List<String> userBadges;
   final List<UserReview> reviews;
+  final List<String> favoriteItemIds;
 
   UserProfile({
     required this.uid,
@@ -73,7 +74,54 @@ class UserProfile {
     required this.verificationBadges,
     required this.userBadges,
     required this.reviews,
+    this.favoriteItemIds = const [],
   });
+
+  UserProfile copyWith({
+    String? uid,
+    String? name,
+    String? username,
+    String? studentId,
+    String? email,
+    String? department,
+    String? avatarUrl,
+    String? bio,
+    int? trustScore,
+    double? averageRating,
+    int? reviewCount,
+    int? successfulBorrows,
+    int? successfulLends,
+    double? onTimeReturnRate,
+    String? avgResponseTime,
+    int? lateReturnsCount,
+    List<String>? verificationBadges,
+    List<String>? userBadges,
+    List<UserReview>? reviews,
+    List<String>? favoriteItemIds,
+  }) {
+    return UserProfile(
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      studentId: studentId ?? this.studentId,
+      email: email ?? this.email,
+      department: department ?? this.department,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      trustScore: trustScore ?? this.trustScore,
+      averageRating: averageRating ?? this.averageRating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      successfulBorrows: successfulBorrows ?? this.successfulBorrows,
+      successfulLends: successfulLends ?? this.successfulLends,
+      onTimeReturnRate: onTimeReturnRate ?? this.onTimeReturnRate,
+      avgResponseTime: avgResponseTime ?? this.avgResponseTime,
+      lateReturnsCount: lateReturnsCount ?? this.lateReturnsCount,
+      verificationBadges: verificationBadges ?? this.verificationBadges,
+      userBadges: userBadges ?? this.userBadges,
+      reviews: reviews ?? this.reviews,
+      favoriteItemIds: favoriteItemIds ?? this.favoriteItemIds,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -96,6 +144,7 @@ class UserProfile {
       'verificationBadges': verificationBadges,
       'userBadges': userBadges,
       'reviews': reviews.map((r) => r.toMap()).toList(),
+      'favoriteItemIds': favoriteItemIds,
     };
   }
 
@@ -123,6 +172,7 @@ class UserProfile {
               ?.map((x) => UserReview.fromMap(x as Map<String, dynamic>))
               .toList() ??
           [],
+      favoriteItemIds: List<String>.from(map['favoriteItemIds'] ?? []),
     );
   }
 }

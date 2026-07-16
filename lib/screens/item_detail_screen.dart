@@ -516,12 +516,14 @@ class ItemDetailScreen extends StatelessWidget {
                             const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
                             const SizedBox(width: 4),
                             Text(
-                              lenderUser.averageRating.toString(),
+                              lenderUser.reviewCount == 0
+                                  ? 'Henüz değerlendirilmedi'
+                                  : '${lenderUser.averageRating} • ${lenderUser.reviewCount} yorum',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 6),
                             Text(
                               '(Güven Skoru: ${lenderUser.trustScore})',
                               style: theme.textTheme.bodySmall?.copyWith(

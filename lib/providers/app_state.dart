@@ -119,17 +119,38 @@ class AppState extends ChangeNotifier {
   }
 
   // Favorites logic
-  bool isFavorite(String itemId) => _favoriteItemIds.contains(itemId);
-
-  void toggleFavorite(String itemId) {
-    if (_favoriteItemIds.contains(itemId)) {
-      _favoriteItemIds.remove(itemId);
-      _addLog('Ürün favorilerden çıkarıldı: $itemId');
-    } else {
-      _favoriteItemIds.add(itemId);
-      _addLog('Ürün favorilere eklendi: $itemId');
+  bool isFavorite(String itemId) {
+    if (currentUser != null) {
+      return currentUser!.favoriteItemIds.contains(itemId);
     }
-    notifyListeners();
+    return _favoriteItemIds.contains(itemId);
+  }
+
+  void toggleFavorite(String itemId) async {
+    if (currentUser != null) {
+      final user = currentUser!;
+      final bool isAlreadyFav = user.favoriteItemIds.contains(itemId);
+      
+      // Perform atomic toggle via service
+      await _authService.toggleFavorite(user.uid, itemId, !isAlreadyFav);
+      
+      if (isAlreadyFav) {
+        _addLog('Ürün favorilerden çıkarıldı: $itemId');
+      } else {
+        _addLog('Ürün favorilere eklendi: $itemId');
+      }
+      notifyListeners();
+    } else {
+      // Offline / Fallback mode
+      if (_favoriteItemIds.contains(itemId)) {
+        _favoriteItemIds.remove(itemId);
+        _addLog('Ürün favorilerden çıkarıldı: $itemId');
+      } else {
+        _favoriteItemIds.add(itemId);
+        _addLog('Ürün favorilere eklendi: $itemId');
+      }
+      notifyListeners();
+    }
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {

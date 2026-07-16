@@ -20,6 +20,8 @@ abstract class AuthService {
   List<UserProfile> get availableMockUsers;
   void addReviewToUser(String targetUserId, UserReview review);
   Future<UserProfile?> getUserProfile(String uid);
+  Future<void> updateUserProfile(UserProfile updatedProfile);
+  Future<void> toggleFavorite(String userId, String itemId, bool isAdd);
 }
 
 class MockAuthService implements AuthService {
@@ -266,6 +268,38 @@ class MockAuthService implements AuthService {
   @override
   Future<UserProfile?> getUserProfile(String uid) async {
     return _mockUsers.firstWhere((u) => u.uid == uid, orElse: () => _mockUsers[0]);
+  }
+
+  @override
+  Future<void> updateUserProfile(UserProfile updatedProfile) async {
+    final index = _mockUsers.indexWhere((u) => u.uid == updatedProfile.uid);
+    if (index != -1) {
+      _mockUsers[index] = updatedProfile;
+    }
+    if (_currentUser?.uid == updatedProfile.uid) {
+      _currentUser = updatedProfile;
+      _controller.add(_currentUser);
+    }
+  }
+
+  @override
+  Future<void> toggleFavorite(String userId, String itemId, bool isAdd) async {
+    final index = _mockUsers.indexWhere((u) => u.uid == userId);
+    if (index != -1) {
+      final user = _mockUsers[index];
+      final list = List<String>.from(user.favoriteItemIds);
+      if (isAdd) {
+        if (!list.contains(itemId)) list.add(itemId);
+      } else {
+        list.remove(itemId);
+      }
+      final updated = user.copyWith(favoriteItemIds: list);
+      _mockUsers[index] = updated;
+      if (_currentUser?.uid == userId) {
+        _currentUser = updated;
+        _controller.add(_currentUser);
+      }
+    }
   }
 }
 
@@ -585,6 +619,55 @@ class FirebaseAuthService implements AuthService {
         _currentUser = _mappedMockUsers[index];
         _controller.add(_currentUser);
       }
+    }
+  }
+
+  @override
+  Future<void> updateUserProfile(UserProfile updatedProfile) async {
+    final docRef = FirebaseFirestore.instance.collection('users').doc(updatedProfile.uid);
+    try {
+      await docRef.set(updatedProfile.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      print('Emanetly: Error updating user profile in Firestore: $e');
+    }
+    if (_currentUser?.uid == updatedProfile.uid) {
+      _currentUser = updatedProfile;
+      _controller.add(_currentUser);
+    }
+  }
+
+  @override
+  Future<void> toggleFavorite(String userId, String itemId, bool isAdd) async {
+    final docRef = FirebaseFirestore.instance.collection('users').doc(userId);
+    try {
+      // Use FieldValue.arrayUnion / arrayRemove as requested by user to avoid complete overwrite!
+      await docRef.update({
+        'favoriteItemIds': isAdd
+            ? FieldValue.arrayUnion([itemId])
+            : FieldValue.arrayRemove([itemId])
+      });
+    } catch (e) {
+      print('Emanetly: Error toggling favorite in Firestore: $e');
+      
+      // Fallback: If document doesn't exist yet, create it with merge
+      if (e is FirebaseException && (e.code == 'not-found' || e.message?.contains('NOT_FOUND') == true)) {
+        final defaultProfile = _mapFirebaseUser(_firebaseAuth.currentUser!);
+        final list = isAdd ? [itemId] : <String>[];
+        final updated = defaultProfile.copyWith(favoriteItemIds: list);
+        await docRef.set(updated.toMap(), SetOptions(merge: true));
+      }
+    }
+    
+    // Always update local currentUser to keep the UI immediate & responsive
+    if (_currentUser?.uid == userId) {
+      final list = List<String>.from(_currentUser!.favoriteItemIds);
+      if (isAdd) {
+        if (!list.contains(itemId)) list.add(itemId);
+      } else {
+        list.remove(itemId);
+      }
+      _currentUser = _currentUser!.copyWith(favoriteItemIds: list);
+      _controller.add(_currentUser);
     }
   }
 }

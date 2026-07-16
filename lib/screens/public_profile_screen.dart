@@ -188,13 +188,16 @@ class PublicProfileScreen extends StatelessWidget {
                             const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
                             const SizedBox(width: 4),
                             Text(
-                              '${user.averageRating}',
+                              user.reviewCount == 0
+                                  ? 'Henüz değerlendirilmedi'
+                                  : '${user.averageRating}',
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
-                            Text(
-                              ' (${user.reviewCount} Değerlendirme)',
-                              style: TextStyle(color: theme.colorScheme.outline, fontSize: 11),
-                            ),
+                            if (user.reviewCount > 0)
+                              Text(
+                                ' (${user.reviewCount} Değerlendirme)',
+                                style: TextStyle(color: theme.colorScheme.outline, fontSize: 11),
+                              ),
                           ],
                         ),
                       ],
