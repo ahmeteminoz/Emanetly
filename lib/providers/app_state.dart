@@ -132,6 +132,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<UserProfile?> getUserProfile(String uid) async {
+    return _authService.getUserProfile(uid);
+  }
+
   // Swap users for prototype testing
   void switchUser(String uid) {
     final service = _authService;

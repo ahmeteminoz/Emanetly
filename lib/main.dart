@@ -13,6 +13,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   AuthService authService;
+  ItemService itemService;
 
   try {
     // Attempt to initialize Firebase using platform options (overwritten by flutterfire configure)
@@ -20,15 +21,16 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     authService = FirebaseAuthService();
-    debugPrint('Emanetly: Firebase Authentication initialized successfully.');
+    itemService = FirestoreItemService();
+    debugPrint('Emanetly: Firebase initialized successfully with Firestore support.');
   } catch (e) {
     // Fallback if firebase options are not configured yet or throws UnimplementedError
     authService = MockAuthService();
-    debugPrint('Emanetly: Firebase config fallback to MockAuthService. Notice: $e');
+    itemService = MockItemService();
+    debugPrint('Emanetly: Firebase config fallback to Mock. Notice: $e');
   }
 
   // Instantiate services
-  final itemService = MockItemService();
   final qrService = MockQrService();
 
   // Instantiate application state controller

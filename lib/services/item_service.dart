@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/item.dart';
 import '../models/comment.dart';
 
@@ -312,4 +313,238 @@ class MockItemService implements ItemService {
 
   @override
   Stream<List<EmanetItem>> get onItemsChanged => _controller.stream;
+}
+
+class FirestoreItemService implements ItemService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _controller = StreamController<List<EmanetItem>>.broadcast();
+  List<EmanetItem> _cachedItems = [];
+  StreamSubscription? _firestoreSubscription;
+
+  FirestoreItemService() {
+    // Listen to real-time updates from Firestore items collection
+    _firestoreSubscription = _firestore
+        .collection('items')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.docs.isEmpty) {
+        // Database is empty, let's pre-populate with default mock items so the feed is not blank
+        _populateDefaultItems();
+      } else {
+        final List<EmanetItem> firestoreItems = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return EmanetItem.fromMap(data);
+        }).toList();
+
+        // Merge firestore items with locally modified state (borrowed status, delivery status, etc.)
+        // so that local mock updates are preserved on screen rebuilds
+        _mergeWithLocalCache(firestoreItems);
+      }
+    }, onError: (e) {
+      print('Emanetly: Firestore items listen error: $e');
+    });
+  }
+
+  void _populateDefaultItems() async {
+    final List<EmanetItem> defaultItems = [
+      EmanetItem(
+        id: 'item_1',
+        title: 'USB-C Hızlı Şarj Cihazı (65W)',
+        description: 'MacBook ve Android telefonları hızlı şarj eder. Kütüphane 2. katta elden teslim edebilirim.',
+        category: 'Elektronik',
+        lenderId: 'user_2', // Ayşe Yılmaz
+        lenderName: 'Ayşe Yılmaz',
+        location: 'Merkez Kütüphane 2. Kat',
+        status: EmanetStatus.available,
+        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        mockImageColorValue: 0xFF3B82F6, // Bright Blue
+        pickupLocationTitle: 'Kütüphane önü',
+        pickupAddressText: 'Merkez Kütüphane ana giriş kapısı önü',
+        pickupLatitude: 41.0082,
+        pickupLongitude: 28.9784,
+        locationVisibility: true,
+      ),
+      EmanetItem(
+        id: 'item_2',
+        title: 'Büyük Boy Siyah Şemsiye',
+        description: 'Sağlam rüzgara dayanıklı şemsiye. Yağmurlu günlerde ders bitimine kadar ödünç verebilirim.',
+        category: 'Günlük Eşya & Yaşam',
+        lenderId: 'user_3', // Can Demir
+        lenderName: 'Can Demir',
+        location: 'Fizik Bölümü Kantini',
+        status: EmanetStatus.available,
+        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+        mockImageColorValue: 0xFFEF4444, // Vibrant Red
+        pickupLocationTitle: 'Fizik Kantini çevresi',
+        pickupAddressText: 'Fizik Bölümü giriş kat kantin masaları',
+        pickupLatitude: 41.0095,
+        pickupLongitude: 28.9770,
+        locationVisibility: true,
+      ),
+      EmanetItem(
+        id: 'item_3',
+        title: 'Casio fx-991EX Bilimsel Hesap Makinesi',
+        description: 'Matematik ve mühendislik sınavlarında kullanılabilir. Sınavınız bitince teslim alırım.',
+        category: 'Elektronik',
+        lenderId: 'user_1', // Ahmet Öz
+        lenderName: 'Ahmet Öz',
+        location: 'Mühendislik Fakültesi B Blok',
+        status: EmanetStatus.available,
+        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+        mockImageColorValue: 0xFF10B981, // Vibrant Green
+        pickupLocationTitle: 'Mühendislik B Blok Girişi',
+        pickupAddressText: 'Mühendislik Fakültesi B Blok ana giriş merdivenleri',
+        pickupLatitude: 41.0070,
+        pickupLongitude: 28.9790,
+        locationVisibility: true,
+      ),
+    ];
+
+    for (final item in defaultItems) {
+      try {
+        await _firestore.collection('items').doc(item.id).set(item.toMap());
+      } catch (e) {
+        print('Emanetly: Error populating default item ${item.id}: $e');
+      }
+    }
+  }
+
+  void _mergeWithLocalCache(List<EmanetItem> firestoreItems) {
+    final updatedList = <EmanetItem>[];
+    
+    for (final freshItem in firestoreItems) {
+      // Find if we have a locally modified version (e.g. status was changed to borrowed in memory)
+      final localIndex = _cachedItems.indexWhere((u) => u.id == freshItem.id);
+      if (localIndex != -1) {
+        final localItem = _cachedItems[localIndex];
+        // Keep the local state modifications (status, borrower, comments, meeting points, delivery status)
+        updatedList.add(freshItem.copyWith(
+          status: localItem.status,
+          borrowerId: localItem.borrowerId,
+          borrowerName: localItem.borrowerName,
+          comments: localItem.comments,
+          meetingPoint: localItem.meetingPoint,
+          deliveryStatus: localItem.deliveryStatus,
+        ));
+      } else {
+        updatedList.add(freshItem);
+      }
+    }
+    
+    _cachedItems = updatedList;
+    _controller.add(_cachedItems);
+  }
+
+  @override
+  Future<List<EmanetItem>> getItems() async {
+    if (_cachedItems.isEmpty) {
+      try {
+        final snapshot = await _firestore
+            .collection('items')
+            .orderBy('createdAt', descending: true)
+            .get();
+        _cachedItems = snapshot.docs.map((doc) => EmanetItem.fromMap(doc.data())).toList();
+      } catch (e) {
+        print('Emanetly: Firestore getItems error: $e');
+      }
+    }
+    return _cachedItems;
+  }
+
+  @override
+  Future<void> addItem(EmanetItem item) async {
+    try {
+      final docRef = _firestore.collection('items').doc();
+      final finalItem = item.copyWith(id: docRef.id);
+      await docRef.set(finalItem.toMap());
+    } catch (e) {
+      print('Emanetly: Firestore addItem error: $e');
+      rethrow;
+    }
+  }
+
+  // Local Memory fallback handlers for other Stage 2+ features so they continue to work in Stage 1
+  void _updateLocalItem(String itemId, EmanetItem Function(EmanetItem) updater) {
+    final index = _cachedItems.indexWhere((u) => u.id == itemId);
+    if (index != -1) {
+      _cachedItems[index] = updater(_cachedItems[index]);
+      _controller.add(_cachedItems);
+    }
+  }
+
+  @override
+  Future<void> requestBorrow(String itemId, String borrowerId, String borrowerName) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.pendingApproval,
+      borrowerId: borrowerId,
+      borrowerName: borrowerName,
+      deliveryStatus: DeliveryStatus.requestSent,
+    ));
+  }
+
+  @override
+  Future<void> approveBorrow(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.borrowed,
+      deliveryStatus: DeliveryStatus.delivered,
+    ));
+  }
+
+  @override
+  Future<void> rejectBorrow(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.available,
+      borrowerId: null,
+      borrowerName: null,
+      deliveryStatus: null,
+    ));
+  }
+
+  @override
+  Future<void> requestReturn(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.pendingReturn,
+    ));
+  }
+
+  @override
+  Future<void> approveReturn(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.available,
+      borrowerId: null,
+      borrowerName: null,
+      deliveryStatus: null,
+    ));
+  }
+
+  @override
+  Future<void> setMeetingPoint(String itemId, String meetingPoint) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      meetingPoint: meetingPoint,
+      deliveryStatus: DeliveryStatus.meetingPointSet,
+    ));
+  }
+
+  @override
+  Future<void> startRouting(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      deliveryStatus: DeliveryStatus.routingStarted,
+    ));
+  }
+
+  @override
+  Future<void> completeDelivery(String itemId) async {
+    _updateLocalItem(itemId, (item) => item.copyWith(
+      status: EmanetStatus.borrowed,
+      deliveryStatus: DeliveryStatus.completed,
+    ));
+  }
+
+  @override
+  Stream<List<EmanetItem>> get onItemsChanged => _controller.stream;
+
+  void dispose() {
+    _firestoreSubscription?.cancel();
+  }
 }

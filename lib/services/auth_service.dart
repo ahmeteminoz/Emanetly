@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
 
 abstract class AuthService {
@@ -18,6 +19,7 @@ abstract class AuthService {
   // Unified mock management
   List<UserProfile> get availableMockUsers;
   void addReviewToUser(String targetUserId, UserReview review);
+  Future<UserProfile?> getUserProfile(String uid);
 }
 
 class MockAuthService implements AuthService {
@@ -260,6 +262,11 @@ class MockAuthService implements AuthService {
       }
     }
   }
+
+  @override
+  Future<UserProfile?> getUserProfile(String uid) async {
+    return _mockUsers.firstWhere((u) => u.uid == uid, orElse: () => _mockUsers[0]);
+  }
 }
 
 class FirebaseAuthService implements AuthService {
@@ -337,10 +344,30 @@ class FirebaseAuthService implements AuthService {
         _currentUser = null;
         _controller.add(null);
       } else {
-        _currentUser = _mapFirebaseUser(user);
-        _controller.add(_currentUser);
+        _loadUserProfileFromFirestore(user);
       }
     });
+  }
+
+  Future<void> _loadUserProfileFromFirestore(fb.User user) async {
+    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    try {
+      final doc = await docRef.get();
+      if (doc.exists && doc.data() != null) {
+        _currentUser = UserProfile.fromMap(doc.data()!);
+      } else {
+        // Document doesn't exist on Firestore yet, let's create a default profile
+        final defaultProfile = _mapFirebaseUser(user);
+        await docRef.set(defaultProfile.toMap());
+        _currentUser = defaultProfile;
+      }
+      _controller.add(_currentUser);
+    } catch (e) {
+      print('Emanetly: Error loading user profile from Firestore: $e');
+      // Offline fallback: map user from in-memory template
+      _currentUser = _mapFirebaseUser(user);
+      _controller.add(_currentUser);
+    }
   }
 
   UserProfile _mapFirebaseUser(fb.User user) {
@@ -397,7 +424,11 @@ class FirebaseAuthService implements AuthService {
   UserProfile? get currentUser {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
-      _currentUser = _mapFirebaseUser(user);
+      // Async loading fallback trigger
+      if (_currentUser == null || _currentUser!.uid != user.uid) {
+        _currentUser = _mapFirebaseUser(user);
+        _loadUserProfileFromFirestore(user);
+      }
     } else {
       _currentUser = null;
     }
@@ -411,7 +442,7 @@ class FirebaseAuthService implements AuthService {
       password: password,
     );
     if (credential.user != null) {
-      _currentUser = _mapFirebaseUser(credential.user!);
+      await _loadUserProfileFromFirestore(credential.user!);
       return _currentUser;
     }
     return null;
@@ -427,7 +458,20 @@ class FirebaseAuthService implements AuthService {
       await credential.user!.updateDisplayName(name.trim());
       await credential.user!.reload();
       final freshUser = _firebaseAuth.currentUser ?? credential.user!;
-      _currentUser = _mapFirebaseUser(freshUser);
+      
+      // Write profile directly to Firestore on registration success
+      final defaultProfile = _mapFirebaseUser(freshUser);
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(freshUser.uid)
+            .set(defaultProfile.toMap());
+      } catch (e) {
+        print('Emanetly: Error writing user profile on signUp: $e');
+      }
+      
+      _currentUser = defaultProfile;
+      _controller.add(_currentUser);
       return _currentUser;
     }
     return null;
@@ -474,6 +518,23 @@ class FirebaseAuthService implements AuthService {
 
   @override
   List<UserProfile> get availableMockUsers => _mappedMockUsers;
+
+  @override
+  Future<UserProfile?> getUserProfile(String uid) async {
+    // Check local cache list first
+    final cached = _mappedMockUsers.where((u) => u.uid == uid);
+    if (cached.isNotEmpty) return cached.first;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserProfile.fromMap(doc.data()!);
+      }
+    } catch (e) {
+      print('Emanetly: Error getting user profile from Firestore: $e');
+    }
+    return null;
+  }
 
   @override
   void addReviewToUser(String targetUserId, UserReview review) {

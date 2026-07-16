@@ -33,31 +33,38 @@ class PublicProfileScreen extends StatelessWidget {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Find user profile by userId
-    UserProfile? user;
-    try {
-      user = appState.availableMockUsers.firstWhere((u) => u.uid == userId);
-    } catch (_) {
-      user = null;
-    }
+    return FutureBuilder<UserProfile?>(
+      future: appState.getUserProfile(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Profil Yükleniyor')),
+            body: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-    if (user == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Profil Bulunamadı')),
-        body: const Center(child: Text('Aradığınız kullanıcı profili bulunamadı.')),
-      );
-    }
+        final user = snapshot.data;
+        if (user == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Profil Bulunamadı')),
+            body: const Center(child: Text('Aradığınız kullanıcı profili bulunamadı.')),
+          );
+        }
 
-    // Filter active items listed by this user
-    final userActiveItems = appState.items.where((i) => i.lenderId == userId && i.status == EmanetStatus.available).toList();
+        // Filter active items listed by this user
+        final userActiveItems = appState.items
+            .where((i) => i.lenderId == userId && i.status == EmanetStatus.available)
+            .toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${user.name} Profili'),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('${user.name} Profili'),
+            centerTitle: true,
+          ),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
         children: [
           // 1. Profile Header Details Card
           Card(
@@ -451,6 +458,8 @@ class PublicProfileScreen extends StatelessWidget {
           const SizedBox(height: 32),
         ],
       ),
+    );
+      },
     );
   }
 
