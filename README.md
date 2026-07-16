@@ -36,7 +36,7 @@ Emanetly is currently an in-memory MVP prototype for university students. Below 
 *   **State management**: Provider / ChangeNotifier
 *   **Backend**: Planned (not integrated yet)
 *   **Firebase Auth**: Integrated (login, register, reset, verification)
-*   **Firestore**: Planned (not integrated yet)
+*   **Firestore**: Partially Integrated (Stage 1 & 2: Users, Listings/Items, and Favorites are persisted on Firestore)
 *   **Firebase Storage**: Planned (not integrated yet)
 *   **Maps**: Planned (custom painted simulation currently)
 *   **QR Code Handover**: Simulated (in-memory validation)

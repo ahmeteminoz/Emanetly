@@ -36,7 +36,7 @@ Emanetly şu anda üniversite öğrencileri için geliştirilmiş bir bellek iç
 *   **Durum Yönetimi (State)**: Provider / ChangeNotifier
 *   **Sunucu / Backend**: Planlandı (henüz entegre edilmedi)
 *   **Firebase Auth**: Entegre Edildi (giriş, kayıt, e-posta doğrulama)
-*   **Firestore**: Planlandı (henüz entegre edilmedi)
+*   **Firestore**: Kısmen Entegre Edildi (Aşama 1 & 2: Kullanıcı profilleri, ilanlar/eşyalar ve favoriler Firestore'a bağlandı)
 *   **Firebase Storage**: Planlandı (henüz entegre edilmedi)
 *   **Harita / Konum**: Planlandı (şu anda custom painter çizimiyle simüle edilmiştir)
 *   **QR Kod Doğrulama**: Simüle edildi (bellek içi doğrulama)
