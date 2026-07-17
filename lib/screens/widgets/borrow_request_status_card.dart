@@ -65,6 +65,13 @@ class BorrowRequestStatusCard extends StatelessWidget {
         statusSubtitle = 'Talep yanıtlanmadığı için süresi doldu.';
         icon = Icons.timer_off_outlined;
         break;
+      case BorrowRequestStatus.completed:
+        cardColor = Colors.teal.shade50;
+        textColor = Colors.teal.shade900;
+        statusTitle = 'İşlem Başarıyla Tamamlandı';
+        statusSubtitle = 'Eşya iade edildi ve süreç tamamlandı. Katkınız için teşekkürler!';
+        icon = Icons.assignment_turned_in_outlined;
+        break;
     }
 
     return Container(

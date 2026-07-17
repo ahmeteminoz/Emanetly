@@ -5,6 +5,7 @@ enum BorrowRequestStatus {
   rejected,
   cancelled,
   expired,
+  completed,
 }
 
 class BorrowRequestModel {

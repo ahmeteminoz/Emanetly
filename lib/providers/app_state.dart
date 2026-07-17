@@ -391,8 +391,48 @@ class AppState extends ChangeNotifier {
   Future<void> approveReturn(String itemId) async {
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
+      if (item.status != EmanetStatus.pendingReturn) {
+        _addLog('İade onaylama iptal edildi: Ürün iade bekleme durumunda değil (Mevcut: ${item.status.name})');
+        return;
+      }
       await _itemService.approveReturn(itemId);
       _addLog('"${item.title}" iadesi onaylandı ve eşya teslim alındı.');
+
+      // Mark the corresponding accepted borrow request as completed in Firestore
+      try {
+        final reqIndex = _borrowRequests.indexWhere(
+          (r) => r.itemId == itemId && r.status == BorrowRequestStatus.accepted
+        );
+        if (reqIndex != -1) {
+          final request = _borrowRequests[reqIndex];
+          await _borrowRequestService.updateBorrowRequestStatus(request.id, BorrowRequestStatus.completed);
+        }
+      } catch (e) {
+        _addLog('Talep tamamlandı olarak güncellenirken hata: $e');
+      }
+
+      // Increment statistics for lender (current user) and borrower in Firestore
+      try {
+        final lenderProfile = await _authService.getUserProfile(item.lenderId);
+        if (lenderProfile != null) {
+          final updatedLender = lenderProfile.copyWith(
+            successfulLends: lenderProfile.successfulLends + 1,
+          );
+          await _authService.updateUserProfile(updatedLender);
+        }
+
+        if (item.borrowerId != null) {
+          final borrowerProfile = await _authService.getUserProfile(item.borrowerId!);
+          if (borrowerProfile != null) {
+            final updatedBorrower = borrowerProfile.copyWith(
+              successfulBorrows: borrowerProfile.successfulBorrows + 1,
+            );
+            await _authService.updateUserProfile(updatedBorrower);
+          }
+        }
+      } catch (e) {
+        _addLog('Kullanıcı istatistikleri güncellenirken hata: $e');
+      }
     } catch (e) {
       _addLog('İade onaylama hatası: $e');
     }
@@ -441,7 +481,13 @@ class AppState extends ChangeNotifier {
 
   BorrowRequestModel? getRequestForActiveItem(String itemId) {
     try {
-      return _borrowRequests.firstWhere((req) => req.itemId == itemId);
+      return _borrowRequests.firstWhere(
+        (req) => req.itemId == itemId &&
+                 req.status != BorrowRequestStatus.rejected &&
+                 req.status != BorrowRequestStatus.cancelled &&
+                 req.status != BorrowRequestStatus.expired &&
+                 req.status != BorrowRequestStatus.completed
+      );
     } catch (_) {
       return null;
     }
@@ -633,7 +679,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addUserReview(String targetUserId, String comment, double ratingRating) {
+  Future<void> addUserReview(String targetUserId, String comment, double ratingRating) async {
     if (currentUser == null) return;
     
     final review = UserReview(
@@ -643,7 +689,7 @@ class AppState extends ChangeNotifier {
       dateText: 'Bugün',
     );
 
-    _authService.addReviewToUser(targetUserId, review);
+    await _authService.addReviewToUser(targetUserId, review);
     notifyListeners();
   }
 
@@ -716,6 +762,57 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       _addLog('Şifre sıfırlama hatası: $e');
       rethrow;
+    }
+  }
+
+  Future<void> updateItem(EmanetItem item) async {
+    _setLoading(true);
+    try {
+      await _itemService.updateItem(item);
+      _addLog('İlan güncellendi: ${item.id}');
+    } catch (e) {
+      _addLog('İlan güncellenirken hata: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> deleteItem(String itemId) async {
+    _setLoading(true);
+    try {
+      final index = _items.indexWhere((i) => i.id == itemId);
+      if (index != -1) {
+        final item = _items[index];
+        if (item.status != EmanetStatus.available && item.status != EmanetStatus.archived) {
+          _addLog('İlan silme engellendi: Aktif işlemdeki ilanlar silinemez.');
+          return;
+        }
+      }
+      await _itemService.deleteItem(itemId);
+      _addLog('İlan silindi: $itemId');
+    } catch (e) {
+      _addLog('İlan silinirken hata: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> toggleItemArchive(String itemId, bool shouldArchive) async {
+    _setLoading(true);
+    try {
+      final index = _items.indexWhere((i) => i.id == itemId);
+      if (index != -1) {
+        final item = _items[index];
+        final updatedItem = item.copyWith(
+          status: shouldArchive ? EmanetStatus.archived : EmanetStatus.available,
+        );
+        await _itemService.updateItem(updatedItem);
+        _addLog('İlan arşiv durumu güncellendi: $shouldArchive');
+      }
+    } catch (e) {
+      _addLog('İlan arşivlenirken hata: $e');
+    } finally {
+      _setLoading(false);
     }
   }
 

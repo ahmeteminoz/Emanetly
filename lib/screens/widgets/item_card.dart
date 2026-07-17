@@ -84,6 +84,10 @@ class ItemCard extends StatelessWidget {
           statusColor = Colors.deepPurple;
           statusText = 'İade Sırada';
           break;
+        case EmanetStatus.archived:
+          statusColor = Colors.grey;
+          statusText = 'Arşivlendi';
+          break;
       }
     }
 

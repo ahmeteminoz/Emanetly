@@ -30,14 +30,13 @@ Emanetly offers a specialized campus-sharing marketplace:
 
 ## Current MVP Status
 
-Emanetly is currently an in-memory MVP prototype for university students. Below is the checklist of the current technical state:
-*   **Current version**: in-memory MVP prototype
-*   **Database**: Mock in-memory data (resets on hot restart)
+Emanetly is currently a hybrid Firestore-backed MVP prototype. Below is the checklist of the current technical state:
+*   **Current version**: Firestore-backed MVP
+*   **Database**: Firestore database persistence (Users, Listings, Favorites, and BorrowRequests are persisted)
 *   **State management**: Provider / ChangeNotifier
-*   **Backend**: Planned (not integrated yet)
-*   **Firebase Auth**: Integrated (login, register, reset, verification)
-*   **Firestore**: Partially Integrated (Stage 1 & 2: Users, Listings/Items, and Favorites are persisted on Firestore)
-*   **Firebase Storage**: Planned (not integrated yet)
+*   **Firebase Auth**: Fully Integrated (login, register, reset, verification)
+*   **Firestore**: Fully Integrated (Users, Listings/Items, Favorites, Borrow Requests, Reviews & Trust Score)
+*   **Firebase Storage**: Planned (placeholder assets/templates currently)
 *   **Maps**: Planned (custom painted simulation currently)
 *   **QR Code Handover**: Simulated (in-memory validation)
 *   **Real-time chat**: Planned (local mock simulation currently)
@@ -179,8 +178,8 @@ flutter analyze
 
 *   **Firebase Authentication**: Integrated (`firebase_core` & `firebase_auth`). Supports login, register, password reset, and email verification.
 *   **University Email Check**: Restricted to `.edu.tr` domains. Note that this is currently MVP-level client-side validation.
-*   **App Data**: All listings, chat messages, meetings, and reviews remain in-memory mock data (not persisted in Firestore/Storage yet).
-*   **Firestore, Storage, Real-time Chat**: Planned (see Roadmap below).
+*   **App Data**: Listings, user profiles, favorites, borrow requests, reviews, and transaction statistics are fully persisted on Firestore database. Chat messages remain mock/local.
+*   **Storage, Real-time Chat, Maps**: Planned (see Roadmap below).
 
 ---
 
@@ -189,7 +188,7 @@ flutter analyze
 1.  **Public Profile Screen & Owner Navigation**: Clickable owner cards on item details routing to read-only user metrics and comments. *(Completed)*
 2.  **README and GitHub Cleanup**: Consolidating repository information and renaming KampusEmanet references to Emanetly. *(Completed)*
 3.  **Firebase Authentication**: Implement actual campus student email (`.edu.tr`) verification flows. *(Completed - Fallback to Mock Auth enabled if options are not configured)*
-4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections. *(Planned)*
+4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections (Users, Items, BorrowRequests). *(Completed)*
 5.  **Firebase Storage**: Store item images and profile pictures in Storage buckets. *(Planned)*
 6.  **Real-time Chat with Firestore**: Replace simulated streams with real Firestore listener channels. *(Planned)*
 7.  **Real Google Maps Integration**: Replace painter simulations with live geofenced meeting coordinates. *(Planned)*

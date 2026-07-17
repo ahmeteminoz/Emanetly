@@ -568,7 +568,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             ),
 
           // 4. MESSAGE INPUT BOX BAR
-          if (isOnlyInquiry || isPendingDiscussion)
+          if (isOnlyInquiry || isPendingDiscussion || isAccepted)
             SafeArea(
               top: false,
               child: Container(

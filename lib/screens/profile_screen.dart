@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
+import '../models/borrow_request.dart';
+import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import '../services/auth_service.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
+import 'public_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -168,7 +171,7 @@ class ProfileScreen extends StatelessWidget {
                           children: [
                             Icon(Icons.inventory_2_outlined, size: 18),
                             SizedBox(width: 6),
-                            Text('Aktif İlanlarım'),
+                            Text('İlanlarım & Geçmiş'),
                           ],
                         ),
                       ),
@@ -184,8 +187,8 @@ class ProfileScreen extends StatelessWidget {
               // Tab 1: Trust Dashboard
               _buildTrustDashboardTab(context, currentUser, theme),
               
-              // Tab 2: My Active Listings
-              _buildActiveListingsTab(context, myListedItems, theme),
+              // Tab 2: My Listings & History
+              _buildActiveListingsTab(context, myListedItems, currentUser, theme),
             ],
           ),
         ),
@@ -521,8 +524,14 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveListingsTab(BuildContext context, List<EmanetItem> items, ThemeData theme) {
-    if (items.isEmpty) {
+  Widget _buildActiveListingsTab(BuildContext context, List<EmanetItem> items, UserProfile currentUser, ThemeData theme) {
+    final appState = AppStateProvider.of(context);
+    final completedRequests = appState.borrowRequests.where((r) {
+      final isParticipant = r.ownerId == currentUser.uid || r.requesterId == currentUser.uid;
+      return isParticipant && r.status == BorrowRequestStatus.completed;
+    }).toList();
+
+    if (items.isEmpty && completedRequests.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -531,47 +540,147 @@ class ProfileScreen extends StatelessWidget {
             children: [
               Icon(Icons.inventory_2_outlined, size: 48, color: theme.colorScheme.outline),
               const SizedBox(height: 12),
-              const Text('Aktif ilanınız bulunmuyor.', style: TextStyle(fontStyle: FontStyle.italic)),
+              const Text(
+                'Henüz bir ilanınız veya geçmiş işleminiz bulunmuyor.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+      children: [
+        if (items.isNotEmpty) ...[
+          Text(
+            'Aktif İlanlarım (${items.length})',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text('Konum: ${item.location} • ${item.category}'),
-              ],
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ItemDetailScreen(item: item),
+          const SizedBox(height: 8),
+          ...items.map((item) {
+            final isBorrowed = item.status == EmanetStatus.borrowed;
+            final isPending = item.status == EmanetStatus.pendingApproval || item.status == EmanetStatus.pendingReturn;
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(item.mockImageColorValue).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.inventory_2_outlined, color: Color(item.mockImageColorValue)),
                 ),
-              );
-            },
+                title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Konum: ${item.location} • ${item.category}'),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isBorrowed 
+                        ? Colors.blue.shade50 
+                        : isPending 
+                            ? Colors.orange.shade50 
+                            : Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isBorrowed 
+                        ? 'Ödünçte' 
+                        : isPending 
+                            ? 'İşlemde' 
+                            : 'Müsait',
+                    style: TextStyle(
+                      fontSize: 10, 
+                      fontWeight: FontWeight.bold, 
+                      color: isBorrowed 
+                          ? Colors.blue.shade800 
+                          : isPending 
+                              ? Colors.orange.shade800 
+                              : Colors.green.shade800
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ItemDetailScreen(item: item),
+                    ),
+                  );
+                },
+              ),
+            );
+          }),
+          const SizedBox(height: 16),
+        ],
+
+        if (completedRequests.isNotEmpty) ...[
+          Text(
+            'Geçmiş İşlemlerim (${completedRequests.length})',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          ...completedRequests.map((request) {
+            final isLender = request.ownerId == currentUser.uid;
+            EmanetItem? relatedItem;
+            try {
+              relatedItem = appState.items.firstWhere((i) => i.id == request.itemId);
+            } catch (_) {}
+
+            final title = relatedItem?.title ?? 'Emanet Eşya';
+            final category = relatedItem?.category ?? 'Kategori';
+            final colorVal = relatedItem?.mockImageColorValue ?? 0xFF1E3A8A;
+            
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(colorVal).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.history_rounded, color: Color(colorVal)),
+                ),
+                title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                  isLender 
+                      ? 'Ödünç Verildi (Tamamlandı)' 
+                      : 'Ödünç Alındı (Tamamlandı)',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: const Icon(Icons.account_circle_outlined),
+                onTap: () async {
+                  final otherUserId = isLender ? request.requesterId : request.ownerId;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PublicProfileScreen(userId: otherUserId),
+                    ),
+                  );
+                },
+              ),
+            );
+          }),
+        ],
+      ],
     );
   }
 }

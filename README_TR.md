@@ -30,14 +30,13 @@ Emanetly, kampüse özel yapılandırılmış bir paylaşım pazar yeri sunar:
 
 ## Mevcut MVP Durumu
 
-Emanetly şu anda üniversite öğrencileri için geliştirilmiş bir bellek içi (in-memory) MVP prototipidir. Mevcut teknik durum çeklistesi şu şekildedir:
-*   **Mevcut Sürüm**: Bellek içi (in-memory) MVP prototipi
-*   **Veritabanı**: Mock bellek içi veri (Hot restart atıldığında sıfırlanır)
+Emanetly şu anda hibrit Firestore destekli bir MVP prototipidir. Mevcut teknik durum çeklistesi şu şekildedir:
+*   **Mevcut Sürüm**: Firestore destekli MVP prototipi
+*   **Veritabanı**: Firestore veritabanı kalıcılığı (Kullanıcı profilleri, İlanlar, Favoriler ve Ödünç Talepleri kalıcı hale getirildi)
 *   **Durum Yönetimi (State)**: Provider / ChangeNotifier
-*   **Sunucu / Backend**: Planlandı (henüz entegre edilmedi)
-*   **Firebase Auth**: Entegre Edildi (giriş, kayıt, e-posta doğrulama)
-*   **Firestore**: Kısmen Entegre Edildi (Aşama 1 & 2: Kullanıcı profilleri, ilanlar/eşyalar ve favoriler Firestore'a bağlandı)
-*   **Firebase Storage**: Planlandı (henüz entegre edilmedi)
+*   **Firebase Auth**: Tamamen Entegre Edildi (giriş, kayıt, e-posta doğrulama)
+*   **Firestore**: Tamamen Entegre Edildi (Kullanıcı profilleri, İlanlar/Eşyalar, Favoriler, Ödünç Talepleri, İncelemeler ve Güven Skoru)
+*   **Firebase Storage**: Planlandı (şu anda hazır şablon görseller)
 *   **Harita / Konum**: Planlandı (şu anda custom painter çizimiyle simüle edilmiştir)
 *   **QR Kod Doğrulama**: Simüle edildi (bellek içi doğrulama)
 *   **Gerçek Zamanlı Sohbet**: Planlandı (şu anda gecikmeli yerel simülasyon)
@@ -174,8 +173,8 @@ flutter analyze
 
 *   **Firebase Yetkilendirme (Auth)**: Entegre edildi (`firebase_core` & `firebase_auth`). Kayıt ol, giriş yap, şifre sıfırlama ve e-posta doğrulama süreçlerini destekler.
 *   **Üniversite E-posta Kısıtlaması**: Sadece `.edu.tr` uzantılı e-postalara izin verilir. Bu kontrol şu an için MVP seviyesinde istemci tarafında (client-side) yapılmaktadır.
-*   **Uygulama Verisi**: Tüm ürün ilanları, mesajlaşmalar, buluşma yerleri ve değerlendirmeler bellek içi (in-memory) mock veriler olarak kalmaya devam etmektedir (Firestore/Storage entegrasyonları henüz yapılmamıştır).
-*   **Firestore, Storage ve Canlı Sohbet**: Planlanmaktadır (Aşağıdaki Yol Haritasına bakınız).
+*   **Uygulama Verisi**: Eşya ilanları, kullanıcı profilleri, favoriler, ödünç talepleri, incelemeler ve işlem istatistikleri Firestore veritabanında kalıcı olarak saklanır. Sohbet mesajları yerel/simüle kalmaya devam etmektedir.
+*   **Storage, Canlı Sohbet, Haritalar**: Planlanmaktadır (Aşağıdaki Yol Haritasına bakınız).
 
 ---
 
@@ -184,7 +183,7 @@ flutter analyze
 1.  **Kamuya Açık Profil Ekranı & Navigasyon**: İlan sahibinin kartından salt okunur profil görünümüne ve yorumlarına yönlendirme. *(Tamamlandı)*
 2.  **README ve GitHub Temizliği**: Proje ismi referanslarının Emanetly olarak güncellenmesi. *(Tamamlandı)*
 3.  **Firebase Yetkilendirme (Auth)**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik sistemi. *(Tamamlandı - Yapılandırma dosyaları yoksa otomatik Mock Auth moduna döner)*
-4.  **Firestore Entegrasyonu**: Bellek içi listenin canlı Firestore koleksiyonlarına taşınması. *(Planlandı)*
+4.  **Firestore Entegrasyonu**: Bellek içi listenin canlı Firestore koleksiyonlarına (Users, Items, BorrowRequests) taşınması. *(Tamamlandı)*
 5.  **Firebase Storage Entegrasyonu**: İlan ve profil resimlerinin saklanması. *(Planlandı)*
 6.  **Firestore ile Canlı Sohbet**: Mesaj akışlarının gerçek zamanlı veritabanı kanallarına taşınması. *(Planlandı)*
 7.  **Google Haritalar Entegrasyonu**: Simüle haritaların gerçek harita API'si ile değiştirilmesi. *(Planlandı)*

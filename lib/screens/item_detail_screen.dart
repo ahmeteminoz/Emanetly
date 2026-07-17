@@ -7,6 +7,7 @@ import '../providers/app_state_provider.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
+import 'edit_item_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final EmanetItem item;
@@ -327,6 +328,11 @@ class ItemDetailScreen extends StatelessWidget {
         statusText = 'İade Onayı Bekliyor';
         statusIcon = Icons.assignment_return_outlined;
         break;
+      case EmanetStatus.archived:
+        statusColor = Colors.grey;
+        statusText = 'Arşivlendi';
+        statusIcon = Icons.archive_outlined;
+        break;
     }
 
     return Container(
@@ -458,7 +464,8 @@ class ItemDetailScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Row(
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text(
                                     '${lenderUser.department} • Öğrenci',
@@ -625,7 +632,7 @@ class ItemDetailScreen extends StatelessWidget {
 
     // If item is currently in active transaction, show Rota Tracking button
     final isParticipant = isOwnItem || isBorrower;
-    final inProgress = item.status != EmanetStatus.available;
+    final inProgress = item.status != EmanetStatus.available && item.status != EmanetStatus.archived;
 
     if (inProgress && isParticipant) {
       return Column(
@@ -703,17 +710,141 @@ class ItemDetailScreen extends StatelessWidget {
       );
     }
 
-    // Case 1: Current User is Lender (Own Item) and it's available
-    if (isOwnItem) {
-      return Center(
-        child: Text(
-          'İlanınız aktif ve ödünç alınmayı bekliyor.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontStyle: FontStyle.italic,
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
+    // Case 1: Current User is Lender (Own Item) and it's available or archived
+    if (isOwnItem && (item.status == EmanetStatus.available || item.status == EmanetStatus.archived)) {
+      final isArchived = item.status == EmanetStatus.archived;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isArchived ? Colors.grey.shade100 : theme.colorScheme.primaryContainer.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isArchived ? Colors.grey.shade300 : theme.colorScheme.primary.withOpacity(0.2)
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isArchived ? Icons.archive_outlined : Icons.check_circle_outline_rounded,
+                  color: isArchived ? Colors.grey.shade700 : theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isArchived
+                        ? 'İlanınız arşivlendi. Diğer kullanıcılar bu ilanı göremez.'
+                        : 'İlanınız yayında ve aktif. Ödünç talebi alabilirsiniz.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isArchived ? Colors.grey.shade800 : theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // 1. Edit Button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditItemScreen(item: item),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Düzenle'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 2. Pause/Publish Button
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await appState.toggleItemArchive(item.id, !isArchived);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isArchived 
+                                ? 'İlan başarıyla arşivden çıkarıldı ve yayına alındı!' 
+                                : 'İlan başarıyla arşivlendi.'
+                          ),
+                          backgroundColor: isArchived ? Colors.green : Colors.grey.shade800,
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(isArchived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 18),
+                  label: Text(isArchived ? 'Yayınla' : 'Arşivle'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // 3. Delete Button (Danger Zone)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('İlanı Sil?'),
+                    content: const Text('Bu ilanı tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('İptal'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(context); // close dialog
+                          await appState.deleteItem(item.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('İlan başarıyla silindi.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            Navigator.pop(context); // return to home
+                          }
+                        },
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Evet, Sil'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('İlanı Tamamen Sil'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
       );
     }
 

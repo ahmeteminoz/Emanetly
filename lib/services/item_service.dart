@@ -17,6 +17,7 @@ abstract class ItemService {
   Future<void> startRouting(String itemId);
   Future<void> completeDelivery(String itemId);
   Future<void> updateItem(EmanetItem item);
+  Future<void> deleteItem(String itemId);
   
   Stream<List<EmanetItem>> get onItemsChanged;
 }
@@ -263,7 +264,7 @@ class MockItemService implements ItemService {
     final index = _items.indexWhere((i) => i.id == itemId);
     if (index != -1 && _items[index].status == EmanetStatus.pendingReturn) {
       _items[index] = _items[index].copyWith(
-        status: EmanetStatus.available,
+        status: EmanetStatus.archived,
         borrowerId: null,
         borrowerName: null,
         deliveryStatus: null,
@@ -319,6 +320,12 @@ class MockItemService implements ItemService {
       _items[index] = item;
       _notify();
     }
+  }
+
+  @override
+  Future<void> deleteItem(String itemId) async {
+    _items.removeWhere((i) => i.id == itemId);
+    _notify();
   }
 
   @override
@@ -469,6 +476,15 @@ class FirestoreItemService implements ItemService {
   }
 
   @override
+  Future<void> deleteItem(String itemId) async {
+    try {
+      await _firestore.collection('items').doc(itemId).delete();
+    } catch (e) {
+      print('Emanetly: Firestore deleteItem error: $e');
+    }
+  }
+
+  @override
   Future<void> requestBorrow(String itemId, String borrowerId, String borrowerName) async {
     try {
       await _firestore.collection('items').doc(itemId).update({
@@ -524,7 +540,7 @@ class FirestoreItemService implements ItemService {
   Future<void> approveReturn(String itemId) async {
     try {
       await _firestore.collection('items').doc(itemId).update({
-        'status': EmanetStatus.available.name,
+        'status': EmanetStatus.archived.name,
         'borrowerId': FieldValue.delete(),
         'borrowerName': FieldValue.delete(),
         'deliveryStatus': FieldValue.delete(),

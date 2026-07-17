@@ -5,6 +5,7 @@ enum EmanetStatus {
   pendingApproval,
   borrowed,
   pendingReturn,
+  archived,
 }
 
 enum DeliveryStatus {
