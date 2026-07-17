@@ -71,11 +71,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // Filter items based on search, category and owner (exclude current user's own items)
     final filteredItems = appState.items.where((item) {
       final isNotOwnItem = item.lenderId != appState.currentUser?.uid;
+      final isAvailable = item.status == EmanetStatus.available;
       final matchesSearch = item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           item.description.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesCategory = _selectedCategories.contains('Hepsi') ||
           _selectedCategories.contains(item.category);
-      return isNotOwnItem && matchesSearch && matchesCategory;
+      return isNotOwnItem && isAvailable && matchesSearch && matchesCategory;
     }).toList();
 
     return Column(
