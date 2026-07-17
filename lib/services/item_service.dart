@@ -421,28 +421,10 @@ class FirestoreItemService implements ItemService {
   }
 
   void _mergeWithLocalCache(List<EmanetItem> firestoreItems) {
-    final updatedList = <EmanetItem>[];
-    
-    for (final freshItem in firestoreItems) {
-      // Find if we have a locally modified version (e.g. status was changed to borrowed in memory)
-      final localIndex = _cachedItems.indexWhere((u) => u.id == freshItem.id);
-      if (localIndex != -1) {
-        final localItem = _cachedItems[localIndex];
-        // Keep the local state modifications (status, borrower, comments, meeting points, delivery status)
-        updatedList.add(freshItem.copyWith(
-          status: localItem.status,
-          borrowerId: localItem.borrowerId,
-          borrowerName: localItem.borrowerName,
-          comments: localItem.comments,
-          meetingPoint: localItem.meetingPoint,
-          deliveryStatus: localItem.deliveryStatus,
-        ));
-      } else {
-        updatedList.add(freshItem);
-      }
-    }
-    
-    _cachedItems = updatedList;
+    // In Stage 3, item transactions (status, borrower, meetingPoint, deliveryStatus) 
+    // are fully managed and synchronized via Firestore. 
+    // Therefore, we just use the fresh items from Firestore directly.
+    _cachedItems = firestoreItems;
     _controller.add(_cachedItems);
   }
 
