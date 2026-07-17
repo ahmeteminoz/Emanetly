@@ -52,7 +52,8 @@ Emanetly is currently a hybrid Firestore-backed MVP prototype. Below is the chec
 *   **Expandable View Selector**: Premium micro-interaction that expands to show choices, collapses after 5 seconds of inactivity, or collapses instantly when the active icon is clicked.
 *   **Favorites & Search**: Instantly filter listings by query or categories, and toggle items to a dedicated Favorites tab.
 *   **Ask Question / Inquiry Chat Flow**: Ask questions about an item (`BorrowRequestStatus.onlyInquiry`) without initiating a formal borrow request. The owner can accept/reject once the request is formally upgraded.
-*   **Borrow Request Flow**: Send official requests with a duration selector sheet (1 hour, 2 hours, 6 hours, 1 day, 3 days, 1 week) that updates status to `pendingDiscussion`.
+*   **Borrow Request Flow**: Send official requests with a duration selector sheet (1 hour, 2 hours, 6 hours, 1 day, 3 days, 1 week) persisted on Firestore database.
+*   **Listing Management Panel**: Pre-filled edit form, archiving/unarchiving to toggle visibility on feed, and clean deletion of available listings from Firestore.
 *   **Meeting Point Proposals**: Suggest specific campus coordinates and times within the chat thread.
 *   **Simulated Route Tracking**: An interactive campus map using a custom painter showing active delivery coordinates, meeting points, and linear order progress.
 *   **QR Handover Simulation**: Authenticate handovers by simulating scans supporting both `emanetly://` and legacy `kampusemanet://` deep link URL structures.
@@ -62,14 +63,9 @@ Emanetly is currently a hybrid Firestore-backed MVP prototype. Below is the chec
 
 ---
 
-## Current Limitations
-
-*   **No Real Backend**: All transactions, users, and listings are volatile and stored in local RAM.
-*   **Data Resets on Hot Restart**: Restarting the app clears all simulated chat rooms, requests, and listings to standard mock states.
-*   **No Real Authentication**: Authentic sessions are managed via Firebase, but other collections (items, chats) remain simulated mock data.
-*   **No Real Maps**: Path drawing uses custom painters on mock canvas assets.
-*   **Simulated QR & Chat**: Camera scans and message streams are local time-delayed mock tasks.
-*   **No Real Image Picker**: Adding items or profile pictures uses fallback asset placeholders.
+*   **Volatile Chat & Rota Data**: Chat messages and active route tracking are stored locally in-memory and reset on hot restart. User profiles, listings, favorites, and borrow requests are persistently stored on Firestore.
+*   **Simulated Maps & QR Handover**: Custom painted routing map coordinates and QR camera scans are simulated local tasks.
+*   **No Real Image Picker**: Adding listings uses preset gallery color template assets.
 
 ---
 

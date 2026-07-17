@@ -52,7 +52,8 @@ Emanetly şu anda hibrit Firestore destekli bir MVP prototipidir. Mevcut teknik 
 *   **Yumuşak Görünüm Seçici Animasyonu**: Seçenekleri göstermek için genişleyen, 5 saniye işlem yapılmadığında veya aktif ikona tekrar basıldığında otomatik olarak daralan `AnimatedCrossFade` seçici paneli.
 *   **Favoriler & Arama**: İlanları kelimeye veya kategorilere göre anında filtreleme, ilanları favoriler sekmesine ekleme/çıkarma.
 *   **Soru Sor / Bilgi Edinme Sohbeti**: Bir ilan için resmi talep oluşturmadan soru sorma akışı (`BorrowRequestStatus.onlyInquiry`). İlan resmi talebe yükseltildiğinde onay/red butonları aktifleşir.
-*   **Ödünç Talebi Akışı**: Süre seçici paneli (1 saat, 2 saat, 6 saat, 1 gün, 3 gün, 1 hafta) ile resmi talep gönderimi ve durumun `pendingDiscussion` olarak güncellenmesi.
+*   **Ödünç Talebi Akışı**: Süre seçici paneli (1 saat, 2 saat, 6 saat, 1 gün, 3 gün, 1 hafta) ile resmi talep gönderimi ve talebin Firestore veritabanına kaydedilmesi.
+*   **İlan Yönetim Paneli**: İlan sahibinin eşyayı düzenlemesi, yayından kaldırması (arşivleme/yayınlama) veya veritabanından tamamen silmesi için kontrol paneli.
 *   **Buluşma Noktası Önerileri**: Sohbet ekranında doğrudan kampüs koordinatları ve saat teklif etme.
 *   **Simüle Edilmiş Rota Takibi**: Custom Painter ile çizilen, buluşma noktalarını ve işlem aşamalarını gösteren etkileşimli kampüs haritası.
 *   **QR Doğrulama Simülasyonu**: `emanetly://` ve eski `kampusemanet://` şemalarını destekleyen QR tarama simülasyonu ile teslimat onaylama.
@@ -62,14 +63,9 @@ Emanetly şu anda hibrit Firestore destekli bir MVP prototipidir. Mevcut teknik 
 
 ---
 
-## Mevcut Kısıtlamalar
-
-*   **Gerçek Sunucu Yok**: Tüm işlemler, kullanıcılar ve ilanlar geçicidir ve RAM üzerinde tutulur.
-*   **Hot Restart Sırasında Veri Sıfırlanır**: Uygulamayı yeniden başlatmak tüm aktif sohbetleri, talepleri ve ilanları varsayılan mock durumuna geri döndürür.
-*   **Gerçek Yetkilendirme Yok**: Oturum yönetimi Firebase ile gerçek zamanlı yönetilmektedir ancak diğer veriler (ilanlar, sohbetler) mock kalmaya devam etmektedir.
-*   **Gerçek Harita Entegrasyonu Yok**: Rota çizimleri mock harita görselleri üzerinde CustomPainter ile yapılmaktadır.
-*   **Simüle Edilmiş QR & Sohbet**: Kamera taramaları ve mesajlaşma akışları yerel zaman geciktiricili mock işlevlerdir.
-*   **Fotoğraf Yükleme UI Placeholder'dır**: İlan veya profil resmi ekleme alanlarında galeriden resim seçmek yerine hazır yer tutucu görseller kullanılır.
+*   **Simüle Edilen Sohbet & Rota Verisi**: Sohbet mesajları ve aktif rota takibi yerel bellek içi (in-memory) saklanır ve uygulama yeniden başlatıldığında sıfırlanır. Kullanıcı profilleri, ilanlar, favoriler ve ödünç talepleri Firestore'da kalıcı olarak saklanmaktadır.
+*   **Simüle Haritalar & QR Doğrulama**: Harita rota takibi ve QR kamera taramaları yerel simülasyonlar olarak çalışmaktadır.
+*   **Fotoğraf Yükleme UI Şablonudur**: İlan ekleme formunda galeriden resim seçmek yerine hazır renk şablonları kullanılır.
 
 ---
 
