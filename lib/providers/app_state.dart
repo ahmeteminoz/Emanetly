@@ -570,12 +570,12 @@ class AppState extends ChangeNotifier {
     if (itemIndex != -1) {
       final item = _items[itemIndex];
       
-      // Seed details to make it ready for mock routing
       UserProfile borrowerProfile;
       try {
         borrowerProfile = availableMockUsers.firstWhere((u) => u.uid == request.requesterId);
       } catch (_) {
-        borrowerProfile = currentUser!;
+        final realProfile = await _authService.getUserProfile(request.requesterId);
+        borrowerProfile = realProfile ?? currentUser!;
       }
       
       final meetingPointName = _meetingPointProposals
