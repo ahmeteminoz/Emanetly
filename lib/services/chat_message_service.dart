@@ -4,6 +4,7 @@ import '../models/chat_message.dart';
 abstract class ChatMessageService {
   Future<void> sendChatMessage(ChatMessageModel message);
   Stream<List<ChatMessageModel>> listenToAllChatMessages();
+  Future<void> markMessagesAsRead(String requestId, String currentUserId);
 }
 
 class FirestoreChatMessageService implements ChatMessageService {
@@ -34,6 +35,32 @@ class FirestoreChatMessageService implements ChatMessageService {
           .toList();
     });
   }
+
+  @override
+  Future<void> markMessagesAsRead(String requestId, String currentUserId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('chatMessages')
+          .where('requestId', isEqualTo: requestId)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      final batch = _firestore.batch();
+      var count = 0;
+      for (final doc in snapshot.docs) {
+        final senderId = doc.data()['senderId'];
+        if (senderId != currentUserId) {
+          batch.update(doc.reference, {'isRead': true});
+          count++;
+        }
+      }
+      if (count > 0) {
+        await batch.commit();
+      }
+    } catch (e) {
+      print('Emanetly: Firestore markMessagesAsRead error: $e');
+    }
+  }
 }
 
 class MockChatMessageService implements ChatMessageService {
@@ -45,5 +72,10 @@ class MockChatMessageService implements ChatMessageService {
   @override
   Stream<List<ChatMessageModel>> listenToAllChatMessages() {
     return const Stream.empty();
+  }
+
+  @override
+  Future<void> markMessagesAsRead(String requestId, String currentUserId) async {
+    // Mock fallback, no action needed
   }
 }

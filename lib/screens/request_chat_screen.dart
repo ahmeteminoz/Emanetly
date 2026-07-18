@@ -215,6 +215,12 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
 
     final isOwner = appState.currentUser?.uid == request.ownerId;
     final messages = appState.getChatMessagesForRequest(widget.requestId);
+    final hasUnread = messages.any((msg) => msg.senderId != appState.currentUser?.uid && !msg.isRead);
+    if (hasUnread) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        appState.markMessagesAsRead(widget.requestId);
+      });
+    }
     final isOnlyInquiry = request.status == BorrowRequestStatus.onlyInquiry;
     final isPendingDiscussion = request.status == BorrowRequestStatus.pendingDiscussion;
     final isAccepted = request.status == BorrowRequestStatus.accepted;

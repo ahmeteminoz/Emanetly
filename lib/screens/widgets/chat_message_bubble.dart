@@ -119,14 +119,30 @@ class ChatMessageBubble extends StatelessWidget {
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.bottomRight,
-              child: Text(
-                _formatTime(message.createdAt),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 9,
-                  color: isMe 
-                      ? theme.colorScheme.onPrimary.withOpacity(0.7) 
-                      : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.createdAt),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 9,
+                      color: isMe 
+                          ? theme.colorScheme.onPrimary.withOpacity(0.7) 
+                          : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      size: 13,
+                      color: message.isRead 
+                          ? const Color(0xFF80D8FF) 
+                          : theme.colorScheme.onPrimary.withOpacity(0.6),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

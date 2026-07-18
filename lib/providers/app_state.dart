@@ -538,6 +538,11 @@ class AppState extends ChangeNotifier {
     _addLog('Mesaj gönderildi: "$text"');
   }
 
+  Future<void> markMessagesAsRead(String requestId) async {
+    if (currentUser == null) return;
+    await _chatMessageService.markMessagesAsRead(requestId, currentUser!.uid);
+  }
+
   Future<void> proposeMeetingPoint(String requestId, String title, String addressText, String timeText) async {
     if (currentUser == null) return;
     

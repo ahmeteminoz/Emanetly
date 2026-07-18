@@ -14,6 +14,7 @@ class ChatMessageModel {
   final ChatMessageType type;
   final DateTime createdAt;
   final String? customPayload; // Optional payload for IDs or metadata (e.g. proposalId)
+  final bool isRead;
 
   ChatMessageModel({
     required this.id,
@@ -24,6 +25,7 @@ class ChatMessageModel {
     required this.type,
     required this.createdAt,
     this.customPayload,
+    this.isRead = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +38,7 @@ class ChatMessageModel {
       'type': type.name,
       'createdAt': createdAt.toIso8601String(),
       'customPayload': customPayload,
+      'isRead': isRead,
     };
   }
 
@@ -54,6 +57,7 @@ class ChatMessageModel {
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
       customPayload: map['customPayload'],
+      isRead: map['isRead'] ?? false,
     );
   }
 }
