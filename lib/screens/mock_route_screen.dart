@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
+import 'transaction_success_screen.dart';
 
 class MockRouteScreen extends StatefulWidget {
   final EmanetItem item;
@@ -39,6 +40,26 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
 
     final isLender = currentItem.lenderId == appState.currentUser?.uid;
     final isBorrower = currentItem.borrowerId == appState.currentUser?.uid;
+
+    if (currentItem.status == EmanetStatus.available || currentItem.status == EmanetStatus.archived) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final activeReq = appState.getRequestForActiveItem(widget.item.id);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TransactionSuccessScreen(
+              item: currentItem,
+              targetUserId: isLender ? (currentItem.borrowerId ?? '') : currentItem.lenderId,
+              targetName: isLender ? (currentItem.borrowerName ?? 'Ödünç Alan') : currentItem.lenderName,
+              requestId: activeReq?.id ?? '',
+            ),
+          ),
+        );
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -554,16 +575,6 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
               },
               color: Colors.deepPurple,
             ),
-            const SizedBox(height: 8),
-            buildButton(
-              label: 'Eşya Sahibi ${item.lenderName}\'i Değerlendir',
-              icon: Icons.rate_review_outlined,
-              onPressed: () {
-                final activeReq = appState.getRequestForActiveItem(item.id);
-                _showFeedbackDialog(context, item.lenderId, item.lenderName, appState, activeReq?.id ?? '');
-              },
-              color: theme.colorScheme.secondary,
-            ),
           ] else if (isLender) ...[
             const Center(
               child: Text(
@@ -571,17 +582,6 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                 style: TextStyle(fontStyle: FontStyle.italic),
               ),
             ),
-            const SizedBox(height: 12),
-            if (item.borrowerId != null)
-              buildButton(
-                label: 'Ödünç Alan ${item.borrowerName ?? "Öğrenci"}\'yi Değerlendir',
-                icon: Icons.rate_review_outlined,
-                onPressed: () {
-                  final activeReq = appState.getRequestForActiveItem(item.id);
-                  _showFeedbackDialog(context, item.borrowerId!, item.borrowerName ?? "Öğrenci", appState, activeReq?.id ?? '');
-                },
-                color: theme.colorScheme.secondary,
-              ),
           ],
         ],
       );
@@ -594,15 +594,8 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
           label: 'İadeyi Onayla & Kapat',
           icon: Icons.done_all_rounded,
           onPressed: () {
-            final borrowerId = item.borrowerId;
-            final borrowerName = item.borrowerName;
-            final activeReq = appState.getRequestForActiveItem(item.id);
             appState.approveReturn(item.id);
-            if (borrowerId != null && borrowerName != null) {
-              _showFeedbackDialog(context, borrowerId, borrowerName, appState, activeReq?.id ?? '');
-            } else {
-              Navigator.pop(context);
-            }
+            Navigator.pop(context);
           },
           color: Colors.green,
         );

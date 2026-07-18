@@ -272,12 +272,13 @@ class MockAuthService implements AuthService {
 
   @override
   Future<void> updateUserProfile(UserProfile updatedProfile) async {
-    final index = _mockUsers.indexWhere((u) => u.uid == updatedProfile.uid);
+    final profileWithBadges = updatedProfile.recalculateBadges();
+    final index = _mockUsers.indexWhere((u) => u.uid == profileWithBadges.uid);
     if (index != -1) {
-      _mockUsers[index] = updatedProfile;
+      _mockUsers[index] = profileWithBadges;
     }
-    if (_currentUser?.uid == updatedProfile.uid) {
-      _currentUser = updatedProfile;
+    if (_currentUser?.uid == profileWithBadges.uid) {
+      _currentUser = profileWithBadges;
       _controller.add(_currentUser);
     }
   }
@@ -619,14 +620,15 @@ class FirebaseAuthService implements AuthService {
 
   @override
   Future<void> updateUserProfile(UserProfile updatedProfile) async {
-    final docRef = FirebaseFirestore.instance.collection('users').doc(updatedProfile.uid);
+    final profileWithBadges = updatedProfile.recalculateBadges();
+    final docRef = FirebaseFirestore.instance.collection('users').doc(profileWithBadges.uid);
     try {
-      await docRef.set(updatedProfile.toMap(), SetOptions(merge: true));
+      await docRef.set(profileWithBadges.toMap(), SetOptions(merge: true));
     } catch (e) {
       print('Emanetly: Error updating user profile in Firestore: $e');
     }
-    if (_currentUser?.uid == updatedProfile.uid) {
-      _currentUser = updatedProfile;
+    if (_currentUser?.uid == profileWithBadges.uid) {
+      _currentUser = profileWithBadges;
       _controller.add(_currentUser);
     }
   }

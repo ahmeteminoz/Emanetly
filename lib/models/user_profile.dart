@@ -127,6 +127,42 @@ class UserProfile {
     );
   }
 
+  UserProfile recalculateBadges() {
+    final badges = List<String>.from(userBadges);
+    
+    // 1. Yeni Üye (Hiç rozet yoksa varsayılan)
+    if (badges.isEmpty) {
+      badges.add('Yeni Üye');
+    }
+    
+    // 2. Aktif Paylaşımcı (En az 3 başarılı ödünç verme)
+    if (successfulLends >= 3 && !badges.contains('Aktif Paylaşımcı')) {
+      badges.add('Aktif Paylaşımcı');
+    }
+    
+    // 3. Güvenilir Ödünç Veren (En az 3 başarılı verme ve >= 4.5 puan)
+    if (successfulLends >= 3 && averageRating >= 4.5 && !badges.contains('Güvenilir Ödünç Veren')) {
+      badges.add('Güvenilir Ödünç Veren');
+    }
+    
+    // 4. Zamanında İade (En az 3 başarılı ödünç alma ve >= 4.5 puan)
+    if (successfulBorrows >= 3 && averageRating >= 4.5 && !badges.contains('Zamanında İade')) {
+      badges.add('Zamanında İade');
+    }
+    
+    // 5. Kampüs Yıldızı (En az 5 verme, 5 alma ve >= 4.7 puan - Topluluk Lideri)
+    if (successfulLends >= 5 && successfulBorrows >= 5 && averageRating >= 4.7 && !badges.contains('Kampüs Yıldızı')) {
+      badges.add('Kampüs Yıldızı');
+    }
+
+    // Diğer rozetler kazanıldıysa "Yeni Üye" rozetini listeden temizleyip kalabalık etmesini engelliyoruz
+    if (badges.length > 1 && badges.contains('Yeni Üye')) {
+      badges.remove('Yeni Üye');
+    }
+    
+    return copyWith(userBadges: badges);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
