@@ -447,12 +447,29 @@ class PublicProfileScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _showReportAction(context, 'block'),
-                  icon: const Icon(Icons.block_flipped, size: 18),
-                  label: const Text('Engelle'),
+                  onPressed: () {
+                    final isBlocked = appState.isUserBlocked(userId);
+                    appState.toggleBlockUser(userId);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isBlocked 
+                              ? 'Kullanıcı engeli kaldırıldı.' 
+                              : 'Kullanıcı engellendi. Artık ilanlarınızı göremeyecek.'
+                        ),
+                        backgroundColor: isBlocked ? Colors.green : Colors.red,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    appState.isUserBlocked(userId) ? Icons.check_circle_outline : Icons.block_flipped, 
+                    size: 18
+                  ),
+                  label: Text(appState.isUserBlocked(userId) ? 'Engeli Kaldır' : 'Engelle'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                    foregroundColor: appState.isUserBlocked(userId) ? Colors.green : Colors.red,
+                    side: BorderSide(color: appState.isUserBlocked(userId) ? Colors.green : Colors.red),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),

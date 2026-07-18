@@ -31,6 +31,7 @@ class AppState extends ChangeNotifier {
   int _selectedPaletteIndex = 0;
   ViewMode _gridViewMode = ViewMode.standardGrid;
   final Set<String> _favoriteItemIds = {};
+  final Set<String> _blockedUserIds = {};
 
   // Pre-agreement negotiation collections
   final List<BorrowRequestModel> _borrowRequests = [];
@@ -131,6 +132,22 @@ class AppState extends ChangeNotifier {
   void changeViewMode(ViewMode mode) {
     _gridViewMode = mode;
     _addLog('Görünüm modu değiştirildi: ${mode.name}');
+    notifyListeners();
+  }
+
+  // Blocked users logic
+  bool isUserBlocked(String uid) {
+    return _blockedUserIds.contains(uid);
+  }
+
+  void toggleBlockUser(String uid) {
+    if (_blockedUserIds.contains(uid)) {
+      _blockedUserIds.remove(uid);
+      _addLog('Kullanıcı engeli kaldırıldı: $uid');
+    } else {
+      _blockedUserIds.add(uid);
+      _addLog('Kullanıcı engellendi: $uid');
+    }
     notifyListeners();
   }
 
