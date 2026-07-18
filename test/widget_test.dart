@@ -6,6 +6,7 @@ import 'package:emanetly/services/auth_service.dart';
 import 'package:emanetly/services/item_service.dart';
 import 'package:emanetly/services/qr_service.dart';
 import 'package:emanetly/services/borrow_request_service.dart';
+import 'package:emanetly/services/chat_message_service.dart';
 
 void main() {
   testWidgets('Emanetly smoke test - App renders listings correctly', (WidgetTester tester) async {
@@ -14,11 +15,13 @@ void main() {
     final itemService = MockItemService();
     final qrService = MockQrService();
     final borrowRequestService = MockBorrowRequestService();
+    final chatMessageService = MockChatMessageService();
     final appState = AppState(
       authService: authService,
       itemService: itemService,
       qrService: qrService,
       borrowRequestService: borrowRequestService,
+      chatMessageService: chatMessageService,
     );
 
     // Build the app widget tree

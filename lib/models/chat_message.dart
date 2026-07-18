@@ -25,4 +25,35 @@ class ChatMessageModel {
     required this.createdAt,
     this.customPayload,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'requestId': requestId,
+      'senderId': senderId,
+      'senderName': senderName,
+      'text': text,
+      'type': type.name,
+      'createdAt': createdAt.toIso8601String(),
+      'customPayload': customPayload,
+    };
+  }
+
+  factory ChatMessageModel.fromMap(Map<String, dynamic> map) {
+    return ChatMessageModel(
+      id: map['id'] ?? '',
+      requestId: map['requestId'] ?? '',
+      senderId: map['senderId'] ?? '',
+      senderName: map['senderName'] ?? '',
+      text: map['text'] ?? '',
+      type: ChatMessageType.values.firstWhere(
+        (e) => e.name == map['type'],
+        orElse: () => ChatMessageType.text,
+      ),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      customPayload: map['customPayload'],
+    );
+  }
 }

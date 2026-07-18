@@ -7,6 +7,7 @@ import 'services/auth_service.dart';
 import 'services/item_service.dart';
 import 'services/qr_service.dart';
 import 'services/borrow_request_service.dart';
+import 'services/chat_message_service.dart';
 import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
 
@@ -16,6 +17,7 @@ void main() async {
   AuthService authService;
   ItemService itemService;
   BorrowRequestService borrowRequestService;
+  ChatMessageService chatMessageService;
 
   try {
     // Attempt to initialize Firebase using platform options (overwritten by flutterfire configure)
@@ -25,12 +27,14 @@ void main() async {
     authService = FirebaseAuthService();
     itemService = FirestoreItemService();
     borrowRequestService = FirestoreBorrowRequestService();
+    chatMessageService = FirestoreChatMessageService();
     debugPrint('Emanetly: Firebase initialized successfully with Firestore support.');
   } catch (e) {
     // Fallback if firebase options are not configured yet or throws UnimplementedError
     authService = MockAuthService();
     itemService = MockItemService();
     borrowRequestService = MockBorrowRequestService();
+    chatMessageService = MockChatMessageService();
     debugPrint('Emanetly: Firebase config fallback to Mock. Notice: $e');
   }
 
@@ -43,6 +47,7 @@ void main() async {
     itemService: itemService,
     qrService: qrService,
     borrowRequestService: borrowRequestService,
+    chatMessageService: chatMessageService,
   );
 
   runApp(

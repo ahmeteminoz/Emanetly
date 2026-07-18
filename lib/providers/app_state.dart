@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/item_service.dart';
 import '../services/qr_service.dart';
 import '../services/borrow_request_service.dart';
+import '../services/chat_message_service.dart';
 
 enum ViewMode {
   compactGrid,
@@ -21,6 +22,7 @@ class AppState extends ChangeNotifier {
   final ItemService _itemService;
   final QrService _qrService;
   final BorrowRequestService _borrowRequestService;
+  final ChatMessageService _chatMessageService;
 
   List<EmanetItem> _items = [];
   bool _isLoading = false;
@@ -41,16 +43,19 @@ class AppState extends ChangeNotifier {
   StreamSubscription<UserProfile?>? _authSubscription;
   StreamSubscription<List<EmanetItem>>? _itemsSubscription;
   StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
+  StreamSubscription<List<ChatMessageModel>>? _chatSubscription;
 
   AppState({
     required AuthService authService,
     required ItemService itemService,
     required QrService qrService,
     required BorrowRequestService borrowRequestService,
+    required ChatMessageService chatMessageService,
   })  : _authService = authService,
         _itemService = itemService,
         _qrService = qrService,
-        _borrowRequestService = borrowRequestService {
+        _borrowRequestService = borrowRequestService,
+        _chatMessageService = chatMessageService {
     
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
@@ -71,6 +76,13 @@ class AppState extends ChangeNotifier {
     // Listen to Items changes
     _itemsSubscription = _itemService.onItemsChanged.listen((newItems) {
       _items = newItems;
+      notifyListeners();
+    });
+
+    // Listen to Chat Messages changes globally
+    _chatSubscription = _chatMessageService.listenToAllChatMessages().listen((newMessages) {
+      _chatMessages.clear();
+      _chatMessages.addAll(newMessages);
       notifyListeners();
     });
 
@@ -269,7 +281,7 @@ class AppState extends ChangeNotifier {
       await _borrowRequestService.addBorrowRequest(newRequest);
 
       // System message
-      _chatMessages.add(ChatMessageModel(
+      await _chatMessageService.sendChatMessage(ChatMessageModel(
         id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
         requestId: requestId,
         senderId: 'system',
@@ -306,7 +318,7 @@ class AppState extends ChangeNotifier {
         await _borrowRequestService.addBorrowRequest(updatedReq);
         
         // Add a system message in the chat
-        _chatMessages.add(ChatMessageModel(
+        await _chatMessageService.sendChatMessage(ChatMessageModel(
           id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
           requestId: requestId,
           senderId: 'system',
@@ -511,7 +523,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Pre-Agreement Actions
-  void sendChatMessage(String requestId, String text) {
+  Future<void> sendChatMessage(String requestId, String text) async {
     if (currentUser == null) return;
     final message = ChatMessageModel(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
@@ -522,12 +534,11 @@ class AppState extends ChangeNotifier {
       type: ChatMessageType.text,
       createdAt: DateTime.now(),
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
     _addLog('Mesaj gönderildi: "$text"');
-    notifyListeners();
   }
 
-  void proposeMeetingPoint(String requestId, String title, String addressText, String timeText) {
+  Future<void> proposeMeetingPoint(String requestId, String title, String addressText, String timeText) async {
     if (currentUser == null) return;
     
     final proposalId = 'prop_${DateTime.now().millisecondsSinceEpoch}';
@@ -563,13 +574,12 @@ class AppState extends ChangeNotifier {
       createdAt: DateTime.now(),
       customPayload: proposalId,
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
 
     _addLog('Yeni buluşma noktası önerildi: $title');
-    notifyListeners();
   }
 
-  void acceptMeetingPoint(String proposalId) {
+  Future<void> acceptMeetingPoint(String proposalId) async {
     final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
     if (propIndex == -1) return;
     final proposal = _meetingPointProposals[propIndex];
@@ -590,13 +600,12 @@ class AppState extends ChangeNotifier {
       type: ChatMessageType.system,
       createdAt: DateTime.now(),
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
 
     _addLog('Buluşma noktası onaylandı: ${proposal.title}');
-    notifyListeners();
   }
 
-  void rejectMeetingPoint(String proposalId) {
+  Future<void> rejectMeetingPoint(String proposalId) async {
     final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
     if (propIndex == -1) return;
     final proposal = _meetingPointProposals[propIndex];
@@ -615,10 +624,9 @@ class AppState extends ChangeNotifier {
       type: ChatMessageType.system,
       createdAt: DateTime.now(),
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
 
     _addLog('Buluşma noktası reddedildi: ${proposal.title}');
-    notifyListeners();
   }
 
   void acceptBorrowRequest(String requestId) async {
@@ -668,10 +676,9 @@ class AppState extends ChangeNotifier {
       type: ChatMessageType.requestStatusUpdate,
       createdAt: DateTime.now(),
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
 
     _addLog('Ödünç talebi kabul edildi. Rota takibi açılabilir.');
-    notifyListeners();
   }
 
   void rejectBorrowRequest(String requestId) async {
@@ -690,10 +697,9 @@ class AppState extends ChangeNotifier {
       type: ChatMessageType.requestStatusUpdate,
       createdAt: DateTime.now(),
     );
-    _chatMessages.add(message);
+    await _chatMessageService.sendChatMessage(message);
 
     _addLog('Ödünç talebi reddedildi.');
-    notifyListeners();
   }
 
   Future<void> addUserReview(String targetUserId, String comment, double ratingRating) async {
@@ -865,6 +871,7 @@ class AppState extends ChangeNotifier {
     _authSubscription?.cancel();
     _itemsSubscription?.cancel();
     _requestsSubscription?.cancel();
+    _chatSubscription?.cancel();
     super.dispose();
   }
 }
