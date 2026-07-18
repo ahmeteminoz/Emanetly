@@ -135,7 +135,7 @@ class ChatMessageBubble extends StatelessWidget {
                   if (isMe) ...[
                     const SizedBox(width: 4),
                     Icon(
-                      message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      Icons.done_all_rounded,
                       size: 13,
                       color: message.isRead 
                           ? const Color(0xFF80D8FF) 
