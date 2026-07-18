@@ -748,7 +748,7 @@ class AppState extends ChangeNotifier {
     _addLog('Ödünç talebi reddedildi.');
   }
 
-  Future<void> addUserReview(String targetUserId, String comment, double ratingRating) async {
+  Future<void> addUserReview(String targetUserId, String comment, double ratingRating, String requestId) async {
     if (currentUser == null) return;
     
     final review = UserReview(
@@ -756,6 +756,7 @@ class AppState extends ChangeNotifier {
       rating: ratingRating.toStringAsFixed(1),
       comment: comment,
       dateText: 'Bugün',
+      requestId: requestId,
     );
 
     await _authService.addReviewToUser(targetUserId, review);

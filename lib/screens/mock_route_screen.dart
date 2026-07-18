@@ -311,6 +311,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     String targetUserId,
     String targetName,
     AppState appState,
+    String requestId,
   ) {
     showDialog(
       context: context,
@@ -340,7 +341,6 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                   children: [
                     const Text('Lütfen emanet süreç kalitesini değerlendirin:'),
                     const SizedBox(height: 12),
-                    // Row of stars
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
@@ -364,27 +364,31 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: commentController,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        hintText: 'Yorumunuzu yazın (örn: zamanında teslim etti)...',
-                        labelText: 'Yorum Yaz',
-                        border: OutlineInputBorder(),
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Deneyiminizi buraya yazın (isteğe bağlı)...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Etiketler:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                    const SizedBox(height: 6),
                     Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: availableTags.map((tag) {
-                        final isSel = selectedTags.contains(tag);
-                        return ChoiceChip(
-                          label: Text(tag, style: const TextStyle(fontSize: 10)),
-                          selected: isSel,
-                          onSelected: (selected) {
+                        final isSelected = selectedTags.contains(tag);
+                        return FilterChip(
+                          selected: isSelected,
+                          label: Text(tag),
+                          labelStyle: TextStyle(
+                            fontSize: 11,
+                            color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                          ),
+                          selectedColor: theme.colorScheme.primary,
+                          checkmarkColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onSelected: (val) {
                             setDialogState(() {
-                              if (selected) {
+                              if (val) {
                                 selectedTags.add(tag);
                               } else {
                                 selectedTags.remove(tag);
@@ -401,14 +405,12 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Close route screen
                   },
                   child: const Text('Atla'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     final comment = commentController.text.trim();
-                    // Append selected tags to comments if present
                     String finalComment = comment.isNotEmpty ? comment : 'Sorunsuz ve güvenilir işlem.';
                     if (selectedTags.isNotEmpty) {
                       finalComment += ' (${selectedTags.join(', ')})';
@@ -418,10 +420,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                       targetUserId,
                       finalComment,
                       currentRating,
+                      requestId,
                     );
 
                     Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Close route screen
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -556,7 +558,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
             buildButton(
               label: 'Eşya Sahibi ${item.lenderName}\'i Değerlendir',
               icon: Icons.rate_review_outlined,
-              onPressed: () => _showFeedbackDialog(context, item.lenderId, item.lenderName, appState),
+              onPressed: () {
+                final activeReq = appState.getRequestForActiveItem(item.id);
+                _showFeedbackDialog(context, item.lenderId, item.lenderName, appState, activeReq?.id ?? '');
+              },
               color: theme.colorScheme.secondary,
             ),
           ] else if (isLender) ...[
@@ -571,7 +576,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
               buildButton(
                 label: 'Ödünç Alan ${item.borrowerName ?? "Öğrenci"}\'yi Değerlendir',
                 icon: Icons.rate_review_outlined,
-                onPressed: () => _showFeedbackDialog(context, item.borrowerId!, item.borrowerName ?? "Öğrenci", appState),
+                onPressed: () {
+                  final activeReq = appState.getRequestForActiveItem(item.id);
+                  _showFeedbackDialog(context, item.borrowerId!, item.borrowerName ?? "Öğrenci", appState, activeReq?.id ?? '');
+                },
                 color: theme.colorScheme.secondary,
               ),
           ],
@@ -588,9 +596,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
           onPressed: () {
             final borrowerId = item.borrowerId;
             final borrowerName = item.borrowerName;
+            final activeReq = appState.getRequestForActiveItem(item.id);
             appState.approveReturn(item.id);
             if (borrowerId != null && borrowerName != null) {
-              _showFeedbackDialog(context, borrowerId, borrowerName, appState);
+              _showFeedbackDialog(context, borrowerId, borrowerName, appState, activeReq?.id ?? '');
             } else {
               Navigator.pop(context);
             }

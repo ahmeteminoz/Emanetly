@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/borrow_request.dart';
 import '../models/item.dart';
+import '../models/user_profile.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'widgets/chat_message_bubble.dart';
@@ -644,8 +645,232 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 ),
               ),
             ),
+
+          // 5. COMPLETED TRANSACTION FEEDBACK INVITATION CARD
+          if (request != null && request.status == BorrowRequestStatus.completed)
+            FutureBuilder<UserProfile?>(
+              future: appState.getUserProfile(isOwner ? request.requesterId : request.ownerId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 80,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final targetUser = snapshot.data;
+                if (targetUser == null) return const SizedBox.shrink();
+
+                final hasReviewed = targetUser.reviews.any((r) => r.requestId == widget.requestId);
+                final targetName = isOwner ? (request!.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
+
+                return SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                    ),
+                    child: hasReviewed
+                        ? Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Colors.green.shade600, size: 22),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Bu işlem tamamlandı ve karşı tarafı değerlendirdiniz. Teşekkürler!',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.handshake_rounded, color: theme.colorScheme.primary, size: 22),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Emanet süreci başarıyla tamamlandı! Deneyiminizi puanlamak ister misiniz?',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: () => _showFeedbackDialog(
+                                  context,
+                                  targetUser.uid,
+                                  targetName,
+                                  appState,
+                                ),
+                                icon: const Icon(Icons.rate_review_outlined),
+                                label: Text('$targetName Değerlendir'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
+    );
+  }
+
+  void _showFeedbackDialog(
+    BuildContext context,
+    String targetUserId,
+    String targetName,
+    AppState appState,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        double currentRating = 5.0;
+        final commentController = TextEditingController();
+        final List<String> availableTags = ['Zamanında Teslim', 'Hızlı İletişim', 'Temiz Kullanım', 'Güvenilir'];
+        final List<String> selectedTags = [];
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final theme = Theme.of(context);
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Icon(Icons.rate_review_outlined, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('$targetName Değerlendir')),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Lütfen emanet süreç kalitesini değerlendirin:'),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starVal = index + 1.0;
+                        return IconButton(
+                          icon: Icon(
+                            starVal <= currentRating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: Colors.amber,
+                            size: 32,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              currentRating = starVal;
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Deneyiminizi buraya yazın (isteğe bağlı)...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: availableTags.map((tag) {
+                        final isSelected = selectedTags.contains(tag);
+                        return FilterChip(
+                          selected: isSelected,
+                          label: Text(tag),
+                          labelStyle: TextStyle(
+                            fontSize: 11,
+                            color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+                          ),
+                          selectedColor: theme.colorScheme.primary,
+                          checkmarkColor: theme.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          onSelected: (val) {
+                            setDialogState(() {
+                              if (val) {
+                                selectedTags.add(tag);
+                              } else {
+                                selectedTags.remove(tag);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                  },
+                  child: const Text('Atla'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final comment = commentController.text.trim();
+                    String finalComment = comment.isNotEmpty ? comment : 'Sorunsuz ve güvenilir işlem.';
+                    if (selectedTags.isNotEmpty) {
+                      finalComment += ' (${selectedTags.join(', ')})';
+                    }
+
+                    appState.addUserReview(
+                      targetUserId,
+                      finalComment,
+                      currentRating,
+                      widget.requestId,
+                    );
+
+                    Navigator.pop(context); // Close dialog
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                  ),
+                  child: const Text('Gönder'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

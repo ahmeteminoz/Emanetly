@@ -3,12 +3,14 @@ class UserReview {
   final String rating;
   final String comment;
   final String dateText;
+  final String? requestId;
 
   UserReview({
     required this.authorName,
     required this.rating,
     required this.comment,
     required this.dateText,
+    this.requestId,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +19,7 @@ class UserReview {
       'rating': rating,
       'comment': comment,
       'dateText': dateText,
+      'requestId': requestId,
     };
   }
 
@@ -26,6 +29,7 @@ class UserReview {
       rating: map['rating'] ?? '',
       comment: map['comment'] ?? '',
       dateText: map['dateText'] ?? '',
+      requestId: map['requestId'],
     );
   }
 }
