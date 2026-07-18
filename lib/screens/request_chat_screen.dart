@@ -6,6 +6,7 @@ import '../providers/app_state_provider.dart';
 import 'widgets/chat_message_bubble.dart';
 import 'widgets/borrow_request_status_card.dart';
 import 'mock_route_screen.dart';
+import 'item_detail_screen.dart';
 
 class RequestChatScreen extends StatefulWidget {
   final String requestId;
@@ -249,8 +250,17 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
       body: Column(
         children: [
           // 1. PRODUCT MINI HEADER CARD
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ItemDetailScreen(item: item!),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4))),
@@ -358,6 +368,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
               ],
             ),
           ),
+        ),
 
           // 2. CONVERSATION MESSAGES LIST
           Expanded(
