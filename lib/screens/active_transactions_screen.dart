@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../providers/app_state_provider.dart';
 import '../models/item.dart';
+import '../models/user_profile.dart';
 import '../models/borrow_request.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
+import 'public_profile_screen.dart';
 
 class ActiveTransactionsScreen extends StatefulWidget {
   const ActiveTransactionsScreen({super.key});
@@ -211,19 +213,9 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                             }
 
                             if (matchingItem == null) return const SizedBox.shrink();
-
+                            
                             final isLender = request.ownerId == currentUser.uid;
-                            String partyName = 'Bilinmeyen Kullanıcı';
-                            String roleLabel = '';
-                            if (isLender) {
-                              roleLabel = 'Alıcı Adayı';
-                              if (request.requesterId == 'user_1') partyName = 'Ahmet Öz';
-                              if (request.requesterId == 'user_2') partyName = 'Ayşe Yılmaz';
-                              if (request.requesterId == 'user_3') partyName = 'Can Demir';
-                            } else {
-                              roleLabel = 'Eşya Sahibi';
-                              partyName = matchingItem.lenderName;
-                            }
+                            final targetUserId = isLender ? request.requesterId : request.ownerId;
 
                             // Get last message
                             final messages = appState.getChatMessagesForRequest(request.id);
@@ -236,123 +228,157 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               lastMessageTime = lastMsg.createdAt.toLocal().toString().substring(11, 16);
                             }
 
+                            final lenderResponded = messages.any((msg) => msg.senderId == request.ownerId);
                             final unreadCount = appState.getUnreadCountForRequest(request.id);
                             final hasUnread = unreadCount > 0;
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-                              ),
-                              color: Colors.orange.shade50.withOpacity(0.08),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => RequestChatScreen(requestId: request.id),
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(
-                                    children: [
-                                      // Avatar
-                                      CircleAvatar(
-                                        radius: 24,
-                                        backgroundColor: theme.colorScheme.primaryContainer,
-                                        child: Text(
-                                          partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
-                                          style: TextStyle(
-                                            color: theme.colorScheme.onPrimaryContainer,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                            return FutureBuilder<UserProfile?>(
+                              future: appState.getUserProfile(targetUserId),
+                              builder: (context, snapshot) {
+                                final profile = snapshot.data;
+                                
+                                String partyName = 'Bilinmeyen Kullanıcı';
+                                String roleLabel = '';
+                                if (isLender) {
+                                  roleLabel = 'Alıcı Adayı';
+                                  if (lenderResponded && profile != null) {
+                                    partyName = profile.name;
+                                  } else {
+                                    partyName = 'Bilinmeyen Kullanıcı';
+                                  }
+                                } else {
+                                  roleLabel = 'Eşya Sahibi';
+                                  partyName = matchingItem!.lenderName;
+                                }
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                                  ),
+                                  color: Colors.orange.shade50.withOpacity(0.08),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => RequestChatScreen(requestId: request.id),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      // Info
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  partyName,
-                                                  style: theme.textTheme.titleSmall?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          // Avatar (Dokunulduğunda Profil Sayfasına Geçiş)
+                                          GestureDetector(
+                                            onTap: (partyName != 'Bilinmeyen Kullanıcı' && profile != null)
+                                                ? () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => PublicProfileScreen(userId: targetUserId),
+                                                      ),
+                                                    );
+                                                  }
+                                                : null,
+                                            child: CircleAvatar(
+                                              radius: 24,
+                                              backgroundColor: theme.colorScheme.primaryContainer,
+                                              child: Text(
+                                                partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
+                                                style: TextStyle(
+                                                  color: theme.colorScheme.onPrimaryContainer,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
-                                                if (lastMessageTime.isNotEmpty)
-                                                  Text(
-                                                    lastMessageTime,
-                                                    style: theme.textTheme.bodySmall?.copyWith(
-                                                      color: hasUnread 
-                                                          ? theme.colorScheme.error 
-                                                          : theme.colorScheme.outline,
-                                                      fontSize: 10,
-                                                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          // Info
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      partyName,
+                                                      style: theme.textTheme.titleSmall?.copyWith(
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
                                                     ),
+                                                    if (lastMessageTime.isNotEmpty)
+                                                      Text(
+                                                        lastMessageTime,
+                                                        style: theme.textTheme.bodySmall?.copyWith(
+                                                          color: hasUnread 
+                                                              ? theme.colorScheme.error 
+                                                              : theme.colorScheme.outline,
+                                                          fontSize: 10,
+                                                          fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 2),
+                                                 Text(
+                                                   '${matchingItem?.title ?? "Bilinmeyen Ürün"} ($roleLabel)',
+                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                    color: theme.colorScheme.primary,
+                                                    fontWeight: FontWeight.w500,
                                                   ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  lastMessageText,
+                                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                                    color: hasUnread 
+                                                        ? theme.colorScheme.onSurface 
+                                                        : theme.colorScheme.onSurfaceVariant,
+                                                    fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ],
                                             ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${matchingItem.title} ($roleLabel)',
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: theme.colorScheme.primary,
-                                                fontWeight: FontWeight.w500,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (hasUnread) ...[
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.error,
+                                                shape: BoxShape.circle,
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              lastMessageText,
-                                              style: theme.textTheme.bodyMedium?.copyWith(
-                                                color: hasUnread 
-                                                    ? theme.colorScheme.onSurface 
-                                                    : theme.colorScheme.onSurfaceVariant,
-                                                fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                              child: Text(
+                                                unreadCount.toString(),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
+                                            const SizedBox(width: 4),
                                           ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      if (hasUnread) ...[
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.error,
-                                            shape: BoxShape.circle,
+                                          Icon(
+                                            Icons.chevron_right_rounded,
+                                            color: theme.colorScheme.outline,
                                           ),
-                                          child: Text(
-                                            unreadCount.toString(),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                      ],
-                                      Icon(
-                                        Icons.chevron_right_rounded,
-                                        color: theme.colorScheme.outline,
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           }),
                           const SizedBox(height: 16),

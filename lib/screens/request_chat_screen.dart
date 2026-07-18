@@ -8,6 +8,7 @@ import 'widgets/chat_message_bubble.dart';
 import 'widgets/borrow_request_status_card.dart';
 import 'mock_route_screen.dart';
 import 'item_detail_screen.dart';
+import 'public_profile_screen.dart';
 
 class RequestChatScreen extends StatefulWidget {
   final String requestId;
@@ -231,13 +232,83 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     // Auto scroll bottom when build finishes
     _scrollToBottom();
 
+    final targetUserId = isOwner ? request.requesterId : request.ownerId;
+    final lenderResponded = messages.any((msg) => msg.senderId == request!.ownerId);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          isOnlyInquiry 
-              ? (isOwner ? 'Soru / Bilgi Talebi' : 'Bilgi Al / Soru Sor')
-              : (isOwner ? 'Ödünç Alma Talebi' : 'Ön Görüşme Chat'),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        titleSpacing: 0,
+        title: FutureBuilder<UserProfile?>(
+          future: appState.getUserProfile(targetUserId),
+          builder: (context, snapshot) {
+            final profile = snapshot.data;
+            String partyName = 'Bilinmeyen Kullanıcı';
+            
+            if (isOwner) {
+              if (lenderResponded && profile != null) {
+                partyName = profile.name;
+              } else {
+                partyName = 'Bilinmeyen Kullanıcı';
+              }
+            } else {
+              partyName = item?.lenderName ?? 'Eşya Sahibi';
+            }
+            
+            final canNavigate = partyName != 'Bilinmeyen Kullanıcı' && profile != null;
+            
+            return InkWell(
+              onTap: canNavigate ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PublicProfileScreen(userId: targetUserId),
+                  ),
+                );
+              } : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: Text(
+                        partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          partyName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        Text(
+                          isOwner ? 'Alıcı Adayı' : 'Eşya Sahibi',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
         actions: [
           if (isPendingDiscussion)
@@ -381,9 +452,17 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
               itemBuilder: (context, index) {
                 final message = messages[index];
                 final isMe = message.senderId == appState.currentUser?.uid;
+                
+                // İlan sahibi henüz yanıt vermediyse karşı tarafın adını baloncukta maskeliyoruz
+                String? senderNameOverride;
+                if (!isMe && isOwner && !lenderResponded) {
+                  senderNameOverride = 'Bilinmeyen Kullanıcı';
+                }
+
                 return ChatMessageBubble(
                   message: message,
                   isMe: isMe,
+                  senderNameOverride: senderNameOverride,
                 );
               },
             ),

@@ -5,11 +5,13 @@ import 'meeting_point_proposal_card.dart';
 class ChatMessageBubble extends StatelessWidget {
   final ChatMessageModel message;
   final bool isMe;
+  final String? senderNameOverride;
 
   const ChatMessageBubble({
     super.key,
     required this.message,
     required this.isMe,
+    this.senderNameOverride,
   });
 
   @override
@@ -102,7 +104,7 @@ class ChatMessageBubble extends StatelessWidget {
           children: [
             if (!isMe) ...[
               Text(
-                message.senderName,
+                senderNameOverride ?? message.senderName,
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
