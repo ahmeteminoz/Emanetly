@@ -138,7 +138,9 @@ class ChatMessageBubble extends StatelessWidget {
                       Icons.done_all_rounded,
                       size: 13,
                       color: message.isRead 
-                          ? const Color(0xFF80D8FF) 
+                          ? (theme.brightness == Brightness.dark 
+                              ? const Color(0xFF1565C0) // Karanlık modda belirgin koyu mavi
+                              : const Color(0xFF80D8FF)) // Aydınlık modda açık mavi/cyan
                           : theme.colorScheme.onPrimary.withOpacity(0.6),
                     ),
                   ],
