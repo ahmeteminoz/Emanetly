@@ -250,17 +250,8 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
       body: Column(
         children: [
           // 1. PRODUCT MINI HEADER CARD
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ItemDetailScreen(item: item!),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4))),
@@ -274,90 +265,101 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             ),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    // Small Image Representative
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(item.mockImageColorValue).withOpacity(0.8),
-                            Color(item.mockImageColorValue),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ItemDetailScreen(item: item!),
                       ),
-                      child: const Center(
-                        child: Icon(Icons.inventory_2_outlined, size: 24, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Product Details
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    );
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      // Small Image Representative
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(item.mockImageColorValue).withOpacity(0.8),
+                              Color(item.mockImageColorValue),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  item.category,
-                                  style: TextStyle(
-                                    fontSize: 9, 
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.inventory_2_outlined, size: 24, color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Product Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    item.category,
+                                    style: TextStyle(
+                                      fontSize: 9, 
+                                      color: theme.colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(Icons.location_on_outlined, size: 10, color: theme.colorScheme.outline),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                child: Text(
-                                  item.pickupLocationTitle,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                                const SizedBox(width: 8),
+                                Icon(Icons.location_on_outlined, size: 10, color: theme.colorScheme.outline),
+                                const SizedBox(width: 2),
+                                Expanded(
+                                  child: Text(
+                                    item.pickupLocationTitle,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                                  ),
                                 ),
-                              ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Trust Rating representation
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                              const SizedBox(width: 2),
+                              const Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             ],
+                          ),
+                          Text(
+                            isOwner ? 'Talep Eden' : 'Sahip Puanı',
+                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
                           ),
                         ],
                       ),
-                    ),
-                    // Trust Rating representation
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 2),
-                            const Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Text(
-                          isOwner ? 'Talep Eden' : 'Sahip Puanı',
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 // Status Card Banner
@@ -368,7 +370,6 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
               ],
             ),
           ),
-        ),
 
           // 2. CONVERSATION MESSAGES LIST
           Expanded(

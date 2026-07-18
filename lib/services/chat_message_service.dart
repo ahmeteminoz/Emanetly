@@ -42,14 +42,15 @@ class FirestoreChatMessageService implements ChatMessageService {
       final snapshot = await _firestore
           .collection('chatMessages')
           .where('requestId', isEqualTo: requestId)
-          .where('isRead', isEqualTo: false)
           .get();
 
       final batch = _firestore.batch();
       var count = 0;
       for (final doc in snapshot.docs) {
-        final senderId = doc.data()['senderId'];
-        if (senderId != currentUserId) {
+        final data = doc.data();
+        final senderId = data['senderId'];
+        final isRead = data['isRead'] ?? false;
+        if (senderId != currentUserId && !isRead) {
           batch.update(doc.reference, {'isRead': true});
           count++;
         }

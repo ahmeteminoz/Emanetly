@@ -557,6 +557,30 @@ class AppState extends ChangeNotifier {
 
   Future<void> markMessagesAsRead(String requestId) async {
     if (currentUser == null) return;
+    
+    // Yerel mesajları anında okundu yaparak arayüzün anlık tepki vermesini sağlıyoruz
+    var localUpdated = false;
+    for (var i = 0; i < _chatMessages.length; i++) {
+      final msg = _chatMessages[i];
+      if (msg.requestId == requestId && msg.senderId != currentUser!.uid && !msg.isRead) {
+        _chatMessages[i] = ChatMessageModel(
+          id: msg.id,
+          requestId: msg.requestId,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          text: msg.text,
+          type: msg.type,
+          createdAt: msg.createdAt,
+          customPayload: msg.customPayload,
+          isRead: true,
+        );
+        localUpdated = true;
+      }
+    }
+    if (localUpdated) {
+      notifyListeners();
+    }
+    
     await _chatMessageService.markMessagesAsRead(requestId, currentUser!.uid);
   }
 
