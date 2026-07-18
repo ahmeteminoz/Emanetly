@@ -499,6 +499,23 @@ class AppState extends ChangeNotifier {
   List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
     return _chatMessages.where((msg) => msg.requestId == requestId).toList();
   }
+
+  int getUnreadCountForRequest(String requestId) {
+    if (currentUser == null) return 0;
+    return _chatMessages.where((msg) =>
+      msg.requestId == requestId &&
+      msg.senderId != currentUser!.uid &&
+      !msg.isRead
+    ).length;
+  }
+
+  int get totalUnreadCount {
+    if (currentUser == null) return 0;
+    return _chatMessages.where((msg) =>
+      msg.senderId != currentUser!.uid &&
+      !msg.isRead
+    ).length;
+  }
   
   MeetingPointProposalModel? getProposal(String proposalId) {
     try {

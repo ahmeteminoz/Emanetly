@@ -49,7 +49,7 @@ class _MainLayoutState extends State<MainLayout> {
       return isParticipant && inProgress;
     }).length;
 
-    final totalMessagesAndTrackingCount = activeTrackingCount + discussionRequestsCount;
+    final totalUnreadMessages = appState.totalUnreadCount;
 
     return Scaffold(
       body: SafeArea(
@@ -128,9 +128,9 @@ class _MainLayoutState extends State<MainLayout> {
             ),
             const SizedBox(width: 48), // Space for floating action button
             Badge(
-              isLabelVisible: totalMessagesAndTrackingCount > 0,
-              label: Text(totalMessagesAndTrackingCount.toString()),
-              backgroundColor: theme.colorScheme.secondary,
+              isLabelVisible: totalUnreadMessages > 0,
+              label: Text(totalUnreadMessages.toString()),
+              backgroundColor: theme.colorScheme.error,
               child: IconButton(
                 icon: Icon(
                   _currentIndex == 2 ? Icons.forum : Icons.forum_outlined,

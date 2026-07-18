@@ -236,6 +236,9 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               lastMessageTime = lastMsg.createdAt.toLocal().toString().substring(11, 16);
                             }
 
+                            final unreadCount = appState.getUnreadCountForRequest(request.id);
+                            final hasUnread = unreadCount > 0;
+
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               elevation: 0,
@@ -289,8 +292,11 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                                   Text(
                                                     lastMessageTime,
                                                     style: theme.textTheme.bodySmall?.copyWith(
-                                                      color: theme.colorScheme.outline,
+                                                      color: hasUnread 
+                                                          ? theme.colorScheme.error 
+                                                          : theme.colorScheme.outline,
                                                       fontSize: 10,
+                                                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
                                                     ),
                                                   ),
                                               ],
@@ -309,7 +315,10 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                             Text(
                                               lastMessageText,
                                               style: theme.textTheme.bodyMedium?.copyWith(
-                                                color: theme.colorScheme.onSurfaceVariant,
+                                                color: hasUnread 
+                                                    ? theme.colorScheme.onSurface 
+                                                    : theme.colorScheme.onSurfaceVariant,
+                                                fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -318,6 +327,24 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
+                                      if (hasUnread) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.error,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            unreadCount.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
                                       Icon(
                                         Icons.chevron_right_rounded,
                                         color: theme.colorScheme.outline,
