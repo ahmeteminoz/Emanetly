@@ -555,18 +555,26 @@ class FirebaseAuthService implements AuthService {
 
   @override
   Future<UserProfile?> getUserProfile(String uid) async {
-    // Check local cache list first
-    final cached = _mappedMockUsers.where((u) => u.uid == uid);
-    if (cached.isNotEmpty) return cached.first;
-
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists && doc.data() != null) {
-        return UserProfile.fromMap(doc.data()!);
+        final profile = UserProfile.fromMap(doc.data()!);
+        // Update local cache to maintain consistency
+        final index = _mappedMockUsers.indexWhere((u) => u.uid == uid);
+        if (index != -1) {
+          _mappedMockUsers[index] = profile;
+        } else {
+          _mappedMockUsers.add(profile);
+        }
+        return profile;
       }
     } catch (e) {
       print('Emanetly: Error getting user profile from Firestore: $e');
     }
+
+    // Fallback to cache if database read fails or profile is not found
+    final cached = _mappedMockUsers.where((u) => u.uid == uid);
+    if (cached.isNotEmpty) return cached.first;
     return null;
   }
 

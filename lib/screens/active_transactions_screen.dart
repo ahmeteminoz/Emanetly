@@ -30,7 +30,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
     // 1. Filter active routing items
     final allActiveItems = appState.items.where((item) {
       final isParticipant = item.borrowerId == currentUser.uid || item.lenderId == currentUser.uid;
-      final inProgress = item.status != EmanetStatus.available;
+      final inProgress = item.status != EmanetStatus.available && item.status != EmanetStatus.archived;
       return isParticipant && inProgress;
     }).toList();
 
