@@ -4,6 +4,7 @@ import '../models/item.dart';
 import '../models/borrow_request.dart';
 import '../models/user_profile.dart';
 import '../providers/app_state_provider.dart';
+import '../providers/app_state.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
@@ -964,17 +965,7 @@ class ItemDetailScreen extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final request = await appState.requestBorrow(item.id, isOfficialRequest: false);
-                    if (context.mounted && request != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RequestChatScreen(requestId: request.id),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: () => _showInquirySheet(context, theme, appState, item),
                   icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
                   label: const Text('Soru Sor'),
                   style: OutlinedButton.styleFrom(
@@ -1224,6 +1215,114 @@ class ItemDetailScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}.${date.month}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _showInquirySheet(
+    BuildContext context,
+    ThemeData theme,
+    AppState appState,
+    EmanetItem currentItem,
+  ) {
+    final TextEditingController questionController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            left: 20,
+            right: 20,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'İlan Sahibine Soru Sor',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '"${currentItem.title}" ilanı hakkında merak ettiğiniz soruyu yazın. İlk mesajı gönderdiğinizde sohbet odası oluşturulacaktır.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: questionController,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: 'Sorunuzu buraya yazın...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () async {
+                  final text = questionController.text.trim();
+                  if (text.isEmpty) return;
+
+                  Navigator.pop(context); // Close sheet
+
+                  final request = await appState.requestBorrow(currentItem.id, isOfficialRequest: false);
+                  if (request != null) {
+                    await appState.sendChatMessage(request.id, text);
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestChatScreen(requestId: request.id),
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Soruyu Gönder',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
