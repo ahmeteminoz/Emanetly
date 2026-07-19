@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../models/item.dart';
@@ -5,6 +6,7 @@ import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'item_detail_screen.dart';
 import 'widgets/item_card.dart';
+import 'widgets/full_screen_image_viewer.dart';
 
 class PublicProfileScreen extends StatelessWidget {
   final String userId;
@@ -78,15 +80,40 @@ class PublicProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   // Large Avatar (Read-Only)
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 36,
+                  GestureDetector(
+                    onTap: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FullScreenImageViewer(
+                                  imageUrl: user.avatarUrl!,
+                                  heroTag: 'public_profile_avatar_${user.uid}',
+                                ),
+                              ),
+                            );
+                          }
+                        : null,
+                    child: Hero(
+                      tag: 'public_profile_avatar_${user.uid}',
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        backgroundImage: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                            ? (user.avatarUrl!.startsWith('http')
+                                ? NetworkImage(user.avatarUrl!)
+                                : FileImage(File(user.avatarUrl!)) as ImageProvider)
+                            : null,
+                        child: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                            ? null
+                            : Text(
+                                user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                style: theme.textTheme.headlineLarge?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 36,
+                                ),
+                              ),
                       ),
                     ),
                   ),

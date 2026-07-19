@@ -8,6 +8,7 @@ import '../providers/app_state.dart';
 import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
+import 'widgets/full_screen_image_viewer.dart';
 import 'edit_item_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -107,19 +108,38 @@ class ItemDetailScreen extends StatelessWidget {
                               );
 
                           if (imageUrl != null && imageUrl.isNotEmpty) {
+                            Widget imageWidget;
                             if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
-                              return Image.network(
+                              imageWidget = Image.network(
                                 imageUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) => fallback(),
                               );
                             } else {
-                              return Image.file(
+                              imageWidget = Image.file(
                                 File(imageUrl),
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) => fallback(),
                               );
                             }
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FullScreenImageViewer(
+                                      imageUrl: imageUrl,
+                                      heroTag: 'item_detail_image_${currentItem.id}',
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Hero(
+                                tag: 'item_detail_image_${currentItem.id}',
+                                child: imageWidget,
+                              ),
+                            );
                           }
                           return fallback();
                         })(),
@@ -442,16 +462,29 @@ class ItemDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          child: Text(
-                            item.lenderName[0].toUpperCase(),
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        FutureBuilder<UserProfile?>(
+                          future: appState.getUserProfile(item.lenderId),
+                          builder: (context, snapshot) {
+                            final profile = snapshot.data;
+                            return CircleAvatar(
+                              radius: 24,
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                                  ? (profile.avatarUrl!.startsWith('http')
+                                      ? NetworkImage(profile.avatarUrl!)
+                                      : FileImage(File(profile.avatarUrl!)) as ImageProvider)
+                                  : null,
+                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                                  ? null
+                                  : Text(
+                                      item.lenderName[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -584,16 +617,29 @@ class ItemDetailScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: theme.colorScheme.secondaryContainer,
-                  child: Text(
-                    item.borrowerName![0].toUpperCase(),
-                    style: TextStyle(
-                      color: theme.colorScheme.onSecondaryContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                FutureBuilder<UserProfile?>(
+                  future: appState.getUserProfile(item.borrowerId!),
+                  builder: (context, snapshot) {
+                    final profile = snapshot.data;
+                    return CircleAvatar(
+                      radius: 20,
+                      backgroundColor: theme.colorScheme.secondaryContainer,
+                      backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                          ? (profile.avatarUrl!.startsWith('http')
+                              ? NetworkImage(profile.avatarUrl!)
+                              : FileImage(File(profile.avatarUrl!)) as ImageProvider)
+                          : null,
+                      child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                          ? null
+                          : Text(
+                              item.borrowerName![0].toUpperCase(),
+                              style: TextStyle(
+                                color: theme.colorScheme.onSecondaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(

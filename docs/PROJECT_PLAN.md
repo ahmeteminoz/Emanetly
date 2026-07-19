@@ -135,12 +135,17 @@ To ensure secure transactions and prevent disputes, item handovers are validated
 *   [x] Mock canvas maps, reviews listings, and transaction trackers.
 *   [x] Verification smoke tests.
 
-### Phase 2: Backend Integration (Future Work)
+### Phase 2: Image Experience & Media Polish (v0.6.1)
+*   [ ] Profil fotoğrafı kırpma ve önizleme ekranı (1:1 oranlı)
+*   [ ] İlanlar için çoklu fotoğraf desteği (maksimum 5 fotoğraf, sürükle-bırak sıralama, kapak resmi, silme/ekleme)
+*   *Not: Firestore veri modelini bozmadan geriye dönük uyumlu liste şeklinde yönetilecektir.*
+*   [ ] Tam ekran görsel görüntüleyici (Pinch-to-zoom, çift dokunma zoom, aşağı kaydırıp kapatma)
+*   [ ] Storage yükleme progress barları, yükleme yüzdeleri ve hata durumlarında tekrar deneme (retry) desteği
+*   [ ] Kapsamlı hata yönetimi ve kullanıcı dostu SnackBar/Alert mesajları
+
+### Phase 3: Backend & Feature Integrations (Future Work)
 *   [ ] Set up Firebase project and configure auth domain restrictions.
 *   [ ] Implement Firestore sync controllers for feed listings.
 *   [ ] Integrate Camera & `mobile_scanner` packages for QR handovers.
-
-### Phase 3: Launch & Polish (Future Work)
 *   [ ] Add push notifications via Firebase Cloud Messaging (FCM).
 *   [ ] Deploy real Google Maps tracking.
-*   [ ] Conduct beta testing inside a single campus.

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
@@ -10,6 +11,7 @@ import '../services/item_service.dart';
 import '../services/qr_service.dart';
 import '../services/borrow_request_service.dart';
 import '../services/chat_message_service.dart';
+import '../services/storage_service.dart';
 
 enum ViewMode {
   compactGrid,
@@ -23,6 +25,7 @@ class AppState extends ChangeNotifier {
   final QrService _qrService;
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
+  final StorageService _storageService;
 
   List<EmanetItem> _items = [];
   bool _isLoading = false;
@@ -51,11 +54,13 @@ class AppState extends ChangeNotifier {
     required QrService qrService,
     required BorrowRequestService borrowRequestService,
     required ChatMessageService chatMessageService,
+    required StorageService storageService,
   })  : _authService = authService,
         _itemService = itemService,
         _qrService = qrService,
         _borrowRequestService = borrowRequestService,
-        _chatMessageService = chatMessageService {
+        _chatMessageService = chatMessageService,
+        _storageService = storageService {
     
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
@@ -118,6 +123,20 @@ class AppState extends ChangeNotifier {
       _addLog('Veri yüklenirken hata oluştu: $e');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshData() async {
+    try {
+      _items = await _itemService.getItems();
+      if (currentUser != null) {
+        await _authService.reloadUser();
+      }
+      _addLog('Veriler başarıyla yenilendi.');
+    } catch (e) {
+      _addLog('Yenileme sırasında hata oluştu: $e');
+    } finally {
       notifyListeners();
     }
   }
@@ -219,23 +238,32 @@ class AppState extends ChangeNotifier {
     required String location,
     String? imageUrl,
     int? mockColorValue,
+    void Function(double progress)? onProgress,
   }) async {
     if (currentUser == null) return false;
     _setLoading(true);
     try {
+      final itemId = 'item_${DateTime.now().millisecondsSinceEpoch}';
+      String? finalImageUrl = imageUrl;
+      
+      // Eğer görsel yerel bir dosya yolu ise önce Storage'a yüklüyoruz
+      if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+        finalImageUrl = await _storageService.uploadItemImage(itemId, File(imageUrl), onProgress: onProgress);
+      }
+
       // Pick a random mock color for the grid photo placeholders if not selected
       final colorOptions = [0xFF3B82F6, 0xFFEF4444, 0xFFF59E0B, 0xFF10B981, 0xFF8B5CF6, 0xFFEC4899];
       final finalColor = mockColorValue ?? colorOptions[DateTime.now().millisecond % colorOptions.length];
 
       final newItem = EmanetItem(
-        id: 'item_${DateTime.now().millisecondsSinceEpoch}',
+        id: itemId,
         title: title,
         description: description,
         category: category,
         lenderId: currentUser!.uid,
         lenderName: currentUser!.name,
         location: location,
-        imageUrl: imageUrl,
+        imageUrl: finalImageUrl,
         status: EmanetStatus.available,
         createdAt: DateTime.now(),
         comments: [],
@@ -835,10 +863,36 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateItem(EmanetItem item) async {
+  Future<void> updateItem(EmanetItem item, {void Function(double progress)? onProgress}) async {
     _setLoading(true);
     try {
-      await _itemService.updateItem(item);
+      EmanetItem finalItem = item;
+      
+      EmanetItem? oldItem;
+      try {
+        oldItem = _items.firstWhere((i) => i.id == item.id);
+      } catch (_) {
+        oldItem = null;
+      }
+
+      if (item.imageUrl != null && item.imageUrl!.isNotEmpty && !item.imageUrl!.startsWith('http')) {
+        // Yeni fotoğrafı Storage'a yüklüyoruz
+        final downloadUrl = await _storageService.uploadItemImage(item.id, File(item.imageUrl!), onProgress: onProgress);
+        
+        // Varsa eski fotoğrafı Storage'dan siliyoruz
+        if (oldItem != null && oldItem.imageUrl != null && oldItem.imageUrl!.isNotEmpty) {
+          await _storageService.deleteImage(oldItem.imageUrl!);
+        }
+        
+        finalItem = item.copyWith(imageUrl: downloadUrl);
+      } else if (item.imageUrl != oldItem?.imageUrl) {
+        // Fotoğraf kaldırıldıysa veya başka şekilde değiştiyse eskiyi temizliyoruz
+        if (oldItem != null && oldItem.imageUrl != null && oldItem.imageUrl!.isNotEmpty) {
+          await _storageService.deleteImage(oldItem.imageUrl!);
+        }
+      }
+
+      await _itemService.updateItem(finalItem);
       _addLog('İlan güncellendi: ${item.id}');
     } catch (e) {
       _addLog('İlan güncellenirken hata: $e');
@@ -856,6 +910,10 @@ class AppState extends ChangeNotifier {
         if (item.status != EmanetStatus.available && item.status != EmanetStatus.archived) {
           _addLog('İlan silme engellendi: Aktif işlemdeki ilanlar silinemez.');
           return;
+        }
+        // İlan silinirken Storage'daki görseli de temizliyoruz
+        if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+          await _storageService.deleteImage(item.imageUrl!);
         }
       }
       await _itemService.deleteItem(itemId);
@@ -911,6 +969,32 @@ class AppState extends ChangeNotifier {
     _requestsSubscription?.cancel();
     _requestsSubscription = null;
     _borrowRequests.clear();
+  }
+
+  StorageService get storageService => _storageService;
+
+  Future<void> updateUserProfilePhoto(File imageFile, {void Function(double progress)? onProgress}) async {
+    final user = currentUser;
+    if (user == null) return;
+    
+    // Upload profile image to storage
+    final downloadUrl = await _storageService.uploadProfileImage(user.uid, imageFile, onProgress: onProgress);
+    
+    // Keep reference to old photo
+    final oldAvatarUrl = user.avatarUrl;
+    
+    // Create updated profile
+    final updatedProfile = user.copyWith(avatarUrl: downloadUrl);
+    
+    // Update profile in Firestore/AuthService
+    await _authService.updateUserProfile(updatedProfile);
+    
+    // If update is successful and there was an old photo, delete it from Storage
+    if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty) {
+      await _storageService.deleteImage(oldAvatarUrl);
+    }
+    
+    notifyListeners();
   }
 
   @override

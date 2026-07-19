@@ -444,33 +444,38 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 )
-              : _selectedViewMode == ViewMode.largeCards
-                  ? ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        return ItemCard(
-                          item: filteredItems[index],
-                          viewMode: ViewMode.largeCards,
-                        );
-                      },
-                    )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(12),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: _selectedViewMode == ViewMode.compactGrid ? 1.0 : 0.72,
-                      ),
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        return ItemCard(
-                          item: filteredItems[index],
-                          viewMode: _selectedViewMode,
-                        );
-                      },
-                    ),
+              : RefreshIndicator(
+                  onRefresh: () => appState.refreshData(),
+                  child: _selectedViewMode == ViewMode.largeCards
+                      ? ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) {
+                            return ItemCard(
+                              item: filteredItems[index],
+                              viewMode: ViewMode.largeCards,
+                            );
+                          },
+                        )
+                      : GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(12),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: _selectedViewMode == ViewMode.compactGrid ? 1.0 : 0.72,
+                          ),
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) {
+                            return ItemCard(
+                              item: filteredItems[index],
+                              viewMode: _selectedViewMode,
+                            );
+                          },
+                        ),
+                ),
         ),
       ],
     );

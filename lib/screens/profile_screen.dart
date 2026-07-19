@@ -1,24 +1,205 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../utils/image_utils.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
 import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import '../services/auth_service.dart';
+import 'widgets/full_screen_image_viewer.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
 import 'public_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  void _showPhotoSnackbar(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil fotoğrafı yükleme özelliği sonraki sürümde eklenecek.'),
-        duration: Duration(seconds: 2),
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
+  int _uploadCounter = 0;
+
+  void _showPhotoSourceSheet(BuildContext context, AppState appState) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Profil Fotoğrafı Güncelle',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Galeriden Seç'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updatePhoto(ImageSource.gallery, appState);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Kameradan Çek'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _updatePhoto(ImageSource.camera, appState);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _updatePhoto(ImageSource source, AppState appState) async {
+    final picker = ImagePicker();
+    try {
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 500,
+        maxHeight: 500,
+        imageQuality: 70, // Sıkıştırma / Optimize görsel boyutu
+      );
+      
+      if (pickedFile == null) return;
+
+      final imageFile = File(pickedFile.path);
+      // İlksel dosya boyutu kontrolü
+      final bytes = await imageFile.length();
+      final double mb = bytes / (1024 * 1024);
+      if (mb > 5.0) {
+        throw Exception('Seçilen görsel çok büyük (Maksimum 5 MB olabilir. Mevcut boyut: ${mb.toStringAsFixed(1)} MB).');
+      }
+
+      // 2. Önizleme Adımı (Preview)
+      if (!mounted) return;
+      final confirm = await ImageUtils.showImagePreviewDialog(
+        context: context,
+        imageFile: imageFile,
+      );
+      if (!confirm) return;
+
+      // Yükleme Başlat
+      if (mounted) {
+        await _performUpload(imageFile, appState, source);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fotoğraf seçilirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _performUpload(File croppedFile, AppState appState, ImageSource originalSource) async {
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.0;
+    });
+
+    try {
+      await appState.updateUserProfilePhoto(
+        croppedFile,
+        onProgress: (progress) {
+          if (mounted) {
+            setState(() {
+              _uploadProgress = progress;
+            });
+          }
+        },
+      );
+
+      // Evict image cache to force instant redraw
+      if (appState.currentUser?.avatarUrl != null) {
+        final url = appState.currentUser!.avatarUrl!;
+        if (url.startsWith('http')) {
+          NetworkImage(url).evict();
+        } else {
+          FileImage(File(url)).evict();
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _uploadCounter++;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil fotoğrafı başarıyla güncellendi!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      final action = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Yükleme Başarısız', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: const Text(
+              'Profil fotoğrafı yüklenirken bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
+            ),
+            actionsAlignment: MainAxisAlignment.spaceEvenly,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'cancel'),
+                child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'choose'),
+                child: const Text('Yeni Resim Seç'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'retry'),
+                child: const Text('Tekrar Dene'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (action == 'retry') {
+        await _performUpload(croppedFile, appState, originalSource);
+      } else if (action == 'choose') {
+        _updatePhoto(originalSource, appState);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadProgress = 0.0;
+        });
+      }
+    }
   }
 
   @override
@@ -67,32 +248,77 @@ class ProfileScreen extends StatelessWidget {
                       Stack(
                         children: [
                           GestureDetector(
-                            onTap: () => _showPhotoSnackbar(context),
-                            child: CircleAvatar(
-                              radius: 54,
-                              backgroundColor: theme.colorScheme.primaryContainer,
-                              child: Text(
-                                currentUser.name.isNotEmpty ? currentUser.name[0].toUpperCase() : '?',
-                                style: theme.textTheme.headlineLarge?.copyWith(
-                                  color: theme.colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 40,
+                            onTap: _isUploading
+                                ? null
+                                : (currentUser.avatarUrl != null && currentUser.avatarUrl!.isNotEmpty)
+                                    ? () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => FullScreenImageViewer(
+                                              imageUrl: currentUser.avatarUrl!,
+                                              heroTag: 'profile_avatar_hero',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    : () => _showPhotoSourceSheet(context, appState),
+                            child: Hero(
+                              tag: 'profile_avatar_hero',
+                              child: CircleAvatar(
+                                key: ValueKey('${currentUser.avatarUrl}_$_uploadCounter'),
+                                radius: 54,
+                                backgroundColor: theme.colorScheme.primaryContainer,
+                                backgroundImage: (currentUser.avatarUrl != null && currentUser.avatarUrl!.isNotEmpty)
+                                    ? (currentUser.avatarUrl!.startsWith('http')
+                                        ? NetworkImage(currentUser.avatarUrl!)
+                                        : FileImage(File(currentUser.avatarUrl!)) as ImageProvider)
+                                    : null,
+                              child: _isUploading
+                                  ? Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        CircularProgressIndicator(
+                                          value: _uploadProgress > 0 ? _uploadProgress : null,
+                                          color: Colors.white,
+                                          strokeWidth: 3,
+                                        ),
+                                        Text(
+                                          '${(_uploadProgress * 100).toInt()}%',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : (currentUser.avatarUrl != null && currentUser.avatarUrl!.isNotEmpty)
+                                      ? null
+                                      : Text(
+                                          currentUser.name.isNotEmpty ? currentUser.name[0].toUpperCase() : '?',
+                                          style: theme.textTheme.headlineLarge?.copyWith(
+                                            color: theme.colorScheme.onPrimaryContainer,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 40,
+                                          ),
+                                        ),
+                              ),
+                            ),
+                          ),
+                          if (!_isUploading)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () => _showPhotoSourceSheet(context, appState),
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: theme.colorScheme.primary,
+                                  child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
                                 ),
                               ),
                             ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () => _showPhotoSnackbar(context),
-                              child: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: theme.colorScheme.primary,
-                                child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -199,9 +425,12 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildTrustDashboardTab(BuildContext context, UserProfile user, ThemeData theme) {
     final appState = AppStateProvider.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => appState.refreshData(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
         // 1. Large Trust Score Card
         Card(
           elevation: 0,
@@ -486,6 +715,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 32),
         ],
       ],
+    ),
     );
   }
 
@@ -531,29 +761,34 @@ class ProfileScreen extends StatelessWidget {
       return isParticipant && r.status == BorrowRequestStatus.completed;
     }).toList();
 
-    if (items.isEmpty && completedRequests.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    final mainWidget = (items.isEmpty && completedRequests.isEmpty)
+        ? ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             children: [
-              Icon(Icons.inventory_2_outlined, size: 48, color: theme.colorScheme.outline),
-              const SizedBox(height: 12),
-              const Text(
-                'Henüz bir ilanınız veya geçmiş işleminiz bulunmuyor.',
-                style: TextStyle(fontStyle: FontStyle.italic),
-                textAlign: TextAlign.center,
+              const SizedBox(height: 100),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inventory_2_outlined, size: 48, color: theme.colorScheme.outline),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Henüz bir ilanınız veya geçmiş işleminiz bulunmuyor.',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+          )
+        : ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
         if (items.isNotEmpty) ...[
           Text(
             'Aktif İlanlarım (${items.length})',
@@ -681,6 +916,11 @@ class ProfileScreen extends StatelessWidget {
           }),
         ],
       ],
+    );
+
+    return RefreshIndicator(
+      onRefresh: () => appState.refreshData(),
+      child: mainWidget,
     );
   }
 }

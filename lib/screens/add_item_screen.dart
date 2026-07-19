@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../utils/image_utils.dart';
 import '../providers/app_state_provider.dart';
+import '../providers/app_state.dart';
 
 class AddItemScreen extends StatefulWidget {
   final VoidCallback? onItemAdded;
@@ -18,6 +21,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _locationController = TextEditingController();
   String _selectedCategory = 'Elektronik';
   String? _selectedImagePath;
+  bool _isPublishing = false;
+  double _uploadProgress = 0.0;
 
   // Mock Photo Customizer variables
   int? _selectedColorValue;
@@ -113,6 +118,47 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
+  Future<void> _pickRealImage(ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 80, // Optimize boyut & kalite
+      );
+      
+      if (pickedFile == null) return;
+
+      // 1. Kırpma Adımı (Crop)
+      final croppedFile = await ImageUtils.cropImage(
+        imageFile: File(pickedFile.path),
+        isCircle: false,
+      );
+      if (croppedFile == null) return;
+
+      // 2. Önizleme Adımı (Preview)
+      if (!mounted) return;
+      final confirm = await ImageUtils.showImagePreviewDialog(
+        context: context,
+        imageFile: croppedFile,
+      );
+      if (!confirm) return;
+      
+      setState(() {
+        _selectedImagePath = croppedFile.path;
+        _mockImageLabel = source == ImageSource.camera ? 'Kamera Fotoğrafı' : 'Galeri Fotoğrafı';
+        _selectedColorValue = null; // Gerçek görsel seçildiği için mock şablon rengini temizliyoruz
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fotoğraf seçilirken hata oluştu: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _showImageSourceSheet() {
     final theme = Theme.of(context);
     showModalBottomSheet(
@@ -136,8 +182,26 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 ),
                 const SizedBox(height: 20),
                 ListTile(
+                  leading: const Icon(Icons.photo_library_rounded),
+                  title: const Text('Galeriden Gerçek Fotoğraf Seç'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickRealImage(ImageSource.gallery);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_rounded),
+                  title: const Text('Kameradan Gerçek Fotoğraf Çek'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickRealImage(ImageSource.camera);
+                  },
+                ),
+                const Divider(),
+                ListTile(
                   leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Galeriden Şablon Görsel Seç'),
+                  title: const Text('Galeriden Şablon Görsel Seç (Mock)'),
                   onTap: () {
                     Navigator.pop(context);
                     _showMockGalleryDialog();
@@ -175,33 +239,89 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-
     final appState = AppStateProvider.of(context);
-    final success = await appState.addNewItem(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      category: _selectedCategory,
-      location: _locationController.text.trim(),
-      imageUrl: _selectedColorValue != null ? null : _selectedImagePath,
-      mockColorValue: _selectedColorValue,
-    );
+    await _performPublish(appState);
+  }
 
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Emanet ilanı başarıyla yayınlandı!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        widget.onItemAdded?.call();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hata oluştu, ilan eklenemedi.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+  Future<void> _performPublish(AppState appState) async {
+    setState(() {
+      _isPublishing = true;
+      _uploadProgress = 0.0;
+    });
+
+    try {
+      final success = await appState.addNewItem(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        category: _selectedCategory,
+        location: _locationController.text.trim(),
+        imageUrl: _selectedColorValue != null ? null : _selectedImagePath,
+        mockColorValue: _selectedColorValue,
+        onProgress: (progress) {
+          if (mounted) {
+            setState(() {
+              _uploadProgress = progress;
+            });
+          }
+        },
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Emanet ilanı başarıyla yayınlandı!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          widget.onItemAdded?.call();
+        } else {
+          throw Exception("Görsel yüklemesi veya veri tabanı kaydı başarısız oldu.");
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      final action = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Yayınlama Başarısız', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: const Text(
+              'İlan yayınlanırken bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
+            ),
+            actionsAlignment: MainAxisAlignment.spaceEvenly,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'cancel'),
+                child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'choose'),
+                child: const Text('Yeni Resim Seç'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'retry'),
+                child: const Text('Tekrar Dene'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (action == 'retry') {
+        await _performPublish(appState);
+      } else if (action == 'choose') {
+        _showImageSourceSheet();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPublishing = false;
+          _uploadProgress = 0.0;
+        });
       }
     }
   }
@@ -456,22 +576,41 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 const SizedBox(height: 32),
 
                 // Submit Button
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Yayınla',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
+                _isPublishing
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(
+                                value: _uploadProgress > 0 ? _uploadProgress : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Görsel Yükleniyor... ${(_uploadProgress * 100).toInt()}%',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ElevatedButton(
+                        onPressed: _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text(
+                          'Yayınla',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
               ],
             ),
           ),

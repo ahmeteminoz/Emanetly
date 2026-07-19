@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../providers/app_state_provider.dart';
 import '../models/item.dart';
@@ -288,13 +289,20 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                             child: CircleAvatar(
                                               radius: 24,
                                               backgroundColor: theme.colorScheme.primaryContainer,
-                                              child: Text(
-                                                partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
-                                                style: TextStyle(
-                                                  color: theme.colorScheme.onPrimaryContainer,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
+                                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                                   ? (profile.avatarUrl!.startsWith('http')
+                                                       ? NetworkImage(profile.avatarUrl!)
+                                                       : FileImage(File(profile.avatarUrl!)) as ImageProvider)
+                                                   : null,
+                                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                                  ? null
+                                                  : Text(
+                                                      partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
+                                                      style: TextStyle(
+                                                        color: theme.colorScheme.onPrimaryContainer,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
