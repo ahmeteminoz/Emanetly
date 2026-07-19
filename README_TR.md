@@ -39,7 +39,7 @@ Emanetly şu anda hibrit Firestore destekli bir MVP prototipidir. Mevcut teknik 
 *   **Firebase Storage**: Tamamen Entegre Edildi (v0.6.0 & v0.6.1)
 *   **Harita / Konum**: Planlandı (şu anda custom painter çizimiyle simüle edilmiştir)
 *   **QR Kod Doğrulama**: Simüle edildi (bellek içi doğrulama)
-*   **Gerçek Zamanlı Sohbet**: Planlandı (şu anda gecikmeli yerel simülasyon)
+*   **Gerçek Zamanlı Sohbet**: Tamamen Entegre Edildi (Firestore)
 *   **Anlık Bildirimler (Push)**: Planlandı (henüz entegre edilmedi)
 
 ---

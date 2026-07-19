@@ -39,7 +39,7 @@ Emanetly is currently a hybrid Firestore-backed MVP prototype. Below is the chec
 *   **Firebase Storage**: Fully Integrated (v0.6.0 & v0.6.1)
 *   **Maps**: Planned (custom painted simulation currently)
 *   **QR Code Handover**: Simulated (in-memory validation)
-*   **Real-time chat**: Planned (local mock simulation currently)
+*   **Real-time chat**: Fully Integrated (using Firestore)
 *   **Push notifications**: Planned (not integrated yet)
 
 ---
