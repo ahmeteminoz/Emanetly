@@ -15,17 +15,26 @@ class MockRouteScreen extends StatefulWidget {
 }
 
 class _MockRouteScreenState extends State<MockRouteScreen> {
-  final _meetingPointController = TextEditingController();
+  final _meetingLocationController = TextEditingController();
+  final _meetingNoteController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _meetingPointController.text = widget.item.meetingPoint ?? '';
+    final rawMeeting = widget.item.meetingPoint ?? '';
+    if (rawMeeting.contains('| Not: ')) {
+      final parts = rawMeeting.split('| Not: ');
+      _meetingLocationController.text = parts[0].trim();
+      _meetingNoteController.text = parts[1].trim();
+    } else {
+      _meetingLocationController.text = rawMeeting;
+    }
   }
 
   @override
   void dispose() {
-    _meetingPointController.dispose();
+    _meetingLocationController.dispose();
+    _meetingNoteController.dispose();
     super.dispose();
   }
 
@@ -65,60 +74,14 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buluşma & Rota Takibi'),
+        title: const Text('Buluşma & Teslimat Detayları'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Part 1: Custom Painted Mock Map
-            Container(
-              height: 250,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      size: const Size(double.infinity, 250),
-                      painter: MockMapPainter(
-                        status: currentItem.deliveryStatus ?? DeliveryStatus.requestSent,
-                        theme: theme,
-                      ),
-                    ),
-                    // Glassmorphic status label on map
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.map_outlined, size: 16, color: theme.colorScheme.primary),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Kampüs Haritası (Simüle)',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const SizedBox(height: 16),
 
             // Part 2: Buluşma Noktası Bilgisi & Actions
             Padding(
@@ -169,89 +132,199 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     AppState appState,
   ) {
     final theme = Theme.of(context);
-    final hasMeetingPoint = item.meetingPoint != null && item.meetingPoint!.isNotEmpty;
+    final activeRequest = appState.getRequestForActiveItem(item.id);
+    final counterpartyName = isLender ? (item.borrowerName ?? 'Ödünç Alan') : item.lenderName;
+
+    final locationText = activeRequest?.meetingLocation ?? 
+        (_meetingLocationController.text.isNotEmpty ? _meetingLocationController.text : 'Henüz belirlenmedi');
+    final noteText = activeRequest?.meetingNote ?? _meetingNoteController.text;
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.secondaryContainer.withOpacity(0.15),
+      color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header: Counterparty Info
             Row(
               children: [
-                Icon(Icons.storefront_outlined, color: theme.colorScheme.secondary),
-                const SizedBox(width: 8),
-                Text(
-                  'Buluşma Noktası',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.secondary,
+                CircleAvatar(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(
+                    counterpartyName.isNotEmpty ? counterpartyName[0].toUpperCase() : '?',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        counterpartyName,
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        isLender ? 'Eşyayı Ödünç Alan Öğrenci' : 'Eşya Sahibi (Lender)',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
+                      SizedBox(width: 4),
+                      Text('Güvenilir', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (hasMeetingPoint) ...[
-              Text(
-                item.meetingPoint!,
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Lütfen bu konumda bir araya gelerek teslimatı tamamlayın.',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ] else ...[
-              Text(
-                'Buluşma noktası henüz belirlenmedi.',
-                style: theme.textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
-              ),
-            ],
+            const Divider(height: 28),
+
+            // Item and Duration
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 18, color: Colors.blue),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Talep Süresi: ${activeRequest?.requestedDurationText ?? "1 Gün"}',
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Meeting Details Info
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on, color: Colors.red, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '📍 Buluşma Yeri',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        locationText,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: locationText == 'Henüz belirlenmedi' ? theme.colorScheme.outline : theme.colorScheme.onSurface,
+                          fontStyle: locationText == 'Henüz belirlenmedi' ? FontStyle.italic : FontStyle.normal,
+                          fontWeight: locationText == 'Henüz belirlenmedi' ? FontWeight.normal : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             
-            // Allow LENDER to set/change the meeting point if status is Accepted or Request Sent
-            if (isLender && item.status == EmanetStatus.pendingApproval) ...[
+            if (noteText.isNotEmpty) ...[
               const SizedBox(height: 12),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 40,
-                      child: TextField(
-                        controller: _meetingPointController,
-                        decoration: const InputDecoration(
-                          hintText: 'Buluşma noktası girin (örn. Kütüphane önü)...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          border: OutlineInputBorder(),
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
+                  const Icon(Icons.sticky_note_2_outlined, color: Colors.amber, size: 20),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final val = _meetingPointController.text.trim();
-                      if (val.isNotEmpty) {
-                        appState.setMeetingPoint(item.id, val);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Buluşma noktası ayarlandı: $val')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      backgroundColor: theme.colorScheme.secondary,
-                      foregroundColor: theme.colorScheme.onSecondary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '📝 Ekstra Not (Kıyafet/Zaman vb.)',
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          noteText,
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                    child: const Text('Ayarla', style: TextStyle(fontSize: 12)),
                   ),
                 ],
+              ),
+            ],
+
+            // Input form for Lender if status is pendingApproval or accepted
+            if (isLender && item.status == EmanetStatus.pendingApproval) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                'Buluşma Detayı Ekle / Güncelle',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _meetingLocationController,
+                decoration: const InputDecoration(
+                  labelText: 'Buluşma Noktası',
+                  hintText: 'örn. İİBF Kantin Çardaklar',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _meetingNoteController,
+                decoration: const InputDecoration(
+                  labelText: 'Ekstra Not (Opsiyonel)',
+                  hintText: 'örn. Mavi montluyum, 09:15\'te orada olacağım',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final loc = _meetingLocationController.text.trim();
+                    final note = _meetingNoteController.text.trim();
+                    if (loc.isNotEmpty) {
+                      await appState.updateMeetingDetails(item.id, loc, note);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Buluşma detayları başarıyla kaydedildi!'), backgroundColor: Colors.green),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  label: const Text('Buluşma Notunu Kaydet'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.secondary,
+                    foregroundColor: theme.colorScheme.onSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
               ),
             ],
           ],
@@ -789,126 +862,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
   }
 }
 
-// Custom Painter to draw an interactive mock map
-class MockMapPainter extends CustomPainter {
-  final DeliveryStatus status;
-  final ThemeData theme;
-
-  MockMapPainter({required this.status, required this.theme});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintGrid = Paint()
-      ..color = theme.colorScheme.outlineVariant.withOpacity(0.15)
-      ..strokeWidth = 1.0;
-
-    final double step = 25.0;
-
-    // Draw grid background
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paintGrid);
-    }
-    for (double j = 0; j < size.height; j += step) {
-      canvas.drawLine(Offset(0, j), Offset(size.width, j), paintGrid);
-    }
-
-    // Draw campus buildings placeholders
-    final paintBuilding = Paint()
-      ..color = theme.colorScheme.primaryContainer.withOpacity(0.5)
-      ..style = PaintingStyle.fill;
-      
-    final paintBuildingOutline = Paint()
-      ..color = theme.colorScheme.primary.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    // Helper to draw building box
-    void drawBuilding(Rect rect, String label) {
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), paintBuilding);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), paintBuildingOutline);
-      
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(
-            color: theme.colorScheme.onPrimaryContainer.withOpacity(0.7),
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(rect.center.dx - textPainter.width / 2, rect.center.dy - textPainter.height / 2),
-      );
-    }
-
-    // 3 campus buildings
-    drawBuilding(const Rect.fromLTWH(20, 40, 90, 60), 'Kütüphane');
-    drawBuilding(Rect.fromLTWH(size.width - 130, 40, 110, 60), 'Mühendislik');
-    drawBuilding(const Rect.fromLTWH(100, 160, 120, 50), 'Öğrenci Cafesi');
-
-    // Buluşma / Rota Çizimi
-    // Start node: Mühendislik (lender location) -> (250, 70)
-    // End node: Kütüphane (meeting location) -> (65, 70)
-    final startOffset = Offset(size.width - 75, 70);
-    final endOffset = Offset(65, 70);
-
-    final paintRoute = Paint()
-      ..color = theme.colorScheme.primary.withOpacity(0.3)
-      ..strokeWidth = 4.0
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    // Draw path
-    final path = Path();
-    path.moveTo(startOffset.dx, startOffset.dy);
-    // Draw route along student cafe Kantin
-    path.lineTo(size.width / 2, 185);
-    path.lineTo(endOffset.dx, endOffset.dy);
-    canvas.drawPath(path, paintRoute);
-
-    // If routing has started, let's draw a moving dot path or dashed path
-    if (status == DeliveryStatus.routingStarted) {
-      final paintActiveRoute = Paint()
-        ..color = Colors.green
-        ..strokeWidth = 4.0
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
-
-      final pathActive = Path();
-      pathActive.moveTo(startOffset.dx, startOffset.dy);
-      pathActive.lineTo(size.width / 2, 185);
-      canvas.drawPath(pathActive, paintActiveRoute);
-    }
-
-    // Pin locations
-    // 1. Lender Pin (Blue)
-    final paintLenderPin = Paint()..color = theme.colorScheme.primary;
-    canvas.drawCircle(startOffset, 8.0, paintLenderPin);
-    canvas.drawCircle(startOffset, 12.0, Paint()..color = theme.colorScheme.primary.withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 2);
-
-    // 2. Meeting/End Pin (Red or secondary)
-    final hasMeetingSet = status.index >= DeliveryStatus.meetingPointSet.index;
-    final paintMeetingPin = Paint()..color = hasMeetingSet ? Colors.red : Colors.grey;
-    canvas.drawCircle(endOffset, 8.0, paintMeetingPin);
-    canvas.drawCircle(endOffset, 12.0, Paint()..color = (hasMeetingSet ? Colors.red : Colors.grey).withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 2);
-
-    // Draw moving borrower dot if routing started
-    if (status == DeliveryStatus.routingStarted) {
-      final paintBorrower = Paint()..color = Colors.blue;
-      final borrowerPosition = Offset(size.width / 2, 185); // Simulating half-way there
-      canvas.drawCircle(borrowerPosition, 6.0, paintBorrower);
-      canvas.drawCircle(borrowerPosition, 10.0, Paint()..color = Colors.blue.withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 1.5);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
+// Custom Painter to draw QR code fallback preview
 class MockQrPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

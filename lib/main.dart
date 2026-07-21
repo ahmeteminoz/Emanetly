@@ -9,6 +9,7 @@ import 'services/qr_service.dart';
 import 'services/borrow_request_service.dart';
 import 'services/chat_message_service.dart';
 import 'services/storage_service.dart';
+import 'services/navigation_service.dart';
 import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
 
@@ -72,6 +73,7 @@ class EmanetlyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Emanetly',
+      navigatorKey: NavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: appState.themeMode,
       theme: AppTheme.buildTheme(

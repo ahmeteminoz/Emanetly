@@ -17,6 +17,9 @@ class BorrowRequestModel {
   final String requestedDurationText;
   final String? proposedMeetingPointId;
   final DateTime createdAt;
+  final String? meetingLocation;
+  final String? meetingNote;
+  final DateTime? meetingUpdatedAt;
 
   BorrowRequestModel({
     required this.id,
@@ -27,6 +30,9 @@ class BorrowRequestModel {
     required this.requestedDurationText,
     this.proposedMeetingPointId,
     required this.createdAt,
+    this.meetingLocation,
+    this.meetingNote,
+    this.meetingUpdatedAt,
   });
 
   BorrowRequestModel copyWith({
@@ -38,6 +44,9 @@ class BorrowRequestModel {
     String? requestedDurationText,
     String? proposedMeetingPointId,
     DateTime? createdAt,
+    String? meetingLocation,
+    String? meetingNote,
+    DateTime? meetingUpdatedAt,
   }) {
     return BorrowRequestModel(
       id: id ?? this.id,
@@ -48,6 +57,9 @@ class BorrowRequestModel {
       requestedDurationText: requestedDurationText ?? this.requestedDurationText,
       proposedMeetingPointId: proposedMeetingPointId ?? this.proposedMeetingPointId,
       createdAt: createdAt ?? this.createdAt,
+      meetingLocation: meetingLocation ?? this.meetingLocation,
+      meetingNote: meetingNote ?? this.meetingNote,
+      meetingUpdatedAt: meetingUpdatedAt ?? this.meetingUpdatedAt,
     );
   }
 
@@ -61,6 +73,9 @@ class BorrowRequestModel {
       'requestedDurationText': requestedDurationText,
       'proposedMeetingPointId': proposedMeetingPointId,
       'createdAt': createdAt.toIso8601String(),
+      'meetingLocation': meetingLocation,
+      'meetingNote': meetingNote,
+      'meetingUpdatedAt': meetingUpdatedAt?.toIso8601String(),
     };
   }
 
@@ -79,6 +94,11 @@ class BorrowRequestModel {
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
+      meetingLocation: map['meetingLocation'],
+      meetingNote: map['meetingNote'],
+      meetingUpdatedAt: map['meetingUpdatedAt'] != null
+          ? DateTime.parse(map['meetingUpdatedAt'])
+          : null,
     );
   }
 }

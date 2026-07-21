@@ -57,6 +57,7 @@ class UserProfile {
   final List<String> userBadges;
   final List<UserReview> reviews;
   final List<String> favoriteItemIds;
+  final List<String> fcmTokens;
 
   UserProfile({
     required this.uid,
@@ -79,6 +80,7 @@ class UserProfile {
     required this.userBadges,
     required this.reviews,
     this.favoriteItemIds = const [],
+    this.fcmTokens = const [],
   });
 
   UserProfile copyWith({
@@ -102,6 +104,7 @@ class UserProfile {
     List<String>? userBadges,
     List<UserReview>? reviews,
     List<String>? favoriteItemIds,
+    List<String>? fcmTokens,
   }) {
     return UserProfile(
       uid: uid ?? this.uid,
@@ -124,6 +127,7 @@ class UserProfile {
       userBadges: userBadges ?? this.userBadges,
       reviews: reviews ?? this.reviews,
       favoriteItemIds: favoriteItemIds ?? this.favoriteItemIds,
+      fcmTokens: fcmTokens ?? this.fcmTokens,
     );
   }
 
@@ -186,6 +190,7 @@ class UserProfile {
       'userBadges': userBadges,
       'reviews': reviews.map((r) => r.toMap()).toList(),
       'favoriteItemIds': favoriteItemIds,
+      'fcmTokens': fcmTokens,
     };
   }
 
@@ -214,6 +219,7 @@ class UserProfile {
               .toList() ??
           [],
       favoriteItemIds: List<String>.from(map['favoriteItemIds'] ?? []),
+      fcmTokens: List<String>.from(map['fcmTokens'] ?? []),
     );
   }
 }

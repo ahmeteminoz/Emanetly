@@ -5,6 +5,7 @@ import '../models/borrow_request.dart';
 abstract class BorrowRequestService {
   Future<void> addBorrowRequest(BorrowRequestModel request);
   Future<void> updateBorrowRequestStatus(String requestId, BorrowRequestStatus status);
+  Future<void> updateMeetingDetails(String requestId, String location, String note);
   Stream<List<BorrowRequestModel>> listenToBorrowRequests(String userId);
 }
 
@@ -27,6 +28,19 @@ class MockBorrowRequestService implements BorrowRequestService {
     final index = _requests.indexWhere((r) => r.id == requestId);
     if (index != -1) {
       _requests[index] = _requests[index].copyWith(status: status);
+      _controller.add(List.from(_requests));
+    }
+  }
+
+  @override
+  Future<void> updateMeetingDetails(String requestId, String location, String note) async {
+    final index = _requests.indexWhere((r) => r.id == requestId);
+    if (index != -1) {
+      _requests[index] = _requests[index].copyWith(
+        meetingLocation: location,
+        meetingNote: note,
+        meetingUpdatedAt: DateTime.now(),
+      );
       _controller.add(List.from(_requests));
     }
   }
@@ -83,6 +97,23 @@ class FirestoreBorrowRequestService implements BorrowRequestService {
           .update({'status': status.name});
     } catch (e) {
       print('Emanetly: Firestore updateBorrowRequestStatus error: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateMeetingDetails(String requestId, String location, String note) async {
+    try {
+      await _firestore
+          .collection('borrowRequests')
+          .doc(requestId)
+          .update({
+            'meetingLocation': location,
+            'meetingNote': note,
+            'meetingUpdatedAt': DateTime.now().toIso8601String(),
+          });
+    } catch (e) {
+      print('Emanetly: Firestore updateMeetingDetails error: $e');
       rethrow;
     }
   }

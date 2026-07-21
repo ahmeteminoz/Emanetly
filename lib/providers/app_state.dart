@@ -12,6 +12,7 @@ import '../services/qr_service.dart';
 import '../services/borrow_request_service.dart';
 import '../services/chat_message_service.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 
 enum ViewMode {
   compactGrid,
@@ -66,6 +67,7 @@ class AppState extends ChangeNotifier {
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
       if (user != null) {
         _startRequestsSubscription(user.uid);
+        _setupNotifications(user.uid);
       } else {
         _cancelRequestsSubscription();
       }
@@ -76,6 +78,7 @@ class AppState extends ChangeNotifier {
     final initialUser = _authService.currentUser;
     if (initialUser != null) {
       _startRequestsSubscription(initialUser.uid);
+      _setupNotifications(initialUser.uid);
     }
 
     // Listen to Items changes
@@ -409,7 +412,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Set Meeting Point
+  // Set Meeting Point & Additional Note
   Future<void> setMeetingPoint(String itemId, String meetingPoint) async {
     _setLoading(true);
     try {
@@ -419,6 +422,42 @@ class AppState extends ChangeNotifier {
       _addLog('Buluşma noktası ayarlanırken hata: $e');
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<void> updateMeetingDetails(String itemId, String location, String note) async {
+    _setLoading(true);
+    try {
+      final combined = note.isNotEmpty ? '$location | Not: $note' : location;
+      await _itemService.setMeetingPoint(itemId, combined);
+      
+      final activeReq = getRequestForActiveItem(itemId);
+      if (activeReq != null) {
+        await _borrowRequestService.updateMeetingDetails(activeReq.id, location, note);
+      }
+      _addLog('Buluşma detayları kaydedildi: $location ($note)');
+    } catch (e) {
+      _addLog('Buluşma detayları kaydedilirken hata: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  void _setupNotifications(String userId) {
+    NotificationService.instance.initialize(
+      onTokenReceived: (token) {
+        _updateFcmToken(userId, token);
+      },
+    );
+  }
+
+  void _updateFcmToken(String userId, String token) {
+    final user = _authService.currentUser;
+    if (user != null && !user.fcmTokens.contains(token)) {
+      final updatedTokens = List<String>.from(user.fcmTokens)..add(token);
+      final updatedUser = user.copyWith(fcmTokens: updatedTokens);
+      _authService.updateUserProfile(updatedUser);
+      _addLog('FCM Token kaydedildi.');
     }
   }
 
