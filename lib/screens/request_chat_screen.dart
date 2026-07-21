@@ -86,102 +86,6 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
       },
     );
   }
-
-  void _showProposeMeetingSheet(BuildContext context, AppState appState) {
-    final titleController = TextEditingController();
-    final addressController = TextEditingController();
-    final timeController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 20,
-            left: 16,
-            right: 16,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Buluşma Noktası Öner',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Buluşma Noktası Başlığı',
-                    hintText: 'Örn: Mühendislik B Blok Önü',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: addressController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Detaylı Adres / Açıklama',
-                    hintText: 'Örn: Giriş kapısı merdivenleri önü',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: timeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Buluşma Saati',
-                    hintText: 'Örn: 14:30 veya Ders Bitimi',
-                    prefixIcon: Icon(Icons.access_time),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty &&
-                        addressController.text.isNotEmpty &&
-                        timeController.text.isNotEmpty) {
-                      appState.proposeMeetingPoint(
-                        widget.requestId,
-                        titleController.text.trim(),
-                        addressController.text.trim(),
-                        timeController.text.trim(),
-                      );
-                      Navigator.pop(context);
-                      _scrollToBottom();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Öneriyi Gönder'),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
@@ -318,14 +222,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             );
           },
         ),
-        actions: [
-          if (isPendingDiscussion)
-            IconButton(
-              icon: const Icon(Icons.handshake),
-              tooltip: 'Buluşma Noktası Öner',
-              onPressed: () => _showProposeMeetingSheet(context, appState),
-            ),
-        ],
+        actions: const [],
       ),
       body: Column(
         children: [
@@ -685,13 +582,6 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 ),
                 child: Row(
                   children: [
-                    // Suggest button shortcut
-                    IconButton(
-                      icon: Icon(Icons.add_location_alt_outlined, color: theme.colorScheme.primary),
-                      tooltip: 'Buluşma Noktası Öner',
-                      onPressed: () => _showProposeMeetingSheet(context, appState),
-                    ),
-                    const SizedBox(width: 8),
                     // Message Text Field
                     Expanded(
                       child: TextField(

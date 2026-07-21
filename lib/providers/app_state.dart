@@ -443,12 +443,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  String? _currentFcmToken;
+
   void _setupNotifications(String userId) {
     NotificationService.instance.initialize(
       onTokenReceived: (token) {
+        _currentFcmToken = token;
         _updateFcmToken(userId, token);
       },
     );
+    if (_currentFcmToken != null) {
+      _updateFcmToken(userId, _currentFcmToken!);
+    }
   }
 
   void _updateFcmToken(String userId, String token) {
