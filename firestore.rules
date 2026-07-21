@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isOwnerOfItem(itemId) {
+      return isSignedIn() && get(/databases/$(database)/documents/items/$(itemId)).data.lenderId == request.auth.uid;
+    }
+
+    function isParticipant(requestId) {
+      let req = get(/databases/$(database)/documents/borrowRequests/$(requestId)).data;
+      return isSignedIn() && (request.auth.uid == req.ownerId || request.auth.uid == req.requesterId);
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.uid == userId
+        && (!('trustScore' in request.resource.data) || request.resource.data.trustScore == 100)
+        && (!('reviewCount' in request.resource.data) || request.resource.data.reviewCount == 0);
+
+      allow update: if isOwner(userId)
+        && request.resource.data.uid == resource.data.uid
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('trustScore' in resource.data) || request.resource.data.trustScore == resource.data.trustScore)
+        && (!('reviewCount' in resource.data) || request.resource.data.reviewCount == resource.data.reviewCount)
+        && (!('successfulBorrows' in resource.data) || request.resource.data.successfulBorrows == resource.data.successfulBorrows)
+        && (!('successfulLends' in resource.data) || request.resource.data.successfulLends == resource.data.successfulLends)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone']);
+
+      allow delete: if false;
+    }
+
+    // 2. Items Collection
+    match /items/{itemId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.lenderId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 3000
+        && request.resource.data.status in ['available', 'pendingApproval', 'borrowed', 'pendingReturn', 'archived'];
+
+      allow update: if isSignedIn()
+        && request.resource.data.lenderId == resource.data.lenderId
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (
+          // Lender can update details
+          isOwnerOfItem(itemId)
+          ||
+          // Borrower/Participant updating status fields during active process
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deliveryStatus', 'borrowerId', 'borrowerName', 'meetingPoint'])
+            && (
+              // Valid State Transition Pairs
+              (resource.data.status == 'available' && request.resource.data.status == 'pendingApproval') ||
+              (resource.data.status == 'pendingApproval' && (request.resource.data.status == 'borrowed' || request.resource.data.status == 'available')) ||
+              (resource.data.status == 'borrowed' && request.resource.data.status == 'pendingReturn') ||
+              (resource.data.status == 'pendingReturn' && (request.resource.data.status == 'available' || request.resource.data.status == 'archived'))
+            )
+          )
+        );
+
+      allow delete: if isOwnerOfItem(itemId) && resource.data.status == 'available';
+    }
+
+    // 3. BorrowRequests Collection
+    match /borrowRequests/{requestId} {
+      allow read: if isParticipant(requestId);
+
+      allow create: if isSignedIn()
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.status in ['onlyInquiry', 'pendingDiscussion', 'accepted', 'rejected', 'cancelled', 'expired', 'completed'];
+
+      allow update: if isParticipant(requestId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.requesterId == resource.data.requesterId
+        && request.resource.data.itemId == resource.data.itemId
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (
+          // Requester can only cancel
+          (request.auth.uid == resource.data.requesterId && request.resource.data.status == 'cancelled')
+          ||
+          // Owner can accept, reject, or mark completed
+          (request.auth.uid == resource.data.ownerId && request.resource.data.status in ['accepted', 'rejected', 'completed', 'pendingDiscussion'])
+        );
+
+      allow delete: if false;
+    }
+
+    // 4. ChatMessages Collection
+    match /chatMessages/{messageId} {
+      allow read: if isSignedIn()
+        && isParticipant(resource.data.requestId);
+
+      allow create: if isSignedIn()
+        && request.resource.data.senderId == request.auth.uid
+        && isParticipant(request.resource.data.requestId);
+
+      allow update, delete: if false;
+    }
+  }
+}

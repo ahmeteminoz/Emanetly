@@ -1,1 +1,27 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"emanetly","appId":"1:967934651517:android:7baf664fa87ee88fe91514","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"emanetly","configurations":{"android":"1:967934651517:android:7baf664fa87ee88fe91514"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "emanetly",
+          "appId": "1:967934651517:android:7baf664fa87ee88fe91514",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "emanetly",
+          "configurations": {
+            "android": "1:967934651517:android:7baf664fa87ee88fe91514"
+          }
+        }
+      }
+    }
+  }
+}

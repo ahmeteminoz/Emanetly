@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isOwnerOfItem(itemId) {
+      return isSignedIn() && firestore.get(/databases/(default)/documents/items/$(itemId)).data.lenderId == request.auth.uid;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*') && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // 1. Profile photos path: profiles/{userId}/{allPaths=**}
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+
+    // 2. Item photos path: items/{itemId}/{allPaths=**}
+    match /items/{itemId}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isOwnerOfItem(itemId) && isValidImage();
+      allow delete: if isOwnerOfItem(itemId);
+    }
+  }
+}
