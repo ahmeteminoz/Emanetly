@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/item.dart';
+import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'transaction_success_screen.dart';
+import 'widgets/qr_scanner_screen.dart';
 
 class MockRouteScreen extends StatefulWidget {
   final EmanetItem item;
@@ -537,22 +539,37 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
           label: 'QR Göster & Teslim Et',
           icon: Icons.qr_code,
           onPressed: () {
-            appState.completeDelivery(item.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Eşya teslim edildi! Ödünç süreci başladı.'), backgroundColor: Colors.green),
-            );
+            _showQrBottomSheet(context, item, 'borrow');
           },
           color: Colors.green,
         );
       }
       return buildButton(
-        label: 'Teslim Aldım (Onayla)',
-        icon: Icons.verified_user_outlined,
-        onPressed: () {
-          appState.completeDelivery(item.id);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Eşya teslim alındı! Ödünç süreci başladı.'), backgroundColor: Colors.green),
+        label: 'QR Tara & Teslim Al',
+        icon: Icons.qr_code_scanner_rounded,
+        onPressed: () async {
+          BorrowRequestModel? activeRequest;
+          try {
+            activeRequest = appState.borrowRequests.firstWhere(
+              (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
+            );
+          } catch (_) {}
+          final requestId = activeRequest?.id ?? 'mock';
+
+          final scanned = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QrScannerScreen(
+                action: 'borrow',
+                requestId: requestId,
+              ),
+            ),
           );
+          if (scanned == true && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Eşya başarıyla teslim alındı!'), backgroundColor: Colors.green),
+            );
+          }
         },
         color: theme.colorScheme.secondary,
       );
@@ -565,12 +582,12 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
         children: [
           if (isBorrower) ...[
             buildButton(
-              label: 'İade Talebi Gönder (QR Göster)',
+              label: 'İade Talebi Gönder',
               icon: Icons.settings_backup_restore_rounded,
               onPressed: () {
                 appState.requestReturn(item.id);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('İade talebi gönderildi. Eşya sahibinin onaylaması bekleniyor.')),
+                  const SnackBar(content: Text('İade talebi gönderildi. Eşyayı sahibine teslim ederken QR kodunuzu gösterebilirsiniz.')),
                 );
               },
               color: Colors.deepPurple,
@@ -591,19 +608,184 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     if (item.status == EmanetStatus.pendingReturn) {
       if (isLender) {
         return buildButton(
-          label: 'İadeyi Onayla & Kapat',
-          icon: Icons.done_all_rounded,
-          onPressed: () {
-            appState.approveReturn(item.id);
-            Navigator.pop(context);
+          label: 'QR Tara & İade Al',
+          icon: Icons.qr_code_scanner_rounded,
+          onPressed: () async {
+            BorrowRequestModel? activeRequest;
+            try {
+              activeRequest = appState.borrowRequests.firstWhere(
+                (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
+              );
+            } catch (_) {}
+            final requestId = activeRequest?.id ?? 'mock';
+
+            final scanned = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (context) => QrScannerScreen(
+                  action: 'return',
+                  requestId: requestId,
+                ),
+              ),
+            );
+            if (scanned == true && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Eşya başarıyla iade alındı!'), backgroundColor: Colors.green),
+              );
+            }
           },
           color: Colors.green,
         );
       }
-      return const Center(child: Text('İade talebi iletildi. Eşya sahibinin onaylaması bekleniyor...'));
+      return buildButton(
+        label: 'QR Göster (İade Ediyorum)',
+        icon: Icons.qr_code,
+        onPressed: () {
+          _showQrBottomSheet(context, item, 'return');
+        },
+        color: Colors.deepPurple,
+      );
     }
 
     return const SizedBox();
+  }
+
+  void _showQrBottomSheet(
+    BuildContext parentContext,
+    EmanetItem item,
+    String action,
+  ) {
+    final appState = AppStateProvider.of(parentContext);
+    final theme = Theme.of(parentContext);
+
+    BorrowRequestModel? activeRequest;
+    try {
+      activeRequest = appState.borrowRequests.firstWhere(
+        (r) => r.itemId == item.id && 
+               (r.status == BorrowRequestStatus.accepted ||
+                r.status == BorrowRequestStatus.pendingDiscussion ||
+                r.status == BorrowRequestStatus.onlyInquiry ||
+                r.status == BorrowRequestStatus.completed)
+      );
+    } catch (_) {}
+
+    final requestId = activeRequest?.id ?? 'mock_request_id_${item.id}';
+
+    final qrData = appState.qrService.generateQrData(
+      requestId: requestId,
+      action: action,
+    );
+
+    showModalBottomSheet(
+      context: parentContext,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              Text(
+                action == 'borrow' ? 'Emanet Teslim QR Kodu' : 'İade Alım QR Kodu',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              
+              Text(
+                action == 'borrow'
+                    ? 'Eşyayı alan öğrencinin bu QR kodu kendi kamerasından taramasını sağlayın.'
+                    : 'İade eden öğrencinin size eşyayı getirmesiyle bu QR kodunu taranabilir yapın.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              ),
+              const SizedBox(height: 32),
+
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: CustomPaint(
+                  size: const Size(200, 200),
+                  painter: MockQrPainter(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              Text(
+                'Kod: $qrData',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(sheetContext);
+                    
+                    final errorMessage = await appState.processQrCode(qrData);
+
+                    if (parentContext.mounted) {
+                      if (errorMessage == null) {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              action == 'borrow'
+                                  ? 'Emanet başarıyla teslim edildi!'
+                                  : 'İade başarıyla onaylandı ve eşya geri alındı!',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(parentContext).showSnackBar(
+                          SnackBar(
+                            content: Text(errorMessage),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Karşı Taraf Taramasını Simüle Et (Prototip)'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -725,4 +907,47 @@ class MockMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class MockQrPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paintBlack = Paint()..color = Colors.black;
+    final paintWhite = Paint()..color = Colors.white;
+
+    // Background white box
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paintWhite);
+
+    // Three outer position detection boxes
+    // Top-Left
+    canvas.drawRect(const Rect.fromLTWH(10, 10, 45, 45), paintBlack);
+    canvas.drawRect(const Rect.fromLTWH(17, 17, 31, 31), paintWhite);
+    canvas.drawRect(const Rect.fromLTWH(22, 22, 21, 21), paintBlack);
+
+    // Top-Right
+    canvas.drawRect(Rect.fromLTWH(size.width - 55, 10, 45, 45), paintBlack);
+    canvas.drawRect(Rect.fromLTWH(size.width - 48, 17, 31, 31), paintWhite);
+    canvas.drawRect(Rect.fromLTWH(size.width - 43, 22, 21, 21), paintBlack);
+
+    // Bottom-Left
+    canvas.drawRect(Rect.fromLTWH(10, size.height - 55, 45, 45), paintBlack);
+    canvas.drawRect(Rect.fromLTWH(17, size.height - 48, 31, 31), paintWhite);
+    canvas.drawRect(Rect.fromLTWH(22, size.height - 43, 21, 21), paintBlack);
+
+    // Draw some random pixels inside to look like a QR code
+    final double pixelSize = 5.0;
+    for (double y = 60; y < size.height - 10; y += pixelSize * 2) {
+      for (double x = 60; x < size.width - 10; x += pixelSize * 2) {
+        if ((x + y).hashCode % 3 == 0) {
+          canvas.drawRect(Rect.fromLTWH(x, y, pixelSize, pixelSize), paintBlack);
+        }
+        if ((x * y).hashCode % 4 == 0) {
+          canvas.drawRect(Rect.fromLTWH(x, y + pixelSize, pixelSize, pixelSize), paintBlack);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

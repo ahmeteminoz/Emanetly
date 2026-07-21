@@ -28,6 +28,7 @@ class EmanetItem {
   final String? borrowerName;
   final String location;
   final String? imageUrl;
+  final List<String> images;
   final EmanetStatus status;
   final DateTime createdAt;
   
@@ -55,6 +56,7 @@ class EmanetItem {
     this.borrowerName,
     required this.location,
     this.imageUrl,
+    this.images = const [],
     required this.status,
     required this.createdAt,
     this.comments = const [],
@@ -70,6 +72,12 @@ class EmanetItem {
 
   bool get isAvailable => status == EmanetStatus.available;
 
+  List<String> get displayImages {
+    if (images.isNotEmpty) return images;
+    if (imageUrl != null && imageUrl!.isNotEmpty) return [imageUrl!];
+    return [];
+  }
+
   EmanetItem copyWith({
     String? id,
     String? title,
@@ -81,6 +89,7 @@ class EmanetItem {
     String? borrowerName,
     String? location,
     String? imageUrl,
+    List<String>? images,
     EmanetStatus? status,
     DateTime? createdAt,
     List<EmanetComment>? comments,
@@ -104,6 +113,7 @@ class EmanetItem {
       borrowerName: borrowerName ?? this.borrowerName,
       location: location ?? this.location,
       imageUrl: imageUrl ?? this.imageUrl,
+      images: images ?? this.images,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       comments: comments ?? this.comments,
@@ -130,6 +140,7 @@ class EmanetItem {
       'borrowerName': borrowerName,
       'location': location,
       'imageUrl': imageUrl,
+      'images': images,
       'status': status.name,
       'createdAt': createdAt.toIso8601String(),
       'comments': comments.map((c) => c.toMap()).toList(),
@@ -156,6 +167,7 @@ class EmanetItem {
       borrowerName: map['borrowerName'],
       location: map['location'] ?? '',
       imageUrl: map['imageUrl'],
+      images: map['images'] != null ? List<String>.from(map['images']) : const [],
       status: EmanetStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => EmanetStatus.available,

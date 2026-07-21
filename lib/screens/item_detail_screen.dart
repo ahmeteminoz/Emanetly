@@ -9,6 +9,7 @@ import 'mock_route_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
 import 'widgets/full_screen_image_viewer.dart';
+import 'widgets/qr_scanner_screen.dart';
 import 'edit_item_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -66,104 +67,155 @@ class ItemDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Part 1: Large Marketplace Category Hero Image
-            AspectRatio(
-              aspectRatio: 1.5,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned.fill(
-                        child: (() {
-                          final imageUrl = currentItem.imageUrl;
-                          final gradient = LinearGradient(
-                            colors: [
-                              Color(currentItem.mockImageColorValue).withOpacity(0.85),
-                              Color(currentItem.mockImageColorValue),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          );
-                          
-                          Widget fallback() => Container(
-                                decoration: BoxDecoration(gradient: gradient),
-                                child: Center(
-                                  child: Icon(
-                                    categoryIcon,
-                                    size: 80,
-                                    color: Colors.white.withOpacity(0.9),
-                                  ),
-                                ),
-                              );
-
-                          if (imageUrl != null && imageUrl.isNotEmpty) {
-                            Widget imageWidget;
-                            if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
-                              imageWidget = Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => fallback(),
-                              );
-                            } else {
-                              imageWidget = Image.file(
-                                File(imageUrl),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => fallback(),
-                              );
-                            }
-
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FullScreenImageViewer(
-                                      imageUrl: imageUrl,
-                                      heroTag: 'item_detail_image_${currentItem.id}',
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Hero(
-                                tag: 'item_detail_image_${currentItem.id}',
-                                child: imageWidget,
-                              ),
-                            );
-                          }
-                          return fallback();
-                        })(),
-                      ),
-                      Positioned(
-                        bottom: 12,
-                        right: 12,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            currentItem.category,
-                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+            (() {
+              final activeIndexNotifier = ValueNotifier<int>(0);
+              return AspectRatio(
+                aspectRatio: 1.5,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned.fill(
+                          child: (() {
+                            final images = currentItem.displayImages;
+                            final gradient = LinearGradient(
+                              colors: [
+                                Color(currentItem.mockImageColorValue).withOpacity(0.85),
+                                Color(currentItem.mockImageColorValue),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            );
+                            
+                            Widget fallback() => Container(
+                                  decoration: BoxDecoration(gradient: gradient),
+                                  child: Center(
+                                    child: Icon(
+                                      categoryIcon,
+                                      size: 80,
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                );
+
+                            if (images.isEmpty) {
+                              return fallback();
+                            }
+
+                            return Stack(
+                              children: [
+                                PageView.builder(
+                                  itemCount: images.length,
+                                  onPageChanged: (index) {
+                                    activeIndexNotifier.value = index;
+                                  },
+                                  itemBuilder: (context, index) {
+                                    final imageUrl = images[index];
+                                    Widget imageWidget;
+                                    if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
+                                      imageWidget = Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => fallback(),
+                                      );
+                                    } else {
+                                      imageWidget = Image.file(
+                                        File(imageUrl),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => fallback(),
+                                      );
+                                    }
+
+                                    final heroWidget = index == 0
+                                        ? Hero(
+                                            tag: 'item_detail_image_${currentItem.id}',
+                                            child: imageWidget,
+                                          )
+                                        : imageWidget;
+
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => FullScreenImageViewer(
+                                              imageUrls: images,
+                                              initialIndex: index,
+                                              heroTag: index == 0 ? 'item_detail_image_${currentItem.id}' : 'item_detail_image_${currentItem.id}_$index',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: heroWidget,
+                                    );
+                                  },
+                                ),
+                                
+                                // Dot Indicator Overlay
+                                if (images.length > 1)
+                                  Positioned(
+                                    bottom: 12,
+                                    left: 0,
+                                    right: 0,
+                                    child: ValueListenableBuilder<int>(
+                                      valueListenable: activeIndexNotifier,
+                                      builder: (context, activeIndex, child) {
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: List.generate(images.length, (dotIndex) {
+                                            final isActive = activeIndex == dotIndex;
+                                            return AnimatedContainer(
+                                              duration: const Duration(milliseconds: 300),
+                                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                                              width: isActive ? 12 : 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
+                                                borderRadius: BorderRadius.circular(3),
+                                              ),
+                                            );
+                                          }),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            );
+                          })(),
+                        ),
+                        Positioned(
+                          bottom: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              currentItem.category,
+                              style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            })(),
             const SizedBox(height: 20),
 
             // Category & Status Header Card
@@ -734,23 +786,99 @@ class ItemDetailScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('QR Teslim Et'),
+                    child: const Text('QR Göster & Teslim Et'),
                   ),
                 ),
               ],
             ),
-          if (isOwnItem && item.status == EmanetStatus.pendingReturn)
+          if (isBorrower && item.status == EmanetStatus.pendingApproval && item.deliveryStatus == DeliveryStatus.routingStarted)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  BorrowRequestModel? activeRequest;
+                  try {
+                    activeRequest = appState.borrowRequests.firstWhere(
+                      (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
+                    );
+                  } catch (_) {}
+                  final requestId = activeRequest?.id ?? 'mock';
+
+                  final scanned = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QrScannerScreen(
+                        action: 'borrow',
+                        requestId: requestId,
+                      ),
+                    ),
+                  );
+                  if (scanned == true && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Eşya başarıyla teslim alındı!'), backgroundColor: Colors.green),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('QR Tara & Teslim Al'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          if (isBorrower && item.status == EmanetStatus.borrowed)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  _showQrBottomSheet(context, item, 'return', item.borrowerId ?? '');
+                  _showQrBottomSheet(context, item, 'return', item.lenderId);
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('QR Doğrula & İade Al'),
+                child: const Text('İade Et (QR Göster)'),
+              ),
+            ),
+          if (isOwnItem && item.status == EmanetStatus.pendingReturn)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  BorrowRequestModel? activeRequest;
+                  try {
+                    activeRequest = appState.borrowRequests.firstWhere(
+                      (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
+                    );
+                  } catch (_) {}
+                  final requestId = activeRequest?.id ?? 'mock';
+
+                  final scanned = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QrScannerScreen(
+                        action: 'return',
+                        requestId: requestId,
+                      ),
+                    ),
+                  );
+                  if (scanned == true && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Eşya başarıyla iade alındı!'), backgroundColor: Colors.green),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('QR Tara & İade Al'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
         ],
@@ -1137,10 +1265,23 @@ class ItemDetailScreen extends StatelessWidget {
     final appState = AppStateProvider.of(parentContext);
     final theme = Theme.of(parentContext);
 
+    // Find the associated active request
+    BorrowRequestModel? activeRequest;
+    try {
+      activeRequest = appState.borrowRequests.firstWhere(
+        (r) => r.itemId == item.id && 
+               (r.status == BorrowRequestStatus.accepted ||
+                r.status == BorrowRequestStatus.pendingDiscussion ||
+                r.status == BorrowRequestStatus.onlyInquiry ||
+                r.status == BorrowRequestStatus.completed)
+      );
+    } catch (_) {}
+
+    final requestId = activeRequest?.id ?? 'mock_request_id_${item.id}';
+
     final qrData = appState.qrService.generateQrData(
-      itemId: item.id,
+      requestId: requestId,
       action: action,
-      userId: userId,
     );
 
     showModalBottomSheet(
@@ -1219,10 +1360,10 @@ class ItemDetailScreen extends StatelessWidget {
                   onPressed: () async {
                     Navigator.pop(sheetContext); // Close bottom sheet using sheetContext
                     
-                    final success = await appState.processQrCode(qrData);
+                    final errorMessage = await appState.processQrCode(qrData);
 
                     if (parentContext.mounted) {
-                      if (success) {
+                      if (errorMessage == null) {
                         ScaffoldMessenger.of(parentContext).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -1235,8 +1376,8 @@ class ItemDetailScreen extends StatelessWidget {
                         );
                       } else {
                         ScaffoldMessenger.of(parentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text('QR Kod geçersiz veya hata oluştu.'),
+                          SnackBar(
+                            content: Text(errorMessage),
                             backgroundColor: Colors.red,
                           ),
                         );

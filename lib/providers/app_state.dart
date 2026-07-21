@@ -237,6 +237,7 @@ class AppState extends ChangeNotifier {
     required String category,
     required String location,
     String? imageUrl,
+    List<String> images = const [],
     int? mockColorValue,
     void Function(double progress)? onProgress,
   }) async {
@@ -244,11 +245,30 @@ class AppState extends ChangeNotifier {
     _setLoading(true);
     try {
       final itemId = 'item_${DateTime.now().millisecondsSinceEpoch}';
-      String? finalImageUrl = imageUrl;
       
-      // Eğer görsel yerel bir dosya yolu ise önce Storage'a yüklüyoruz
-      if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-        finalImageUrl = await _storageService.uploadItemImage(itemId, File(imageUrl), onProgress: onProgress);
+      final sourcePaths = List<String>.from(images);
+      if (sourcePaths.isEmpty && imageUrl != null && imageUrl.isNotEmpty) {
+        sourcePaths.add(imageUrl);
+      }
+
+      final uploadedUrls = <String>[];
+      if (sourcePaths.isNotEmpty) {
+        final double progressScale = 1.0 / sourcePaths.length;
+        for (int i = 0; i < sourcePaths.length; i++) {
+          final path = sourcePaths[i];
+          if (path.startsWith('http')) {
+            uploadedUrls.add(path);
+          } else {
+            final downloadUrl = await _storageService.uploadItemImage(
+              itemId,
+              File(path),
+              onProgress: onProgress != null
+                  ? (p) => onProgress((i + p) * progressScale)
+                  : null,
+            );
+            uploadedUrls.add(downloadUrl);
+          }
+        }
       }
 
       // Pick a random mock color for the grid photo placeholders if not selected
@@ -263,7 +283,8 @@ class AppState extends ChangeNotifier {
         lenderId: currentUser!.uid,
         lenderName: currentUser!.name,
         location: location,
-        imageUrl: finalImageUrl,
+        imageUrl: uploadedUrls.isNotEmpty ? uploadedUrls.first : null,
+        images: uploadedUrls,
         status: EmanetStatus.available,
         createdAt: DateTime.now(),
         comments: [],
@@ -495,27 +516,83 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Handle Mock QR Scan
-  Future<bool> processQrCode(String qrCodeData) async {
+  // Handle QR Scan Verification
+  Future<String?> processQrCode(String qrCodeData) async {
     _setLoading(true);
     try {
       final result = await _qrService.scanQrCode(qrCodeData);
-      if (result != null) {
-        if (result.isBorrow) {
-          // If action is borrow, let's complete delivery
-          await _itemService.completeDelivery(result.itemId);
-          _addLog('QR Kod doğrulandı: Ödünç teslimatı tamamlandı.');
-        } else if (result.isReturn) {
-          // If action is return, approve return
-          await _itemService.approveReturn(result.itemId);
-          _addLog('QR Kod doğrulandı: İade alma işlemi onaylandı.');
-        }
-        return true;
+      if (result == null) {
+        return 'QR Kod ayrıştırılamadı veya geçersiz format.';
       }
-      return false;
+
+      // 1. Request gerçekten var mı
+      final reqIndex = _borrowRequests.indexWhere((r) => r.id == result.requestId);
+      if (reqIndex == -1) {
+        return 'İlgili ödünç talebi bulunamadı.';
+      }
+      final request = _borrowRequests[reqIndex];
+      
+      // Find matching item details
+      final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
+      if (itemIndex == -1) {
+        return 'İlgili ilan bulunamadı.';
+      }
+      final item = _items[itemIndex];
+
+      // 2. Süre koruması (5 dakika geçerlilik)
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final differenceSeconds = (now - result.timestamp) / 1000;
+      if (differenceSeconds < 0 || differenceSeconds > 300) {
+        return 'Bu QR kodun süresi dolmuş. Lütfen yeni bir kod oluşturup tekrar deneyin.';
+      }
+
+      // 3. Doğru kullanıcı mı (tarayan kişi kim olmalı?)
+      if (currentUser == null) {
+        return 'Doğrulama için lütfen giriş yapın.';
+      }
+      
+      if (result.isBorrow) {
+        // Alıcı, vericinin QR'ını tarar. Tarayan kişi alıcı (requester) olmalı.
+        if (currentUser!.uid != request.requesterId) {
+          return 'Bu işlem sadece ödünç alan kullanıcı tarafından onaylanabilir.';
+        }
+        
+        // 4. Beklenen durumda mı & işlem daha önce tamamlanmış mı (Tekrar Okutma Koruması)
+        if (item.status == EmanetStatus.borrowed || item.deliveryStatus == DeliveryStatus.completed) {
+          return 'Bu işlem zaten tamamlandı.';
+        }
+        if (item.status != EmanetStatus.pendingApproval || item.deliveryStatus != DeliveryStatus.routingStarted) {
+          return 'Eşya henüz teslim aşamasına gelmemiş veya durum uyumsuz.';
+        }
+
+        // Teslimatı tamamla
+        await _itemService.completeDelivery(item.id);
+        _addLog('QR Kod doğrulandı: Ödünç teslimatı tamamlandı.');
+        return null; // Başarılı
+      } else if (result.isReturn) {
+        // Verici, alıcının QR'ını tarar. Tarayan kişi verici (owner) olmalı.
+        if (currentUser!.uid != request.ownerId) {
+          return 'Bu işlem sadece eşya sahibi tarafından onaylanabilir.';
+        }
+
+        // 4. Beklenen durumda mı & işlem daha önce tamamlanmış mı (Tekrar Okutma Koruması)
+        if (item.status == EmanetStatus.available) {
+          return 'Bu işlem zaten tamamlandı.';
+        }
+        if (item.status != EmanetStatus.pendingReturn) {
+          return 'Eşya iade bekleme durumunda değil.';
+        }
+
+        // İadeyi tamamla
+        await approveReturn(item.id);
+        _addLog('QR Kod doğrulandı: İade alma işlemi onaylandı.');
+        return null; // Başarılı
+      }
+      
+      return 'Bilinmeyen işlem türü.';
     } catch (e) {
       _addLog('QR Okuma Hatası: $e');
-      return false;
+      return 'QR okuma işlemi sırasında hata oluştu: $e';
     } finally {
       _setLoading(false);
     }
@@ -875,22 +952,46 @@ class AppState extends ChangeNotifier {
         oldItem = null;
       }
 
-      if (item.imageUrl != null && item.imageUrl!.isNotEmpty && !item.imageUrl!.startsWith('http')) {
-        // Yeni fotoğrafı Storage'a yüklüyoruz
-        final downloadUrl = await _storageService.uploadItemImage(item.id, File(item.imageUrl!), onProgress: onProgress);
-        
-        // Varsa eski fotoğrafı Storage'dan siliyoruz
-        if (oldItem != null && oldItem.imageUrl != null && oldItem.imageUrl!.isNotEmpty) {
-          await _storageService.deleteImage(oldItem.imageUrl!);
-        }
-        
-        finalItem = item.copyWith(imageUrl: downloadUrl);
-      } else if (item.imageUrl != oldItem?.imageUrl) {
-        // Fotoğraf kaldırıldıysa veya başka şekilde değiştiyse eskiyi temizliyoruz
-        if (oldItem != null && oldItem.imageUrl != null && oldItem.imageUrl!.isNotEmpty) {
-          await _storageService.deleteImage(oldItem.imageUrl!);
+      final sourcePaths = List<String>.from(item.images);
+      if (sourcePaths.isEmpty && item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+        sourcePaths.add(item.imageUrl!);
+      }
+
+      final uploadedUrls = <String>[];
+      if (sourcePaths.isNotEmpty) {
+        final double progressScale = 1.0 / sourcePaths.length;
+        for (int i = 0; i < sourcePaths.length; i++) {
+          final path = sourcePaths[i];
+          if (path.startsWith('http')) {
+            uploadedUrls.add(path);
+          } else {
+            final downloadUrl = await _storageService.uploadItemImage(
+              item.id,
+              File(path),
+              onProgress: onProgress != null
+                  ? (p) => onProgress((i + p) * progressScale)
+                  : null,
+            );
+            uploadedUrls.add(downloadUrl);
+          }
         }
       }
+
+      // Garbage Collection: Delete old remote images that are no longer in the updated list
+      final oldUrls = oldItem?.images ?? [];
+      final oldImageUrl = oldItem?.imageUrl;
+      final allOldUrls = {...oldUrls, if (oldImageUrl != null && oldImageUrl.isNotEmpty) oldImageUrl};
+
+      for (final oldUrl in allOldUrls) {
+        if (!uploadedUrls.contains(oldUrl)) {
+          await _storageService.deleteImage(oldUrl);
+        }
+      }
+
+      finalItem = item.copyWith(
+        imageUrl: uploadedUrls.isNotEmpty ? uploadedUrls.first : null,
+        images: uploadedUrls,
+      );
 
       await _itemService.updateItem(finalItem);
       _addLog('İlan güncellendi: ${item.id}');

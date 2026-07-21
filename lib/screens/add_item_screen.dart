@@ -21,6 +21,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _locationController = TextEditingController();
   String _selectedCategory = 'Elektronik';
   String? _selectedImagePath;
+  final List<String> _selectedImagePaths = [];
   bool _isPublishing = false;
   double _uploadProgress = 0.0;
 
@@ -119,37 +120,44 @@ class _AddItemScreenState extends State<AddItemScreen> {
   }
 
   Future<void> _pickRealImage(ImageSource source) async {
+    if (_selectedImagePaths.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('En fazla 5 fotoğraf ekleyebilirsiniz.')),
+      );
+      return;
+    }
     final picker = ImagePicker();
     try {
-      final XFile? pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 1000,
-        maxHeight: 1000,
-        imageQuality: 80, // Optimize boyut & kalite
-      );
-      
-      if (pickedFile == null) return;
-
-      // 1. Kırpma Adımı (Crop)
-      final croppedFile = await ImageUtils.cropImage(
-        imageFile: File(pickedFile.path),
-        isCircle: false,
-      );
-      if (croppedFile == null) return;
-
-      // 2. Önizleme Adımı (Preview)
-      if (!mounted) return;
-      final confirm = await ImageUtils.showImagePreviewDialog(
-        context: context,
-        imageFile: croppedFile,
-      );
-      if (!confirm) return;
-      
-      setState(() {
-        _selectedImagePath = croppedFile.path;
-        _mockImageLabel = source == ImageSource.camera ? 'Kamera Fotoğrafı' : 'Galeri Fotoğrafı';
-        _selectedColorValue = null; // Gerçek görsel seçildiği için mock şablon rengini temizliyoruz
-      });
+      if (source == ImageSource.gallery) {
+        final List<XFile> pickedFiles = await picker.pickMultiImage(
+          maxWidth: 1000,
+          maxHeight: 1000,
+          imageQuality: 80,
+        );
+        if (pickedFiles.isEmpty) return;
+        final remainingSlots = 5 - _selectedImagePaths.length;
+        final filesToAdd = pickedFiles.take(remainingSlots);
+        setState(() {
+          for (final file in filesToAdd) {
+            _selectedImagePaths.add(file.path);
+          }
+          _selectedColorValue = null;
+          _selectedImagePath = _selectedImagePaths.isNotEmpty ? _selectedImagePaths.last : null;
+        });
+      } else {
+        final XFile? pickedFile = await picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1000,
+          maxHeight: 1000,
+          imageQuality: 80,
+        );
+        if (pickedFile == null) return;
+        setState(() {
+          _selectedImagePaths.add(pickedFile.path);
+          _selectedColorValue = null;
+          _selectedImagePath = pickedFile.path;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -176,14 +184,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Ürün Fotoğrafı Ekle',
+                  'Fotoğraf Ekle',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
                 ListTile(
                   leading: const Icon(Icons.photo_library_rounded),
-                  title: const Text('Galeriden Gerçek Fotoğraf Seç'),
+                  title: const Text('Galeriden Fotoğraf Seç'),
                   onTap: () {
                     Navigator.pop(context);
                     _pickRealImage(ImageSource.gallery);
@@ -192,41 +200,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.camera_alt_rounded),
-                  title: const Text('Kameradan Gerçek Fotoğraf Çek'),
+                  title: const Text('Fotoğraf Çek'),
                   onTap: () {
                     Navigator.pop(context);
                     _pickRealImage(ImageSource.camera);
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Galeriden Şablon Görsel Seç (Mock)'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showMockGalleryDialog();
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: const Text('Kamera ile Fotoğraf Çek (Simülatör)'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CameraSimulatorDialog(
-                          onCaptured: (colorValue) {
-                            setState(() {
-                              _selectedColorValue = colorValue;
-                              _selectedImagePath = 'Kamera';
-                              _mockImageLabel = 'Kamera Fotoğrafı';
-                            });
-                          },
-                        ),
-                      ),
-                    );
                   },
                 ),
               ],
@@ -256,6 +233,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
         category: _selectedCategory,
         location: _locationController.text.trim(),
         imageUrl: _selectedColorValue != null ? null : _selectedImagePath,
+        images: _selectedColorValue != null ? const [] : _selectedImagePaths,
         mockColorValue: _selectedColorValue,
         onProgress: (progress) {
           if (mounted) {
@@ -372,108 +350,262 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 const SizedBox(height: 24),
 
                 // Photo Picker Placeholder Widget
-                GestureDetector(
-                  onTap: _showImageSourceSheet,
-                  child: Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: _selectedImagePath != null
-                          ? Colors.transparent
-                          : theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
+                if (_selectedImagePaths.isEmpty && _selectedColorValue == null)
+                  GestureDetector(
+                    onTap: _showImageSourceSheet,
+                    child: Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: CustomPaint(
+                        painter: DashRectPainter(color: theme.colorScheme.outlineVariant),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_a_photo_outlined,
+                                size: 40,
+                                color: theme.colorScheme.outline,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Ürün Fotoğrafı Ekle (En fazla 5 adet)',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Görsel eklemek veya şablon seçmek için dokunun',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    child: _selectedImagePath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                _selectedColorValue != null
-                                    ? Container(
-                                        color: Color(_selectedColorValue!),
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                _selectedImagePath == 'Kamera'
-                                                    ? Icons.camera_alt_outlined
-                                                    : Icons.photo_outlined,
-                                                size: 40,
-                                                color: Colors.white,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                _mockImageLabel ?? 'Görsel Şablonu',
-                                                style: const TextStyle(
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Fotoğraflar (${_selectedColorValue != null ? 1 : _selectedImagePaths.length}/5)',
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          if (_selectedColorValue != null)
+                            const Text(
+                              'Şablon Görseli Etkin',
+                              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 110,
+                        child: ReorderableListView(
+                          scrollDirection: Axis.horizontal,
+                          onReorder: (int oldIndex, int newIndex) {
+                            if (_selectedColorValue != null) return;
+                            if (oldIndex >= _selectedImagePaths.length || newIndex > _selectedImagePaths.length) {
+                              return;
+                            }
+                            setState(() {
+                              if (oldIndex < newIndex) {
+                                newIndex -= 1;
+                              }
+                              final path = _selectedImagePaths.removeAt(oldIndex);
+                              _selectedImagePaths.insert(newIndex, path);
+                              _selectedImagePath = _selectedImagePaths.isNotEmpty ? _selectedImagePaths.last : null;
+                            });
+                          },
+                          children: [
+                            if (_selectedColorValue != null)
+                              Container(
+                                key: const ValueKey('mock_color_template'),
+                                width: 110,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: Color(_selectedColorValue!),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            _selectedImagePath == 'Kamera' ? Icons.camera_alt_outlined : Icons.photo_outlined,
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _mockImageLabel ?? 'Şablon',
+                                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: Colors.black.withOpacity(0.4),
+                                        child: IconButton(
+                                          icon: const Icon(Icons.close, size: 10, color: Colors.white),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedColorValue = null;
+                                              _mockImageLabel = null;
+                                              _selectedImagePath = null;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ..._selectedImagePaths.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final path = entry.value;
+                                final isCover = index == 0;
+                                return Container(
+                                  key: ValueKey(path),
+                                  width: 110,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isCover ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+                                      width: isCover ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final croppedFile = await ImageUtils.cropImage(
+                                              imageFile: File(path),
+                                              isCircle: false,
+                                            );
+                                            if (croppedFile != null) {
+                                              setState(() {
+                                                _selectedImagePaths[index] = croppedFile.path;
+                                              });
+                                            }
+                                          },
+                                          child: Image.file(File(path), fit: BoxFit.cover),
+                                        ),
+                                        if (isCover)
+                                          Positioned(
+                                            bottom: 0,
+                                            left: 0,
+                                            right: 0,
+                                            child: Container(
+                                              color: theme.colorScheme.primary.withOpacity(0.85),
+                                              padding: const EdgeInsets.symmetric(vertical: 2),
+                                              child: const Text(
+                                                'KAPAK',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
                                                   color: Colors.white,
+                                                  fontSize: 8,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
-                                            ],
+                                            ),
+                                          ),
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor: Colors.black.withOpacity(0.5),
+                                            child: IconButton(
+                                              icon: const Icon(Icons.close, size: 10, color: Colors.white),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                              onPressed: () {
+                                                setState(() {
+                                                  _selectedImagePaths.removeAt(index);
+                                                  if (_selectedImagePaths.isEmpty) {
+                                                    _selectedImagePath = null;
+                                                  } else {
+                                                    _selectedImagePath = _selectedImagePaths.last;
+                                                  }
+                                                });
+                                              },
+                                            ),
                                           ),
                                         ),
-                                      )
-                                    : Image.file(
-                                        File(_selectedImagePath!),
-                                        fit: BoxFit.cover,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            if (_selectedColorValue == null && _selectedImagePaths.length < 5)
+                              GestureDetector(
+                                key: const ValueKey('add_image_button'),
+                                onTap: _showImageSourceSheet,
+                                child: Container(
+                                  width: 110,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: CustomPaint(
+                                    painter: DashRectPainter(
+                                      color: theme.colorScheme.outlineVariant,
+                                      strokeWidth: 1.5,
+                                      gap: 3.0,
+                                    ),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_a_photo_outlined,
+                                            size: 24,
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Ekle',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.outline,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                // Remove button
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.black.withOpacity(0.4),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.close, size: 16, color: Colors.white),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedImagePath = null;
-                                          _selectedColorValue = null;
-                                          _mockImageLabel = null;
-                                        });
-                                      },
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          )
-                        : CustomPaint(
-                            painter: DashRectPainter(color: theme.colorScheme.outlineVariant),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add_a_photo_outlined,
-                                    size: 40,
-                                    color: theme.colorScheme.outline,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Ürün Fotoğrafı / Görsel Ekle',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Galeriden seçmek veya fotoğraf çekmek için dokunun',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.outline,
-                                    ),
-                                  ),
-                                ],
                               ),
-                            ),
-                          ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
                 const SizedBox(height: 24),
 
                 // Title Field

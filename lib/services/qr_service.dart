@@ -1,14 +1,14 @@
 import 'dart:async';
 
 class QrScanResult {
-  final String itemId;
+  final String requestId;
   final String action; // 'borrow' or 'return'
-  final String userId;
+  final int timestamp;
 
   QrScanResult({
-    required this.itemId,
+    required this.requestId,
     required this.action,
-    required this.userId,
+    required this.timestamp,
   });
 
   bool get isBorrow => action == 'borrow';
@@ -16,32 +16,38 @@ class QrScanResult {
 }
 
 abstract class QrService {
-  String generateQrData({required String itemId, required String action, required String userId});
+  String generateQrData({required String requestId, required String action});
   Future<QrScanResult?> scanQrCode(String code);
 }
 
 class MockQrService implements QrService {
   @override
-  String generateQrData({required String itemId, required String action, required String userId}) {
-    return 'emanetly:///item/$itemId/$action/$userId';
+  String generateQrData({required String requestId, required String action}) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return 'emanetly://handover?requestId=$requestId&action=$action&t=$timestamp';
   }
 
   @override
   Future<QrScanResult?> scanQrCode(String code) async {
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulating camera scanning
+    // 300ms yapay gecikme (tarama hissi için)
+    await Future.delayed(const Duration(milliseconds: 300));
     try {
       final uri = Uri.parse(code);
-      if (uri.scheme == 'emanetly' || uri.scheme == 'kampusemanet') {
-        final segments = uri.pathSegments;
-        if (segments.length >= 4 && segments[0] == 'item') {
-          final itemId = segments[1];
-          final action = segments[2];
-          final userId = segments[3];
-          return QrScanResult(itemId: itemId, action: action, userId: userId);
+      if (uri.scheme == 'emanetly' && uri.host == 'handover') {
+        final requestId = uri.queryParameters['requestId'];
+        final action = uri.queryParameters['action'];
+        final tStr = uri.queryParameters['t'];
+        if (requestId != null && action != null && tStr != null) {
+          final timestamp = int.parse(tStr);
+          return QrScanResult(
+            requestId: requestId,
+            action: action,
+            timestamp: timestamp,
+          );
         }
       }
     } catch (_) {
-      // Parse error
+      // Ayrıştırma hatası
     }
     return null;
   }
