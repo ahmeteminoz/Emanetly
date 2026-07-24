@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
+import * as logger from "firebase-functions/logger";
 
 // Initialize Admin SDK once if not already initialized
 if (admin.apps.length === 0) {
@@ -17,7 +18,7 @@ function getEventDocId(eventId: string): string {
 }
 
 /**
- * Idempotent execution wrapper using notificationEvents collection
+ * Idempotent execution wrapper using notificationEvents collection with 7-day TTL
  */
 export async function runIdempotent(eventId: string, task: () => Promise<void>): Promise<void> {
   const docId = getEventDocId(eventId);
@@ -29,15 +30,20 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
     if (doc.exists) {
       const data = doc.data();
       if (data && (data.status === "processing" || data.status === "completed")) {
-        console.log(`Emanetly FCM: Event ${eventId} (doc: ${docId}) already in state '${data.status}'. Skipping.`);
+        logger.info(`Emanetly FCM: Event ${eventId} (doc: ${docId}) already in state '${data.status}'. Skipping.`);
         return false;
       }
     }
     
+    // Set TTL expiration date to 7 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
     // Set to processing
     transaction.set(eventRef, {
       status: "processing",
       createdAt: FieldValue.serverTimestamp(),
+      expiresAt: expiresAt, // Firestore TTL automatically prunes this after 7 days
     });
     return true;
   });
@@ -52,7 +58,7 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
       completedAt: FieldValue.serverTimestamp(),
     });
   } catch (error: any) {
-    console.error(`Emanetly FCM: Task execution failed for event ${eventId}:`, error);
+    logger.error(`Emanetly FCM: Task execution failed for event ${eventId}:`, error);
     await eventRef.update({
       status: "failed",
       error: error?.message || "Unknown error",
@@ -73,7 +79,7 @@ export async function sendPushNotification(
   const userDoc = await userRef.get();
 
   if (!userDoc.exists) {
-    console.log(`Emanetly FCM: User ${userId} not found in Firestore. Skipping notification.`);
+    logger.warn(`Emanetly FCM: User ${userId} not found in Firestore. Skipping notification.`);
     return;
   }
 
@@ -81,7 +87,7 @@ export async function sendPushNotification(
   const tokens: string[] = userData?.fcmTokens || [];
 
   if (tokens.length === 0) {
-    console.log(`Emanetly FCM: User ${userId} has no registered FCM tokens. Skipping.`);
+    logger.info(`Emanetly FCM: User ${userId} has no registered FCM tokens. Skipping.`);
     return;
   }
 
@@ -108,7 +114,7 @@ export async function sendPushNotification(
   };
 
   const response = await admin.messaging().sendEachForMulticast(message);
-  console.log(`Emanetly FCM: Multicast sent to ${tokens.length} tokens. Success count: ${response.successCount}`);
+  logger.info(`Emanetly FCM: Multicast sent to ${tokens.length} tokens. Success count: ${response.successCount}`);
 
   // Handle invalid/expired tokens pruning
   const tokensToRemove: string[] = [];
@@ -125,7 +131,7 @@ export async function sendPushNotification(
   });
 
   if (tokensToRemove.length > 0) {
-    console.log(`Emanetly FCM: Pruning ${tokensToRemove.length} invalid tokens for user ${userId}.`);
+    logger.info(`Emanetly FCM: Pruning ${tokensToRemove.length} invalid tokens for user ${userId}.`);
     await userRef.update({
       fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
     });
