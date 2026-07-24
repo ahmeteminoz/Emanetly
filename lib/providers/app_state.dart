@@ -13,6 +13,7 @@ import '../services/borrow_request_service.dart';
 import '../services/chat_message_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ViewMode {
   compactGrid,
@@ -457,13 +458,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _updateFcmToken(String userId, String token) {
+  void _updateFcmToken(String userId, String token) async {
     final user = _authService.currentUser;
-    if (user != null && !user.fcmTokens.contains(token)) {
-      final updatedTokens = List<String>.from(user.fcmTokens)..add(token);
-      final updatedUser = user.copyWith(fcmTokens: updatedTokens);
-      _authService.updateUserProfile(updatedUser);
-      _addLog('FCM Token kaydedildi.');
+    if (user != null) {
+      if (!user.fcmTokens.contains(token)) {
+        final updatedTokens = List<String>.from(user.fcmTokens)..add(token);
+        final updatedUser = user.copyWith(fcmTokens: updatedTokens);
+        _authService.updateUserProfile(updatedUser);
+      }
+      
+      // Force database atomic union to prevent multi-device overwrites
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'fcmTokens': FieldValue.arrayUnion([token])
+        });
+        _addLog('FCM Token veritabanıyla senkronize edildi.');
+      } catch (_) {}
     }
   }
 
