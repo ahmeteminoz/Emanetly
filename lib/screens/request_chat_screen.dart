@@ -36,7 +36,9 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
 
   @override
   void dispose() {
-    NotificationService.instance.activeChatRequestId = null;
+    if (NotificationService.instance.activeChatRequestId == widget.requestId) {
+      NotificationService.instance.activeChatRequestId = null;
+    }
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
