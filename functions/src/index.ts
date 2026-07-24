@@ -10,7 +10,7 @@ if (admin.apps.length === 0) {
 
 // Global runtime options for cost and performance optimization (Senior Best Practices)
 const runtimeOptions = {
-  region: "europe-west3", // Deploy closer to Turkey to minimize network latency
+  region: "europe-west1", // Best location mapping for eur3 multi-region Firestore
   memory: "256MiB" as const, // Reduce memory footprint to decrease Firestore project billings
   timeoutSeconds: 15, // Low timeout for quick fire-and-forget functions
   maxInstances: 10, // Prevent uncontrolled auto-scaling costs

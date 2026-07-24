@@ -11,6 +11,9 @@ class NotificationService {
   FirebaseMessaging? _fcm;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
+  // Tracks the ID of the chat room the user is currently viewing to silence in-app pushes
+  String? activeChatRequestId;
+
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _onMessageSubscription;
   StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
@@ -53,6 +56,11 @@ class NotificationService {
 
         // 5. Foreground Message Listener
         _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          // Skip showing local push notification if user is already viewing this chat
+          final payloadRequestId = message.data["requestId"];
+          if (payloadRequestId != null && payloadRequestId == activeChatRequestId) {
+            return;
+          }
           _showLocalNotification(message);
         });
 

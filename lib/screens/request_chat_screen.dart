@@ -10,6 +10,7 @@ import 'widgets/borrow_request_status_card.dart';
 import 'mock_route_screen.dart';
 import 'item_detail_screen.dart';
 import 'public_profile_screen.dart';
+import '../services/notification_service.dart';
 
 class RequestChatScreen extends StatefulWidget {
   final String requestId;
@@ -28,7 +29,14 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    NotificationService.instance.activeChatRequestId = widget.requestId;
+  }
+
+  @override
   void dispose() {
+    NotificationService.instance.activeChatRequestId = null;
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
