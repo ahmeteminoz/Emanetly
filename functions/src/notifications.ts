@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
+import { FieldValue } from "firebase-admin/firestore";
 
 // Initialize Admin SDK once if not already initialized
 if (admin.apps.length === 0) {
@@ -36,7 +37,7 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
     // Set to processing
     transaction.set(eventRef, {
       status: "processing",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     return true;
   });
@@ -48,14 +49,14 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
     await task();
     await eventRef.update({
       status: "completed",
-      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      completedAt: FieldValue.serverTimestamp(),
     });
   } catch (error: any) {
     console.error(`Emanetly FCM: Task execution failed for event ${eventId}:`, error);
     await eventRef.update({
       status: "failed",
       error: error?.message || "Unknown error",
-      failedAt: admin.firestore.FieldValue.serverTimestamp(),
+      failedAt: FieldValue.serverTimestamp(),
     });
     throw error;
   }
@@ -126,7 +127,7 @@ export async function sendPushNotification(
   if (tokensToRemove.length > 0) {
     console.log(`Emanetly FCM: Pruning ${tokensToRemove.length} invalid tokens for user ${userId}.`);
     await userRef.update({
-      fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
+      fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
     });
   }
 }
