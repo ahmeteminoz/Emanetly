@@ -122,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         .collection('users')
                         .doc(appState.currentUser!.uid)
                         .collection('notifications')
+                        .where('dismissedAt', isNull: true)
                         .where('readAt', isNull: true)
                         .snapshots()
                     : const Stream.empty(),

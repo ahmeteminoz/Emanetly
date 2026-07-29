@@ -9,6 +9,7 @@ class AppNotification {
   final String? itemId;
   final String? senderId;
   final DateTime? readAt;
+  final DateTime? dismissedAt;
   final int schemaVersion;
   final DateTime? createdAt;
 
@@ -21,11 +22,13 @@ class AppNotification {
     this.itemId,
     this.senderId,
     this.readAt,
+    this.dismissedAt,
     this.schemaVersion = 1,
     this.createdAt,
   });
 
   bool get isRead => readAt != null;
+  bool get isDismissed => dismissedAt != null;
 
   factory AppNotification.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
@@ -45,6 +48,7 @@ class AppNotification {
       itemId: data['itemId'] as String?,
       senderId: data['senderId'] as String?,
       readAt: parseTimestamp(data['readAt']),
+      dismissedAt: parseTimestamp(data['dismissedAt']),
       schemaVersion: (data['schemaVersion'] as num?)?.toInt() ?? 1,
       createdAt: parseTimestamp(data['createdAt']),
     );
@@ -59,6 +63,7 @@ class AppNotification {
       if (itemId != null) 'itemId': itemId,
       if (senderId != null) 'senderId': senderId,
       'readAt': readAt != null ? Timestamp.fromDate(readAt!) : null,
+      'dismissedAt': dismissedAt != null ? Timestamp.fromDate(dismissedAt!) : null,
       'schemaVersion': schemaVersion,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
     };

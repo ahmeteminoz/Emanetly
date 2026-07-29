@@ -9,6 +9,51 @@ import 'request_chat_screen.dart';
 class NotificationCenterScreen extends StatelessWidget {
   const NotificationCenterScreen({super.key});
 
+  Future<void> _markAllAsRead(BuildContext context, String currentUserId) async {
+    if (Firebase.apps.isEmpty) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('notifications')
+          .where('dismissedAt', isNull: true)
+          .where('readAt', isNull: true)
+          .get();
+
+      if (snapshot.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'readAt': FieldValue.serverTimestamp()});
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tüm bildirimler okundu olarak işaretlendi.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Non-blocking error handling
+    }
+  }
+
+  void _dismissNotification(String currentUserId, String notificationId) {
+    if (Firebase.apps.isEmpty) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'dismissedAt': FieldValue.serverTimestamp()})
+        .catchError((_) {});
+  }
+
   void _handleNotificationTap(BuildContext context, AppNotification notification, String currentUserId) {
     // 1. Non-blocking update of readAt using serverTimestamp
     if (!notification.isRead && Firebase.apps.isNotEmpty) {
@@ -71,6 +116,14 @@ class NotificationCenterScreen extends StatelessWidget {
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          if (currentUserId != null && Firebase.apps.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.done_all_rounded),
+              tooltip: 'Tümünü okundu işaretle',
+              onPressed: () => _markAllAsRead(context, currentUserId),
+            ),
+        ],
       ),
       body: (currentUserId == null || Firebase.apps.isEmpty)
           ? const Center(child: Text('Lütfen önce giriş yapın.'))
@@ -79,6 +132,7 @@ class NotificationCenterScreen extends StatelessWidget {
                   .collection('users')
                   .doc(currentUserId)
                   .collection('notifications')
+                  .where('dismissedAt', isNull: true)
                   .orderBy('createdAt', descending: true)
                   .limit(50)
                   .snapshots(),
@@ -112,7 +166,7 @@ class NotificationCenterScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Henüz bildirimiz yok',
+                          'Henüz bildirimizin yok',
                           style: TextStyle(
                             fontSize: 16,
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -160,69 +214,106 @@ class NotificationCenterScreen extends StatelessWidget {
                         break;
                     }
 
-                    return Material(
-                      color: isUnread
-                          ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.05))
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: ListTile(
-                        onTap: () => _handleNotificationTap(context, notif, currentUserId),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        leading: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: iconBgColor,
-                          child: Icon(leadingIcon, color: iconColor, size: 22),
+                    return Dismissible(
+                      key: Key(notif.id),
+                      direction: DismissDirection.endToStart, // Only swipe left
+                      onDismissed: (_) {
+                        _dismissNotification(currentUserId, notif.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Bildirim kaldırıldı'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        title: Row(
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Expanded(
-                              child: Text(
-                                notif.title,
-                                style: TextStyle(
-                                  fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            Icon(Icons.visibility_off_outlined, color: Colors.white, size: 20),
+                            SizedBox(width: 6),
+                            Text(
+                              'Kaldır',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
-                            if (isUnread)
-                              Container(
-                                width: 8,
-                                height: 8,
-                                margin: const EdgeInsets.only(left: 6),
-                                decoration: const BoxDecoration(
-                                  color: Colors.blue,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
                           ],
                         ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            notif.body,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isUnread
-                                  ? theme.colorScheme.onSurface
-                                  : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                              fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                      ),
+                      child: Material(
+                        color: isUnread
+                            ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.05))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        child: ListTile(
+                          onTap: () => _handleNotificationTap(context, notif, currentUserId),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          leading: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: iconBgColor,
+                            child: Icon(leadingIcon, color: iconColor, size: 22),
                           ),
-                        ),
-                        trailing: notif.createdAt != null
-                            ? Text(
-                                _formatTime(notif.createdAt!),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  notif.title,
+                                  style: TextStyle(
+                                    fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              )
-                            : null,
+                              ),
+                              if (isUnread)
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(left: 6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.blue,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              notif.body,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isUnread
+                                    ? theme.colorScheme.onSurface
+                                    : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontWeight: isUnread ? FontWeight.w500 : FontWeight.normal,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          trailing: notif.createdAt != null
+                              ? Text(
+                                  _formatTime(notif.createdAt!),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                     );
                   },

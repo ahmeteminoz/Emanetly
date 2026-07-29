@@ -94,6 +94,7 @@ export async function createInAppNotification(
       itemId: data.itemId || null,
       senderId: data.senderId || null,
       readAt: null,
+      dismissedAt: null,
       schemaVersion: 1,
       createdAt: FieldValue.serverTimestamp(),
     });
