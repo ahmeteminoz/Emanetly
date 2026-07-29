@@ -122,12 +122,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         .collection('users')
                         .doc(appState.currentUser!.uid)
                         .collection('notifications')
-                        .where('dismissedAt', isNull: true)
                         .where('readAt', isNull: true)
                         .snapshots()
                     : const Stream.empty(),
                 builder: (context, snapshot) {
-                  final unreadCount = snapshot.data?.docs.length ?? 0;
+                  final docs = snapshot.data?.docs ?? [];
+                  final unreadCount = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>? ?? {};
+                    return data['dismissedAt'] == null;
+                  }).length;
                   return IconButton(
                     icon: Badge(
                       isLabelVisible: unreadCount > 0,

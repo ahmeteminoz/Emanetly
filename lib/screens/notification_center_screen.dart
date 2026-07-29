@@ -17,14 +17,18 @@ class NotificationCenterScreen extends StatelessWidget {
           .collection('users')
           .doc(currentUserId)
           .collection('notifications')
-          .where('dismissedAt', isNull: true)
           .where('readAt', isNull: true)
           .get();
 
-      if (snapshot.docs.isEmpty) return;
+      final unreadDocs = snapshot.docs.where((doc) {
+        final data = doc.data();
+        return data['dismissedAt'] == null;
+      }).toList();
+
+      if (unreadDocs.isEmpty) return;
 
       final batch = FirebaseFirestore.instance.batch();
-      for (final doc in snapshot.docs) {
+      for (final doc in unreadDocs) {
         batch.update(doc.reference, {'readAt': FieldValue.serverTimestamp()});
       }
       await batch.commit();
@@ -38,7 +42,7 @@ class NotificationCenterScreen extends StatelessWidget {
         );
       }
     } catch (e) {
-      // Non-blocking error handling
+      print('Emanetly: NotificationCenter _markAllAsRead error: $e');
     }
   }
 
@@ -51,7 +55,9 @@ class NotificationCenterScreen extends StatelessWidget {
         .collection('notifications')
         .doc(notificationId)
         .update({'dismissedAt': FieldValue.serverTimestamp()})
-        .catchError((_) {});
+        .catchError((e) {
+          print('Emanetly: NotificationCenter _dismissNotification error: $e');
+        });
   }
 
   void _handleNotificationTap(BuildContext context, AppNotification notification, String currentUserId) {
@@ -132,12 +138,12 @@ class NotificationCenterScreen extends StatelessWidget {
                   .collection('users')
                   .doc(currentUserId)
                   .collection('notifications')
-                  .where('dismissedAt', isNull: true)
                   .orderBy('createdAt', descending: true)
                   .limit(50)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  print('Emanetly: NotificationCenter Stream error: ${snapshot.error}');
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
@@ -154,7 +160,12 @@ class NotificationCenterScreen extends StatelessWidget {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) {
+                final notifications = docs
+                    .map((doc) => AppNotification.fromDocument(doc))
+                    .where((notif) => !notif.isDismissed)
+                    .toList();
+
+                if (notifications.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -166,7 +177,7 @@ class NotificationCenterScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Henüz bildirimizin yok',
+                          'Henüz bildirimiz yok',
                           style: TextStyle(
                             fontSize: 16,
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -177,8 +188,6 @@ class NotificationCenterScreen extends StatelessWidget {
                     ),
                   );
                 }
-
-                final notifications = docs.map((doc) => AppNotification.fromDocument(doc)).toList();
 
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
