@@ -1,7 +1,7 @@
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import { runIdempotent, sendPushNotification } from "./notifications";
+import { runIdempotent, sendPushNotification, createInAppNotification } from "./notifications";
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {
@@ -72,13 +72,24 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
-      // 4. Send notification
+      // 4. Create In-App Notification (Decoupled & Create-If-Absent)
       const textPreview = message.text
         ? (message.text.length > 100 ? message.text.substring(0, 100) + "..." : message.text)
         : "Yeni bir mesaj";
+      const notifTitle = `${senderName} size mesaj gönderdi`;
 
+      await createInAppNotification(recipientId, eventId, {
+        type: "chat",
+        title: notifTitle,
+        body: textPreview,
+        requestId: requestId,
+        itemId: request.itemId,
+        senderId: senderId,
+      });
+
+      // 5. Send FCM Push Notification
       await sendPushNotification(recipientId, {
-        title: `${senderName} size mesaj gönderdi`,
+        title: notifTitle,
         body: textPreview,
         data: {
           type: "chat",
@@ -164,13 +175,25 @@ export const onRequestStatusChanged = onDocumentUpdated(
       // 3. Deduplicate recipients
       const uniqueRecipients = Array.from(new Set(recipients));
 
-      // 4. Send multicast notifications
+      // 4. Create In-App Notification and Send FCM Push for each recipient
       for (const recipientId of uniqueRecipients) {
+        const notifDocId = `${eventId}_${recipientId}`;
+        const senderId = recipientId === ownerId ? requesterId : ownerId;
+
+        await createInAppNotification(recipientId, notifDocId, {
+          type: status,
+          title: "Talebiniz Güncellendi",
+          body: statusText,
+          requestId: requestId,
+          itemId: itemId,
+          senderId: senderId,
+        });
+
         await sendPushNotification(recipientId, {
           title: "Talebiniz Güncellendi",
           body: statusText,
           data: {
-            type: "request_detail",
+            type: status,
             requestId: requestId,
           },
         });

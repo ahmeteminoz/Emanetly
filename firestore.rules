@@ -39,6 +39,16 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone']);
 
       allow delete: if false;
+
+      // Notifications Subcollection (v0.8.0 - Ultra-Strict Security Rules)
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create, delete: if false; // Only Admin SDK (Cloud Functions) can create/delete
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && resource.data.readAt == null
+          && request.resource.data.readAt == request.time;
+      }
     }
 
     // 2. Items Collection

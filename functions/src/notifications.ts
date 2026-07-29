@@ -69,6 +69,46 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
 }
 
 /**
+ * Creates an in-app notification document under users/{userId}/notifications/{eventId}.
+ * Uses create-if-absent semantics to prevent overwriting existing documents or resetting readAt on retries.
+ */
+export async function createInAppNotification(
+  userId: string,
+  eventId: string,
+  data: {
+    type: string;
+    title: string;
+    body: string;
+    requestId?: string;
+    itemId?: string;
+    senderId?: string;
+  }
+): Promise<void> {
+  const notifRef = db.collection("users").doc(userId).collection("notifications").doc(eventId);
+  try {
+    await notifRef.create({
+      type: data.type,
+      title: data.title,
+      body: data.body,
+      requestId: data.requestId || null,
+      itemId: data.itemId || null,
+      senderId: data.senderId || null,
+      readAt: null,
+      schemaVersion: 1,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    logger.info(`Emanetly Notification: Created in-app notification for user ${userId} (docId: ${eventId}).`);
+  } catch (error: any) {
+    // If code 6 (ALREADY_EXISTS), ignore gracefully to preserve existing document and readAt timestamp
+    if (error?.code === 6 || error?.code === "already-exists" || error?.message?.includes("ALREADY_EXISTS")) {
+      logger.info(`Emanetly Notification: Notification doc ${eventId} already exists for user ${userId}. Preserving existing record.`);
+    } else {
+      logger.error(`Emanetly Notification: Error creating in-app notification for user ${userId}:`, error);
+    }
+  }
+}
+
+/**
  * Resolves FCM tokens for a user, sends multicast push, and prunes invalid tokens atomically
  */
 export async function sendPushNotification(

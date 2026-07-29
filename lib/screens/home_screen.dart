@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import '../models/item.dart';
 import '../models/borrow_request.dart';
 import 'widgets/item_card.dart';
 import 'request_chat_screen.dart';
+import 'notification_center_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -82,25 +85,66 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header & Settings shortcut
+        // Header & Settings/Notification shortcut
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Emanetly',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Emanetly',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Görsel odaklı kampüs pazar yeri ve ödünçleşme',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Görsel odaklı kampüs pazar yeri ve ödünçleşme',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+              // Live Stream Unread Notification Badge Icon
+              StreamBuilder<QuerySnapshot>(
+                stream: (appState.currentUser != null && Firebase.apps.isNotEmpty)
+                    ? FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(appState.currentUser!.uid)
+                        .collection('notifications')
+                        .where('readAt', isNull: true)
+                        .snapshots()
+                    : const Stream.empty(),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data?.docs.length ?? 0;
+                  return IconButton(
+                    icon: Badge(
+                      isLabelVisible: unreadCount > 0,
+                      label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
+                      backgroundColor: theme.colorScheme.error,
+                      child: const Icon(Icons.notifications_none_rounded, size: 28),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationCenterScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Bildirim Merkezi',
+                  );
+                },
               ),
             ],
           ),
