@@ -104,10 +104,13 @@ class ChatMessageBubble extends StatelessWidget {
           children: [
             if (!isMe) ...[
               Text(
-                senderNameOverride ?? message.senderName,
+                (senderNameOverride ?? (message.senderName.trim().isEmpty ? 'Kullanıcı' : message.senderName)),
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+                  fontSize: 11,
+                  color: isDark 
+                      ? theme.colorScheme.primary 
+                      : theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 3),
