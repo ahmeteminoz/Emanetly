@@ -112,14 +112,14 @@ service cloud.firestore {
 
     // 4. ChatMessages Collection
     match /chatMessages/{messageId} {
-      allow read: if isSignedIn()
-        && isParticipant(resource.data.requestId);
+      allow read: if isSignedIn();
 
       allow create: if isSignedIn()
-        && request.resource.data.senderId == request.auth.uid
-        && isParticipant(request.resource.data.requestId);
+        && request.resource.data.senderId == request.auth.uid;
 
-      allow update, delete: if false;
+      allow update: if isSignedIn(); // Allows markMessagesAsRead batch updates for isRead
+
+      allow delete: if false;
     }
   }
 }
