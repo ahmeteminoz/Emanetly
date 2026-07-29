@@ -17,6 +17,7 @@ class ChatMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // SYSTEM MESSAGE RENDER
     if (message.type == ChatMessageType.system || message.type == ChatMessageType.requestStatusUpdate) {
