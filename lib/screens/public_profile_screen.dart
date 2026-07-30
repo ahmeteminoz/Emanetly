@@ -7,6 +7,7 @@ import '../providers/app_state_provider.dart';
 import 'item_detail_screen.dart';
 import 'widgets/item_card.dart';
 import 'widgets/full_screen_image_viewer.dart';
+import 'widgets/report_dialog.dart';
 
 class PublicProfileScreen extends StatelessWidget {
   final String userId;
@@ -60,10 +61,88 @@ class PublicProfileScreen extends StatelessWidget {
             .where((i) => i.lenderId == userId && i.status == EmanetStatus.available)
             .toList();
 
+        final isSelf = appState.currentUser?.uid == userId;
+        final isBlocked = appState.isUserBlocked(userId);
+
         return Scaffold(
           appBar: AppBar(
             title: Text('${user.name} Profili'),
             centerTitle: true,
+            actions: isSelf ? null : [
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'block') {
+                    if (isBlocked) {
+                      await appState.unblockUser(userId);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${user.name} engeli kaldırıldı.')),
+                        );
+                      }
+                    } else {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('${user.name} Engellensin mi?'),
+                          content: const Text('Bu kullanıcıyı engellediğinizde birbirinizle yeni mesajlaşamaz ve yeni ödünç talebi oluşturamazsınız.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                              child: const Text('Engelle'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await appState.blockUser(userId, source: 'profile');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${user.name} engellendi.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  } else if (value == 'report') {
+                    ReportDialog.show(
+                      context,
+                      targetType: 'user',
+                      targetId: userId,
+                      targetTitle: '${user.name} Profilini Şikayet Et',
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'block',
+                    child: Row(
+                      children: [
+                        Icon(
+                          isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                          color: isBlocked ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(isBlocked ? 'Engeli Kaldır' : 'Kullanıcıyı Engelle'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(Icons.flag_rounded, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Kullanıcıyı Şikayet Et'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           body: ListView(
             padding: const EdgeInsets.all(16),
@@ -474,20 +553,26 @@ class PublicProfileScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     final isBlocked = appState.isUserBlocked(userId);
-                    appState.toggleBlockUser(userId);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isBlocked 
-                              ? 'Kullanıcı engeli kaldırıldı.' 
-                              : 'Kullanıcı engellendi. Artık ilanlarınızı göremeyecek.'
-                        ),
-                        backgroundColor: isBlocked ? Colors.green : Colors.red,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    if (isBlocked) {
+                      await appState.unblockUser(userId);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                        );
+                      }
+                    } else {
+                      await appState.blockUser(userId, source: 'profile');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Kullanıcı engellendi.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
                   },
                   icon: Icon(
                     appState.isUserBlocked(userId) ? Icons.check_circle_outline : Icons.block_flipped, 

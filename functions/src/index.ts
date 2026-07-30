@@ -1,19 +1,31 @@
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
-import { runIdempotent, sendPushNotification, createInAppNotification } from "./notifications";
+import { runIdempotent, sendPushNotification, createInAppNotification, markSuppressed } from "./notifications";
+import { checkMutualBlock, createReport } from "./moderation";
+
+export { createReport };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-// Global runtime options for cost and performance optimization (Senior Best Practices)
-const runtimeOptions = {
-  region: "europe-west1", // Best location mapping for eur3 multi-region Firestore
-  memory: "256MiB" as const, // Reduce memory footprint to decrease Firestore project billings
-  timeoutSeconds: 15, // Low timeout for quick fire-and-forget functions
-  maxInstances: 10, // Prevent uncontrolled auto-scaling costs
+// Trigger runtime options for event-driven Firestore triggers with Gen 2 Eventarc retries
+export const triggerRuntimeOptions = {
+  region: "europe-west1",
+  memory: "256MiB" as const,
+  timeoutSeconds: 15,
+  maxInstances: 10,
+  retry: true, // Explicitly enable Eventarc retries for fail-closed triggers
+};
+
+// Callable runtime options for Https onCall functions (NO retry)
+export const callableRuntimeOptions = {
+  region: "europe-west1",
+  memory: "256MiB" as const,
+  timeoutSeconds: 15,
+  maxInstances: 10,
 };
 
 /**
@@ -22,7 +34,7 @@ const runtimeOptions = {
 export const onMessageCreated = onDocumentCreated(
   {
     document: "chatMessages/{messageId}",
-    ...runtimeOptions,
+    ...triggerRuntimeOptions,
   },
   async (event) => {
     const messageSnap = event.data;
@@ -72,6 +84,14 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
+      // Check mutual block status (Suppression)
+      const isBlocked = await checkMutualBlock(senderId, recipientId);
+      if (isBlocked) {
+        logger.info("Emanetly FCM: Notification suppressed due to mutual block between users.");
+        await markSuppressed(eventId, "mutual_block");
+        return;
+      }
+
       // 4. Create In-App Notification (Decoupled & Create-If-Absent)
       const textPreview = message.text
         ? (message.text.length > 100 ? message.text.substring(0, 100) + "..." : message.text)
@@ -106,7 +126,7 @@ export const onMessageCreated = onDocumentCreated(
 export const onRequestStatusChanged = onDocumentUpdated(
   {
     document: "borrowRequests/{requestId}",
-    ...runtimeOptions,
+    ...triggerRuntimeOptions,
   },
   async (event) => {
     const change = event.data;
@@ -179,6 +199,12 @@ export const onRequestStatusChanged = onDocumentUpdated(
       for (const recipientId of uniqueRecipients) {
         const notifDocId = `${eventId}_${recipientId}`;
         const senderId = recipientId === ownerId ? requesterId : ownerId;
+
+        const isBlocked = await checkMutualBlock(senderId, recipientId);
+        if (isBlocked) {
+          logger.info("Emanetly FCM: Suppressing status change notification due to block.");
+          continue;
+        }
 
         await createInAppNotification(recipientId, notifDocId, {
           type: status,

@@ -10,6 +10,7 @@ import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
 import 'widgets/full_screen_image_viewer.dart';
 import 'widgets/qr_scanner_screen.dart';
+import 'widgets/report_dialog.dart';
 import 'edit_item_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -59,6 +60,31 @@ class ItemDetailScreen extends StatelessWidget {
             ),
             onPressed: () => appState.toggleFavorite(currentItem.id),
           ),
+          if (!isOwnItem)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'report') {
+                  ReportDialog.show(
+                    context,
+                    targetType: 'listing',
+                    targetId: currentItem.id,
+                    targetTitle: currentItem.title,
+                  );
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_rounded, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('İlanı Şikayet Et'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: SingleChildScrollView(

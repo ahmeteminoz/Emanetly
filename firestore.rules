@@ -51,6 +51,24 @@ service cloud.firestore {
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['dismissedAt'])
               || (resource.data.dismissedAt == null && request.resource.data.dismissedAt == request.time));
       }
+
+      // Blocked Users Subcollection (v0.9.0 - Moderation)
+      match /blockedUsers/{blockedUserId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && userId != blockedUserId
+          && request.resource.data.blockedUserId == blockedUserId
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.source in ['profile', 'chat']
+          && request.resource.data.keys().hasOnly(['blockedUserId', 'createdAt', 'source']);
+        allow delete: if isOwner(userId);
+        allow update: if false;
+      }
+    }
+
+    // Reports Collection (v0.9.0 - Only Callable Cloud Function writes)
+    match /reports/{reportId} {
+      allow read, write: if false;
     }
 
     // 2. Items Collection

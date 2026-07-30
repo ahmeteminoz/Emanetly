@@ -15,6 +15,10 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/analytics_service.dart';
+import '../services/crashlytics_service.dart';
+import '../services/block_service.dart';
+
 enum ViewMode {
   compactGrid,
   standardGrid,
@@ -28,6 +32,8 @@ class AppState extends ChangeNotifier {
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
   final StorageService _storageService;
+  final AnalyticsService _analyticsService;
+  final CrashlyticsService _crashlyticsService;
 
   List<EmanetItem> _items = [];
   bool _isLoading = false;
@@ -57,12 +63,16 @@ class AppState extends ChangeNotifier {
     required BorrowRequestService borrowRequestService,
     required ChatMessageService chatMessageService,
     required StorageService storageService,
+    AnalyticsService? analyticsService,
+    CrashlyticsService? crashlyticsService,
   })  : _authService = authService,
         _itemService = itemService,
         _qrService = qrService,
         _borrowRequestService = borrowRequestService,
         _chatMessageService = chatMessageService,
-        _storageService = storageService {
+        _storageService = storageService,
+        _analyticsService = analyticsService ?? AnalyticsService(),
+        _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
     
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
@@ -101,7 +111,10 @@ class AppState extends ChangeNotifier {
   }
 
   // Getters
-  List<EmanetItem> get items => _items;
+  AnalyticsService get analytics => _analyticsService;
+  CrashlyticsService get crashlytics => _crashlyticsService;
+
+  List<EmanetItem> get items => List.unmodifiable(_items);
   UserProfile? get currentUser => _authService.currentUser;
   bool get isLoading => _isLoading;
   List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
@@ -170,20 +183,56 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  BlockService? _blockService;
+  BlockService get blockService => _blockService ??= FirestoreBlockService();
+
   // Blocked users logic
   bool isUserBlocked(String uid) {
     return _blockedUserIds.contains(uid);
   }
 
-  void toggleBlockUser(String uid) {
-    if (_blockedUserIds.contains(uid)) {
-      _blockedUserIds.remove(uid);
-      _addLog('Kullanıcı engeli kaldırıldı: $uid');
-    } else {
-      _blockedUserIds.add(uid);
-      _addLog('Kullanıcı engellendi: $uid');
+  Future<void> blockUser(String targetUserId, {required String source}) async {
+    if (currentUser == null || targetUserId.isEmpty || currentUser!.uid == targetUserId) return;
+    
+    try {
+      await blockService.blockUser(
+        currentUserId: currentUser!.uid,
+        blockedUserId: targetUserId,
+        source: source,
+      );
+      _blockedUserIds.add(targetUserId);
+      _analyticsService.logUserBlocked(source: source);
+      _addLog('Kullanıcı engellendi: $targetUserId');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'blockUser failed');
+      rethrow;
     }
-    notifyListeners();
+  }
+
+  Future<void> unblockUser(String targetUserId) async {
+    if (currentUser == null || targetUserId.isEmpty) return;
+
+    try {
+      await blockService.unblockUser(
+        currentUserId: currentUser!.uid,
+        blockedUserId: targetUserId,
+      );
+      _blockedUserIds.remove(targetUserId);
+      _addLog('Kullanıcı engeli kaldırıldı: $targetUserId');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'unblockUser failed');
+      rethrow;
+    }
+  }
+
+  void _startBlockedUsersSubscription(String userId) {
+    blockService.watchBlockedUserIds(userId).listen((blockedIds) {
+      _blockedUserIds.clear();
+      _blockedUserIds.addAll(blockedIds);
+      notifyListeners();
+    });
   }
 
   // Favorites logic
@@ -201,6 +250,12 @@ class AppState extends ChangeNotifier {
       
       // Perform atomic toggle via service
       await _authService.toggleFavorite(user.uid, itemId, !isAlreadyFav);
+      
+      final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
+      _analyticsService.logFavoriteToggled(
+        action: isAlreadyFav ? 'remove' : 'add',
+        category: itemCategory,
+      );
       
       if (isAlreadyFav) {
         _addLog('Ürün favorilerden çıkarıldı: $itemId');
@@ -295,9 +350,11 @@ class AppState extends ChangeNotifier {
         mockImageColorValue: finalColor,
       );
       await _itemService.addItem(newItem);
+      _analyticsService.logListingCreated(category: category, durationBucket: 'standard');
       _addLog('${currentUser!.name}, yeni bir ilan yayınladı: "$title"');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _crashlyticsService.recordError(e, stackTrace, reason: 'Eşya eklenirken hata');
       _addLog('Eşya eklenirken hata: $e');
       return false;
     } finally {
@@ -332,6 +389,10 @@ class AppState extends ChangeNotifier {
       );
 
       await _borrowRequestService.addBorrowRequest(newRequest);
+      _analyticsService.logBorrowRequestCreated(
+        category: item.category,
+        durationBucket: requestedDurationText,
+      );
 
       // System message
       await _chatMessageService.sendChatMessage(ChatMessageModel(
@@ -723,6 +784,7 @@ class AppState extends ChangeNotifier {
       createdAt: DateTime.now().toUtc(),
     );
     await _chatMessageService.sendChatMessage(message);
+    _analyticsService.logChatMessageSent(messageType: 'text');
     _addLog('Mesaj gönderildi: "$text"');
   }
 
@@ -852,6 +914,7 @@ class AppState extends ChangeNotifier {
     final request = _borrowRequests[reqIndex];
 
     await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.accepted);
+    _analyticsService.logBorrowRequestStatusChanged(requestStatus: 'accepted');
 
     // Update item status in ItemService
     final itemIndex = _items.indexWhere((i) => i.id == request.itemId);

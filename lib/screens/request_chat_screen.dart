@@ -6,6 +6,7 @@ import '../models/user_profile.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'widgets/chat_message_bubble.dart';
+import 'widgets/report_dialog.dart';
 import 'widgets/borrow_request_status_card.dart';
 import 'mock_route_screen.dart';
 import 'item_detail_screen.dart';
@@ -232,7 +233,85 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             );
           },
         ),
-        actions: const [],
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              final isBlocked = appState.isUserBlocked(targetUserId);
+              if (value == 'block') {
+                if (isBlocked) {
+                  await appState.unblockUser(targetUserId);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                    );
+                  }
+                } else {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Kullanıcı Engellensin mi?'),
+                      content: const Text('Bu kullanıcıyı engellediğinizde yeni mesaj ve yeni talep gönderemezsiniz. Aktif devam eden teslimat/iade süreciniz etkilenmez.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                          child: const Text('Engelle'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true) {
+                    await appState.blockUser(targetUserId, source: 'chat');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Kullanıcı engellendi.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              } else if (value == 'report') {
+                ReportDialog.show(
+                  context,
+                  targetType: 'user',
+                  targetId: targetUserId,
+                  targetTitle: 'Kullanıcıyı Şikayet Et',
+                );
+              }
+            },
+            itemBuilder: (context) {
+              final isBlocked = appState.isUserBlocked(targetUserId);
+              return [
+                PopupMenuItem<String>(
+                  value: 'block',
+                  child: Row(
+                    children: [
+                      Icon(
+                        isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                        color: isBlocked ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(isBlocked ? 'Engeli Kaldır' : 'Kullanıcıyı Engelle'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_rounded, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Text('Kullanıcıyı Şikayet Et'),
+                    ],
+                  ),
+                ),
+              ];
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -378,6 +457,14 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   message: message,
                   isMe: isMe,
                   senderNameOverride: senderNameOverride,
+                  onLongPress: isMe ? null : () {
+                    ReportDialog.show(
+                      context,
+                      targetType: 'message',
+                      targetId: message.id,
+                      targetTitle: 'Mesajı Şikayet Et',
+                    );
+                  },
                 );
               },
             ),
