@@ -25,23 +25,19 @@ Emanetly, canlı Firebase servisleri (Auth, Firestore, Storage, Cloud Functions 
 
 ---
 
-### 🚧 Prototipten / Mock Yapıdan Çıkarılması Gerekenler (Gelecek Yol Haritası)
+### 🚧 İleride Tamamlanacak Geliştirme Çeklisti (Roadmap Backlog)
 
-İleride projeye geri dönüldüğünde prototipten çıkarılıp gerçek servise bağlanması gereken parçalar şunlardır:
+Gelecekteki sürümlerde tamamlanması planlanan eksik adımlar şunlardır:
 
-*   [ ] **1. QR Kod Teslimat Doğrulaması (`MockQrService`)**:
+*   [ ] **1. QR Kod Teslimat Doğrulaması (`FirestoreQrService`)**:
     * Kamera ve tarayıcı arayüzü (`mobile_scanner` + `QrScannerScreen`) %100 tamamlanmıştır.
-    * Ancak servis katmanı `main.dart` içinde `MockQrService` kullanmakta, URI parametrelerini bellek içinde (RAM) ayrıştırmaktadır.
-    * *Yapılacak:* Firestore `borrowRequests` dokümanına 5 dakika geçerli `handoverToken` yazacak `FirestoreQrService` sınıfı yazılacak.
-*   [ ] **2. Harita ve Rota Ekranı (`MockRouteScreen`)**:
-    * Buluşma/teslimat yerini gösteren ekran `CustomPainter` ile çizilmiş kampüs maket haritası kullanmaktadır.
-    * *Yapılacak:* Gerçek `google_maps_flutter` paketi entegre edilerek canlı kampüs koordinatları gösterilecek.
-*   [ ] **3. İşlem Sonrası Puan Verme / Yorum Yapma Ekranı (Review Creation UI)**:
+    * Servis katmanı `main.dart` içinde `MockQrService` yerine Firestore `borrowRequests` dokümanına 5 dakika geçerli `handoverToken` yazacak `FirestoreQrService` sınıfına bağlanacak.
+*   [ ] **2. İşlem Sonrası Puan Verme / Yorum Yapma Ekranı (Review Creation UI)**:
     * `UserProfile` modelinde ve profilde `reviews` (yorumlar ve yıldızlar) görünme altyapısı mevcuttur.
-    * *Yapılacak:* İşlem tamamlandıktan sonra kullanıcıya yıldız verdirip yorum yazdıran Modal Sheet UI'ı eklenecek.
-*   [ ] **4. Kullanıcı Moderasyonu (Şikayet Et & Engelle)**:
+    * İşlem tamamlandıktan sonra kullanıcıya yıldız verdirip yorum yazdıran Modal Sheet UI'ı eklenecek.
+*   [ ] **3. Kullanıcı Moderasyonu (Şikayet Et & Engelle)**:
     * İlan detayında ve sohbet ekranında *"Kullanıcıyı Engelle"* ve *"İlanı Şikayet Et"* buton/diyalogları (Play Store yayını için zorunlu).
-*   [ ] **5. Firebase Analytics & Crashlytics**:
+*   [ ] **4. Firebase Analytics & Crashlytics**:
     * Canlıdaki çökmeleri ve kullanıcı etkileşimlerini izleme altyapısı.
 
 ---

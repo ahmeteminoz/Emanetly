@@ -25,23 +25,19 @@ Emanetly is a mature mobile application powered by live Firebase services (Auth,
 
 ---
 
-### 🚧 Prototypes & Mock Components Checklist (Future Backlog)
+### 🚧 Future Development Checklist (Roadmap Backlog)
 
-When returning to the project, the following remaining prototype components need to be migrated to live services:
+The following items represent the planned roadmap backlog for future releases:
 
-*   [ ] **1. QR Code Handover Verification (`MockQrService`)**:
+*   [ ] **1. QR Code Handover Verification (`FirestoreQrService`)**:
     * Camera scanner UI (`mobile_scanner` + `QrScannerScreen`) is 100% complete and working.
-    * Service layer uses `MockQrService` in `main.dart`, parsing URI scheme in-memory (RAM).
-    * *Task:* Implement `FirestoreQrService` to write 5-minute valid `handoverToken` hashes to `borrowRequests` Firestore collection.
-*   [ ] **2. Maps & Pickup Route Screen (`MockRouteScreen`)**:
-    * Meeting/pickup screen uses a `CustomPainter` painted mock campus map.
-    * *Task:* Integrate real `google_maps_flutter` package with live campus coordinates.
-*   [ ] **3. Post-Transaction Review & Rating Modal (Review Creation UI)**:
+    * Connect service layer from `MockQrService` to `FirestoreQrService` to write 5-minute valid `handoverToken` hashes to `borrowRequests` Firestore collection.
+*   [ ] **2. Post-Transaction Review & Rating Modal (Review Creation UI)**:
     * `UserProfile` model and profile screen review cards exist.
-    * *Task:* Add a Modal Bottom Sheet UI allowing users to rate (1-5 stars) and write comments after completing a transaction.
-*   [ ] **4. User Moderation (Report & Block)**:
+    * Add a Modal Bottom Sheet UI allowing users to rate (1-5 stars) and write comments after completing a transaction.
+*   [ ] **3. User Moderation (Report & Block)**:
     * Action dialogs for *"Block User"* and *"Report Listing"* (Required for Play Store / App Store release).
-*   [ ] **5. Firebase Analytics & Crashlytics**:
+*   [ ] **4. Firebase Analytics & Crashlytics**:
     * Infrastructure for tracking real-time crashes and user conversion funnels.
 
 ---
