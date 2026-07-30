@@ -43,6 +43,16 @@ class ChatMessageModel {
   }
 
   factory ChatMessageModel.fromMap(Map<String, dynamic> map) {
+    DateTime parsedDate;
+    final rawCreated = map['createdAt'];
+    if (rawCreated is Timestamp) {
+      parsedDate = rawCreated.toDate();
+    } else if (rawCreated is String) {
+      parsedDate = DateTime.tryParse(rawCreated) ?? DateTime.now();
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return ChatMessageModel(
       id: map['id'] ?? '',
       requestId: map['requestId'] ?? '',
@@ -53,9 +63,7 @@ class ChatMessageModel {
         (e) => e.name == map['type'],
         orElse: () => ChatMessageType.text,
       ),
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
+      createdAt: parsedDate.toLocal(),
       customPayload: map['customPayload'],
       isRead: map['isRead'] ?? false,
     );

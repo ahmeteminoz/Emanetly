@@ -657,7 +657,9 @@ class AppState extends ChangeNotifier {
   List<BorrowRequestModel> get borrowRequests => _borrowRequests;
   
   List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
-    return _chatMessages.where((msg) => msg.requestId == requestId).toList();
+    final list = _chatMessages.where((msg) => msg.requestId == requestId).toList();
+    list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return list;
   }
 
   int getUnreadCountForRequest(String requestId) {
