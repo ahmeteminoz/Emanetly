@@ -334,12 +334,13 @@ class NotificationCenterScreen extends StatelessWidget {
 
   String _formatTime(DateTime date) {
     final now = DateTime.now();
-    final difference = now.difference(date);
+    final localDate = date.toLocal();
+    final difference = now.difference(localDate);
 
     if (difference.inMinutes < 1) return 'Şimdi';
     if (difference.inMinutes < 60) return '${difference.inMinutes}dk';
     if (difference.inHours < 24) return '${difference.inHours}s';
     if (difference.inDays < 7) return '${difference.inDays}g';
-    return '${date.day}.${date.month}.${date.year}';
+    return '${localDate.day}.${localDate.month}.${localDate.year}';
   }
 }

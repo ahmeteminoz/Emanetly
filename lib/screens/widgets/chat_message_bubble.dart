@@ -158,8 +158,9 @@ class ChatMessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime date) {
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
+    final localDate = date.toLocal();
+    final hour = localDate.hour.toString().padLeft(2, '0');
+    final minute = localDate.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
 }
