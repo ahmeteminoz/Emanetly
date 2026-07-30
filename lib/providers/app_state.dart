@@ -709,7 +709,7 @@ class AppState extends ChangeNotifier {
       senderName: currentUser!.name,
       text: text,
       type: ChatMessageType.text,
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
     );
     await _chatMessageService.sendChatMessage(message);
     _addLog('Mesaj gönderildi: "$text"');
