@@ -6,11 +6,35 @@ import '../models/notification_model.dart';
 import '../providers/app_state_provider.dart';
 import 'request_chat_screen.dart';
 
-class NotificationCenterScreen extends StatelessWidget {
+class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key});
 
+  @override
+  State<NotificationCenterScreen> createState() => _NotificationCenterScreenState();
+}
+
+class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
+  final Set<String> _dismissedIds = {};
+  bool _isProcessing = false;
+
+  Future<void> _commitBatchInChunks(List<DocumentSnapshot> docs, Map<String, dynamic> updateData) async {
+    const chunkSize = 450; // Firestore limit is 500
+    for (var i = 0; i < docs.length; i += chunkSize) {
+      final chunk = docs.sublist(i, i + chunkSize > docs.length ? docs.length : i + chunkSize);
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in chunk) {
+        batch.update(doc.reference, updateData);
+      }
+      await batch.commit();
+    }
+  }
+
   Future<void> _markAllAsRead(BuildContext context, String currentUserId) async {
-    if (Firebase.apps.isEmpty) return;
+    if (Firebase.apps.isEmpty || _isProcessing) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -21,32 +45,109 @@ class NotificationCenterScreen extends StatelessWidget {
           .get();
 
       final unreadDocs = snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['dismissedAt'] == null;
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['dismissedAt'] == null && !_dismissedIds.contains(doc.id);
       }).toList();
 
-      if (unreadDocs.isEmpty) return;
-
-      final batch = FirebaseFirestore.instance.batch();
-      for (final doc in unreadDocs) {
-        batch.update(doc.reference, {'readAt': FieldValue.serverTimestamp()});
-      }
-      await batch.commit();
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tüm bildirimler okundu olarak işaretlendi.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+      if (unreadDocs.isNotEmpty) {
+        await _commitBatchInChunks(unreadDocs, {'readAt': FieldValue.serverTimestamp()});
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tüm bildirimler okundu olarak işaretlendi.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Emanetly: NotificationCenter _markAllAsRead error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _dismissAll(BuildContext context, String currentUserId) async {
+    if (Firebase.apps.isEmpty || _isProcessing) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tüm Bildirimleri Kaldır'),
+        content: const Text('Tüm bildirimler Bildirim Merkezi’nden kaldırılacak. Devam edilsin mi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Tümünü Kaldır'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .collection('notifications')
+          .get();
+
+      final activeDocs = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return data['dismissedAt'] == null && !_dismissedIds.contains(doc.id);
+      }).toList();
+
+      if (activeDocs.isNotEmpty) {
+        setState(() {
+          for (final doc in activeDocs) {
+            _dismissedIds.add(doc.id);
+          }
+        });
+
+        await _commitBatchInChunks(activeDocs, {'dismissedAt': FieldValue.serverTimestamp()});
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tüm bildirimler kaldırıldı.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Emanetly: NotificationCenter _dismissAll error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
   void _dismissNotification(String currentUserId, String notificationId) {
+    setState(() {
+      _dismissedIds.add(notificationId);
+    });
+
     if (Firebase.apps.isEmpty) return;
 
     FirebaseFirestore.instance
@@ -124,12 +225,47 @@ class NotificationCenterScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           if (currentUserId != null && Firebase.apps.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.done_all_rounded),
-              tooltip: 'Tümünü okundu işaretle',
-              onPressed: () => _markAllAsRead(context, currentUserId),
+            PopupMenuButton<String>(
+              enabled: !_isProcessing,
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Seçenekler',
+              onSelected: (value) {
+                if (value == 'mark_read') {
+                  _markAllAsRead(context, currentUserId);
+                } else if (value == 'dismiss_all') {
+                  _dismissAll(context, currentUserId);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'mark_read',
+                  child: Row(
+                    children: [
+                      Icon(Icons.done_all_rounded, size: 20),
+                      SizedBox(width: 12),
+                      Text('Tümünü okundu işaretle'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'dismiss_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_sweep_outlined, color: Colors.red, size: 20),
+                      SizedBox(width: 12),
+                      Text('Tümünü kaldır', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
+        bottom: _isProcessing
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(2),
+                child: LinearProgressIndicator(minHeight: 2),
+              )
+            : null,
       ),
       body: (currentUserId == null || Firebase.apps.isEmpty)
           ? const Center(child: Text('Lütfen önce giriş yapın.'))
@@ -162,7 +298,7 @@ class NotificationCenterScreen extends StatelessWidget {
                 final docs = snapshot.data?.docs ?? [];
                 final notifications = docs
                     .map((doc) => AppNotification.fromDocument(doc))
-                    .where((notif) => !notif.isDismissed)
+                    .where((notif) => !notif.isDismissed && !_dismissedIds.contains(notif.id))
                     .toList();
 
                 if (notifications.isEmpty) {

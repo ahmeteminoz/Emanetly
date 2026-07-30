@@ -704,11 +704,20 @@ class AppState extends ChangeNotifier {
   // Pre-Agreement Actions
   Future<void> sendChatMessage(String requestId, String text) async {
     if (currentUser == null) return;
+
+    String validSenderName = currentUser!.name.trim();
+    if (validSenderName.isEmpty && currentUser!.email.isNotEmpty) {
+      validSenderName = currentUser!.email.split('@').first;
+    }
+    if (validSenderName.isEmpty) {
+      validSenderName = 'Öğrenci';
+    }
+
     final message = ChatMessageModel(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
       requestId: requestId,
       senderId: currentUser!.uid,
-      senderName: currentUser!.name,
+      senderName: validSenderName,
       text: text,
       type: ChatMessageType.text,
       createdAt: DateTime.now().toUtc(),

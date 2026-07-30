@@ -6,137 +6,56 @@ A modern, community-driven campus marketplace and peer-to-peer item sharing mobi
 
 ---
 
-## Overview
+## 📌 Project Current Status (v0.8.0)
 
-Emanetly is designed to digitize trust and sharing on university campuses. By creating a visual, modern marketplace format (similar to popular local shopping applications like Dolap), it allows users to view listings, filter by categories, mark favorites, chat about handovers, and track simulated meetup routes. It places a major emphasis on community trust with a dedicated **Trust Dashboard**.
+Emanetly is a mature mobile application powered by live Firebase services (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) and verified on real connected devices.
 
----
-
-## Problem
-
-On university campuses, students frequently need everyday items for short periods—such as a specific scientific calculator for an exam, an umbrella during a sudden downpour, or a charger between classes. Buying these items new is expensive and wasteful, while existing communication channels (e.g., social media groups or messaging apps) are unorganized, lack trust ratings, and offer no structured tracking for returns.
-
----
-
-## Solution
-
-Emanetly offers a specialized campus-sharing marketplace:
-*   **Structured Listings**: Visual categories (Electronics, Books, Stationery, etc.) instead of chaotic chat lines.
-*   **Trust Ratings**: A feedback-driven rating system that encourages reliable sharing.
-*   **Real-time Delivery Timeline**: Clear status steps for requesting, meeting up, and completing handovers.
-*   **Interactive Pathing**: Simulates paths between campus buildings so borrowers can easily locate lenders.
+### ✅ 100% Live & Integrated Systems (Production-Ready)
+*   **Firebase Authentication**: Restricted to verified campus `.edu.tr` emails, password reset, and auth session management (`FirebaseAuthService`).
+*   **Cloud Firestore Database**: Persistent real-time database syncing items, user profiles, favorites, borrow requests, and live chat streams (`FirestoreItemService`, `FirestoreBorrowRequestService`, `FirestoreChatMessageService`).
+*   **Firebase Storage**: Cloud hosting for item images and profile pictures, multi-image upload (1-5 images), cropping, and full-screen zoom (`v0.6.1 - v0.6.3`).
+*   **Cloud Functions Gen 2 (`europe-west1`)**: Eventarc-triggered background push notifications for chat creation and request status changes (`onMessageCreated`, `onRequestStatusChanged`).
+*   **v0.8.0 Notification Center**: 
+    * Top-right AppBar live unread badge stream (`Badge`).
+    * In-app notification event logs (`users/{userId}/notifications`).
+    * **Dual-Layer Idempotency** and `create-if-absent` semantics (preserves `readAt` timestamps on function retries).
+    * Swipe-to-dismiss (`dismissedAt` soft delete), Mark All as Read, and Clear All (with safety confirmation dialogs & 450-item batch chunking).
+    * Material 3 3-dot popup menu (`⋮`), `LinearProgressIndicator` loading bar, and double-tap protection.
+*   **Security Rules (Firestore Rules)**: Client creation/deletion disabled; strictly allows `readAt` and `dismissedAt` updates from `null -> request.time`.
 
 ---
 
-## Current MVP Status
+### 🚧 Prototypes & Mock Components Checklist (Future Backlog)
 
-Emanetly is currently a hybrid Firestore-backed MVP prototype. Below is the checklist of the current technical state:
-*   **Current version**: Firestore-backed MVP
-*   **Database**: Firestore database persistence (Users, Listings, Favorites, and BorrowRequests are persisted)
-*   **State management**: Provider / ChangeNotifier
-*   **Firebase Auth**: Fully Integrated (login, register, reset, verification)
-*   **Firestore**: Fully Integrated (Users, Listings/Items, Favorites, Borrow Requests, Reviews & Trust Score)
-*   **Firebase Storage**: Fully Integrated (v0.6.0 & v0.6.1)
-*   **Maps**: Planned (custom painted simulation currently)
-*   **QR Code Handover**: Simulated (in-memory validation)
-*   **Real-time chat**: Fully Integrated (using Firestore)
-*   **Push notifications**: Planned (not integrated yet)
+When returning to the project, the following remaining prototype components need to be migrated to live services:
 
----
-
-## Features
-
-*   **Visual Item Discovery**: Polished, responsive layout built using Material 3 guidelines.
-*   **Category Filtering**: Collapsible, scrollable category filter bar with support for **multi-selecting** categories.
-*   **Flexible Feed Densities**: Select between **Compact Grid** (image-only), **Standard Grid** (Dolap-style visual + details), and **Large Cards** (full summary). 
-*   **Expandable View Selector**: Premium micro-interaction that expands to show choices, collapses after 5 seconds of inactivity, or collapses instantly when the active icon is clicked.
-*   **Favorites & Search**: Instantly filter listings by query or categories, and toggle items to a dedicated Favorites tab.
-*   **Ask Question / Inquiry Chat Flow**: Ask questions about an item (`BorrowRequestStatus.onlyInquiry`) without initiating a formal borrow request. The owner can accept/reject once the request is formally upgraded.
-*   **Borrow Request Flow**: Send official requests with a duration selector sheet (1 hour, 2 hours, 6 hours, 1 day, 3 days, 1 week) persisted on Firestore database.
-*   **Listing Management Panel**: Pre-filled edit form, archiving/unarchiving to toggle visibility on feed, and clean deletion of available listings from Firestore.
-*   **Meeting Point Proposals**: Suggest specific campus coordinates and times within the chat thread.
-*   **Simulated Route Tracking**: An interactive campus map using a custom painter showing active delivery coordinates, meeting points, and linear order progress.
-*   **QR Handover Simulation**: Authenticate handovers by simulating scans supporting both `emanetly://` and legacy `kampusemanet://` deep link URL structures.
-*   **Trust Dashboard Profile**: View your own profile with calculated trust scores, verification statuses (email, phone, student status), transaction statistics, achievements, active listings, and reviews.
-*   **Public User Profile**: View other users' profiles in a read-only format showing only public safety metrics, preferred meetup locations, listings, and commented reviews with quick tags ("Zamanında teslim", "Hızlı iletişim"). Includes simulated Report/Block buttons.
-*   **Settings Screen**: Clean settings screen supporting Light, Dark, and System theme selectors linked to `AppState` alongside toggles for privacy and notifications.
+*   [ ] **1. QR Code Handover Verification (`MockQrService`)**:
+    * Camera scanner UI (`mobile_scanner` + `QrScannerScreen`) is 100% complete and working.
+    * Service layer uses `MockQrService` in `main.dart`, parsing URI scheme in-memory (RAM).
+    * *Task:* Implement `FirestoreQrService` to write 5-minute valid `handoverToken` hashes to `borrowRequests` Firestore collection.
+*   [ ] **2. Maps & Pickup Route Screen (`MockRouteScreen`)**:
+    * Meeting/pickup screen uses a `CustomPainter` painted mock campus map.
+    * *Task:* Integrate real `google_maps_flutter` package with live campus coordinates.
+*   [ ] **3. Post-Transaction Review & Rating Modal (Review Creation UI)**:
+    * `UserProfile` model and profile screen review cards exist.
+    * *Task:* Add a Modal Bottom Sheet UI allowing users to rate (1-5 stars) and write comments after completing a transaction.
+*   [ ] **4. User Moderation (Report & Block)**:
+    * Action dialogs for *"Block User"* and *"Report Listing"* (Required for Play Store / App Store release).
+*   [ ] **5. Firebase Analytics & Crashlytics**:
+    * Infrastructure for tracking real-time crashes and user conversion funnels.
 
 ---
 
-*   **Volatile Chat & Rota Data**: Chat messages and active route tracking are stored locally in-memory and reset on hot restart. User profiles, listings, favorites, and borrow requests are persistently stored on Firestore.
-*   **Simulated Maps & QR Handover**: Custom painted routing map coordinates and QR camera scans are simulated local tasks.
-*   **No Real Image Picker**: Adding listings uses preset gallery color template assets.
-
----
-
-## Tech Stack
+## 🛠️ Technical Architecture
 
 *   **Framework**: [Flutter](https://flutter.dev) (Dart)
-*   **State Management**: `AppState` ChangeNotifier provider architecture for light, reactive rebuilding.
+*   **State Management**: Reactive and lightweight `AppState` ChangeNotifier Provider architecture.
+*   **Backend**: Firebase Auth, Cloud Firestore, Firebase Storage, Firebase Cloud Messaging (FCM), Cloud Functions Gen 2 (Node.js 20).
 *   **UI System**: Material 3 theme configurations, custom path drawing (`CustomPainter`), and fluid micro-animations.
 
 ---
 
-## App Flow
-
-```mermaid
-graph TD
-    A[Launch App] --> B[Explore Feed]
-    B -->|Search/Multi-Filter| C[Filtered Listings]
-    B -->|Click Item| D[Item Details]
-    D -->|Add Favorite| E[Favorites Tab]
-    D -->|Ask Question| F[Inquiry Chat Flow]
-    D -->|Request Item| G[Select Duration Sheet]
-    G --> H[Formal Borrow Request]
-    H --> I[Active Transactions Tab]
-    I -->|Click Chat| J[Negotiate / Propose Meeting Point]
-    J -->|Accept Request| K[Mock Route Map & Timeline Stepper]
-    K -->|Scan Handover QR| L[Borrowed State]
-    L -->|Scan Return QR| M[Review & Rating Screen]
-    M --> N[Update User Trust Score]
-```
-
----
-
-## Project Structure
-
-```text
-lib/
-├── main.dart                 # Application entry point (EmanetlyApp)
-├── models/
-│   ├── borrow_request.dart   # Request metadata and chat states
-│   ├── chat_message.dart     # Text, system, and proposal messages
-│   ├── comment.dart          # Simple comment data
-│   ├── item.dart             # EmanetItem details and statuses
-│   ├── meeting_point_proposal.dart # Propose coordinates inside chats
-│   └── user_profile.dart     # Trust metrics, badges, and reviews
-├── providers/
-│   ├── app_state.dart        # Core provider managing app-wide local state
-│   └── app_state_provider.dart
-├── screens/
-│   ├── main_layout.dart      # Bottom navigation shell coordinator
-│   ├── home_screen.dart      # Discovery feed with view density selectors
-│   ├── item_detail_screen.dart # Details page with interactive owner cards
-│   ├── favorites_screen.dart # Favorite items grid
-│   ├── settings_screen.dart  # Theme selector and privacy switches
-│   ├── active_transactions_screen.dart # Separated Gelen Kutusu / Taleplerim tabs
-│   ├── mock_route_screen.dart # Custom Paint campus maps and simulator
-│   ├── profile_screen.dart   # Private Trust Dashboard and demo switcher
-│   └── public_profile_screen.dart # Read-only public profiles, comments, and items
-├── services/
-│   ├── auth_service.dart     # Mock Authentication and seeded users
-│   ├── item_service.dart     # Seed data and state actions
-│   └── qr_service.dart       # Mock QR handler with emanetly:// scheme
-└── theme/
-    └── app_theme.dart        # M3 light/dark seeds and palettes
-```
-
----
-
-## Installation
-
-### Prerequisites
-Make sure you have [Flutter SDK](https://docs.flutter.dev/get-started/install) installed on your system.
+## 🚀 Installation & Setup
 
 ### Steps
 1.  **Clone the Repository**:
@@ -148,52 +67,13 @@ Make sure you have [Flutter SDK](https://docs.flutter.dev/get-started/install) i
     ```bash
     flutter pub get
     ```
+3.  **Run the App**:
+    ```bash
+    flutter run
+    ```
 
 ---
 
-## Running the App
-
-Run the application locally on your emulator or connected device:
-```bash
-flutter run
-```
-
-To run built-in widget smoke tests:
-```bash
-flutter test
-```
-
-To run static analysis check:
-```bash
-flutter analyze
-```
-
----
-
-## Current Status & Limitations
-
-*   **Firebase Authentication**: Integrated (`firebase_core` & `firebase_auth`). Supports login, register, password reset, and email verification.
-*   **University Email Check**: Restricted to `.edu.tr` domains. Note that this is currently MVP-level client-side validation.
-*   **App Data**: Listings, user profiles, favorites, borrow requests, reviews, and transaction statistics are fully persisted on Firestore database. Chat messages remain mock/local.
-*   **Storage, Real-time Chat, Maps**: Planned (see Roadmap below).
-
----
-
-## Roadmap
-
-1.  **Public Profile Screen & Owner Navigation**: Clickable owner cards on item details routing to read-only user metrics and comments. *(Completed)*
-2.  **README and GitHub Cleanup**: Consolidating repository information and renaming KampusEmanet references to Emanetly. *(Completed)*
-3.  **Firebase Authentication**: Implement actual campus student email (`.edu.tr`) verification flows. *(Completed - Fallback to Mock Auth enabled if options are not configured)*
-4.  **Firestore Data Model Integration**: Migrate in-memory AppState lists to live Firebase collections (Users, Items, BorrowRequests). *(Completed)*
-5.  **Firebase Storage**: Store item images and profile pictures in Storage buckets. *(Planned)*
-6.  **Real-time Chat with Firestore**: Replace simulated streams with real Firestore listener channels. *(Planned)*
-7.  **Real Google Maps Integration**: Replace painter simulations with live geofenced meeting coordinates. *(Planned)*
-8.  **Real QR Handover Flow**: Implement device camera scanning and hash checks on meetup. *(Planned)*
-9.  **Notifications and Reminders**: Set up FCM (Firebase Cloud Messaging) for handover and return alerts. *(Planned)*
-10. **Production Polish**: Performance optimization, clean visual feedback animations, and App Store / Google Play prep.
-
----
-
-## License
+## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
