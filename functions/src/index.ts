@@ -3,8 +3,9 @@ import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import { runIdempotent, sendPushNotification, createInAppNotification, markSuppressed } from "./notifications";
 import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
+import { confirmHandoverAction } from "./handover";
 
-export { createReport, toggleBlockUser };
+export { createReport, toggleBlockUser, confirmHandoverAction };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {
@@ -174,6 +175,10 @@ export const onRequestStatusChanged = onDocumentUpdated(
         case "accepted":
           recipients.push(requesterId);
           statusText = `"${itemTitle}" talebiniz kabul edildi! Buluşma detaylarını görün.`;
+          break;
+        case "borrowed":
+          recipients.push(ownerId, requesterId);
+          statusText = `"${itemTitle}" teslimatı her iki tarafça onaylandı. Ödünç süreci başladı.`;
           break;
         case "rejected":
           recipients.push(requesterId);

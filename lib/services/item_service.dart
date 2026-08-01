@@ -352,7 +352,7 @@ class FirestoreItemService implements ItemService {
     // Listen to real-time updates from Firestore items collection
     _firestoreSubscription = _firestore
         .collection('items')
-        .orderBy('createdAt', descending: true)
+        .where('status', isNotEqualTo: 'draft')
         .snapshots()
         .listen((snapshot) {
       if (snapshot.docs.isEmpty) {
@@ -363,6 +363,9 @@ class FirestoreItemService implements ItemService {
           final data = doc.data();
           return EmanetItem.fromMap(data);
         }).toList();
+
+        // Sort items by createdAt descending in memory
+        firestoreItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         // Merge firestore items with locally modified state (borrowed status, delivery status, etc.)
         // so that local mock updates are preserved on screen rebuilds
@@ -451,9 +454,11 @@ class FirestoreItemService implements ItemService {
       try {
         final snapshot = await _firestore
             .collection('items')
-            .orderBy('createdAt', descending: true)
+            .where('status', isNotEqualTo: 'draft')
             .get();
-        _cachedItems = snapshot.docs.map((doc) => EmanetItem.fromMap(doc.data())).toList();
+        final list = snapshot.docs.map((doc) => EmanetItem.fromMap(doc.data())).toList();
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _cachedItems = list;
       } catch (e) {
         print('Emanetly: Firestore getItems error: $e');
       }
@@ -464,8 +469,10 @@ class FirestoreItemService implements ItemService {
   @override
   Future<void> addItem(EmanetItem item) async {
     try {
-      final docRef = _firestore.collection('items').doc();
-      final finalItem = item.copyWith(id: docRef.id);
+      final docRef = item.id.isNotEmpty
+          ? _firestore.collection('items').doc(item.id)
+          : _firestore.collection('items').doc();
+      final finalItem = item.id.isNotEmpty ? item : item.copyWith(id: docRef.id);
       await docRef.set(finalItem.toMap());
     } catch (e) {
       print('Emanetly: Firestore addItem error: $e');

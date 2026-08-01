@@ -483,6 +483,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                     requestId = appState.borrowRequests.firstWhere(
                                       (r) => r.itemId == item.id && 
                                              (r.status == BorrowRequestStatus.accepted || 
+                                              r.status == BorrowRequestStatus.borrowed || 
                                               r.status == BorrowRequestStatus.completed)
                                     ).id;
                                   } catch (_) {}
@@ -586,6 +587,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                                 requestId = appState.borrowRequests.firstWhere(
                                                   (r) => r.itemId == item.id && 
                                                          (r.status == BorrowRequestStatus.accepted || 
+                                                          r.status == BorrowRequestStatus.borrowed || 
                                                           r.status == BorrowRequestStatus.completed)
                                                 ).id;
                                               } catch (_) {}

@@ -311,6 +311,96 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<bool> confirmHandoverAction(String requestId, String action) async {
+    if (currentUser == null) return false;
+    _setLoading(true);
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('confirmHandoverAction');
+        final res = await callable.call({
+          'requestId': requestId,
+          'action': action,
+        });
+        
+        final data = res.data as Map;
+        final bool success = data['success'] ?? false;
+        _addLog('Emanet Teslim/İade aksiyonu gönderildi: $action, Sonuç: $success');
+        return success;
+      } else {
+        // Local simulation for widget/unit tests when Firebase is not running
+        final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
+        if (reqIndex == -1) return false;
+        final req = _borrowRequests[reqIndex];
+        
+        final itemIndex = _items.indexWhere((i) => i.id == req.itemId);
+        if (itemIndex == -1) return false;
+        final item = _items[itemIndex];
+
+        DateTime? handoverLenderConfirmedAt = req.handoverLenderConfirmedAt;
+        DateTime? handoverBorrowerConfirmedAt = req.handoverBorrowerConfirmedAt;
+        DateTime? returnBorrowerConfirmedAt = req.returnBorrowerConfirmedAt;
+        DateTime? returnLenderConfirmedAt = req.returnLenderConfirmedAt;
+
+        if (action == 'lender_handover') {
+          handoverLenderConfirmedAt = DateTime.now();
+        } else if (action == 'borrower_receipt') {
+          handoverBorrowerConfirmedAt = DateTime.now();
+        } else if (action == 'borrower_return') {
+          returnBorrowerConfirmedAt = DateTime.now();
+        } else if (action == 'lender_return_receipt') {
+          returnLenderConfirmedAt = DateTime.now();
+        }
+
+        BorrowRequestStatus newStatus = req.status;
+        EmanetStatus newItemStatus = item.status;
+        DeliveryStatus? newDeliveryStatus = item.deliveryStatus;
+        String? borrowerId = item.borrowerId;
+
+        // Transition to borrowed
+        if (handoverLenderConfirmedAt != null && handoverBorrowerConfirmedAt != null) {
+          newStatus = BorrowRequestStatus.borrowed;
+          newItemStatus = EmanetStatus.borrowed;
+          borrowerId = req.requesterId;
+          newDeliveryStatus = DeliveryStatus.delivered;
+        }
+
+        // Transition to completed
+        if (returnBorrowerConfirmedAt != null && returnLenderConfirmedAt != null) {
+          newStatus = BorrowRequestStatus.completed;
+          newItemStatus = EmanetStatus.archived;
+          borrowerId = null;
+          newDeliveryStatus = null;
+        }
+
+        final updatedReq = req.copyWith(
+          status: newStatus,
+          handoverLenderConfirmedAt: handoverLenderConfirmedAt,
+          handoverBorrowerConfirmedAt: handoverBorrowerConfirmedAt,
+          returnBorrowerConfirmedAt: returnBorrowerConfirmedAt,
+          returnLenderConfirmedAt: returnLenderConfirmedAt,
+        );
+        _borrowRequests[reqIndex] = updatedReq;
+
+        final updatedItem = item.copyWith(
+          status: newItemStatus,
+          borrowerId: borrowerId,
+          deliveryStatus: newDeliveryStatus,
+        );
+        _items[itemIndex] = updatedItem;
+
+        _addLog('Yerel simulasyon tamamlandı: $action');
+        notifyListeners();
+        return true;
+      }
+    } catch (e, stack) {
+      _addLog('confirmHandoverAction hatası: $e');
+      _crashlyticsService.recordError(e, stack, reason: 'confirmHandoverAction failed');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Favorites logic
   bool isFavorite(String itemId) {
     if (currentUser != null) {
