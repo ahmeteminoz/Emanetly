@@ -17,6 +17,12 @@ service cloud.firestore {
 
 
 
+    function isVerifiedUser() {
+      return isSignedIn()
+        && ('email_verified' in request.auth.token)
+        && request.auth.token.email_verified == true;
+    }
+
     function isBlockedBetween(userA, userB) {
       return exists(/databases/$(database)/documents/users/$(userA)/blockedUsers/$(userB)) ||
              exists(/databases/$(database)/documents/users/$(userB)/blockedUsers/$(userA));
@@ -81,7 +87,7 @@ service cloud.firestore {
       allow read: if resource.data.status != 'draft' || (isSignedIn() && resource.data.lenderId == request.auth.uid);
 
       // Create supports minimal draft schema or full published schema
-      allow create: if isSignedIn()
+      allow create: if isVerifiedUser()
         && request.resource.data.lenderId == request.auth.uid
         && (
           // Minimal Draft Schema
@@ -128,7 +134,7 @@ service cloud.firestore {
     match /borrowRequests/{requestId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.requesterId);
 
-      allow create: if isSignedIn()
+      allow create: if isVerifiedUser()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.status in ['onlyInquiry', 'pendingDiscussion', 'accepted', 'rejected', 'cancelled', 'expired', 'completed']
         && !isBlockedBetween(request.auth.uid, get(/databases/$(database)/documents/items/$(request.resource.data.itemId)).data.lenderId);

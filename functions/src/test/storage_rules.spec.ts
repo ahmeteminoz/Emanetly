@@ -6,6 +6,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import * as fs from "fs";
 import * as path from "path";
+import * as admin from "firebase-admin";
 
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 process.env.FIREBASE_STORAGE_EMULATOR_HOST = "127.0.0.1:9199";
@@ -13,9 +14,16 @@ process.env.FIREBASE_STORAGE_EMULATOR_HOST = "127.0.0.1:9199";
 describe("Storage Security Rules - Moderation & Items (v0.9.0)", () => {
   let testEnv: RulesTestEnvironment;
 
+  let db: admin.firestore.Firestore;
+
   before(async () => {
     const firestoreRules = fs.readFileSync(path.resolve(__dirname, "../../../firestore.rules"), "utf8");
     const storageRules = fs.readFileSync(path.resolve(__dirname, "../../../storage.rules"), "utf8");
+
+    if (!admin.apps.length) {
+      admin.initializeApp({ projectId: "demo-emanetly" });
+    }
+    db = admin.firestore();
 
     testEnv = await initializeTestEnvironment({
       projectId: "demo-emanetly",
@@ -42,12 +50,10 @@ describe("Storage Security Rules - Moderation & Items (v0.9.0)", () => {
   });
 
   it("1. Owner can upload image when draft item exists in Firestore", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await context.firestore().collection("items").doc("item123").set({
-        lenderId: "lender1",
-        status: "draft",
-        createdAt: new Date(),
-      });
+    await db.collection("items").doc("item123").set({
+      lenderId: "lender1",
+      status: "draft",
+      createdAt: new Date(),
     });
 
     const lenderContext = testEnv.authenticatedContext("lender1");
@@ -61,12 +67,10 @@ describe("Storage Security Rules - Moderation & Items (v0.9.0)", () => {
   });
 
   it("2. Non-owner upload is strictly denied", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await context.firestore().collection("items").doc("item123").set({
-        lenderId: "lender1",
-        status: "draft",
-        createdAt: new Date(),
-      });
+    await db.collection("items").doc("item123").set({
+      lenderId: "lender1",
+      status: "draft",
+      createdAt: new Date(),
     });
 
     const intruderContext = testEnv.authenticatedContext("intruder99");
@@ -91,12 +95,10 @@ describe("Storage Security Rules - Moderation & Items (v0.9.0)", () => {
   });
 
   it("4. Non-image content type is rejected", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await context.firestore().collection("items").doc("item123").set({
-        lenderId: "lender1",
-        status: "draft",
-        createdAt: new Date(),
-      });
+    await db.collection("items").doc("item123").set({
+      lenderId: "lender1",
+      status: "draft",
+      createdAt: new Date(),
     });
 
     const lenderContext = testEnv.authenticatedContext("lender1");
@@ -110,12 +112,10 @@ describe("Storage Security Rules - Moderation & Items (v0.9.0)", () => {
   });
 
   it("5. Files exceeding 8 MB size limit are rejected", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      await context.firestore().collection("items").doc("item123").set({
-        lenderId: "lender1",
-        status: "draft",
-        createdAt: new Date(),
-      });
+    await db.collection("items").doc("item123").set({
+      lenderId: "lender1",
+      status: "draft",
+      createdAt: new Date(),
     });
 
     const lenderContext = testEnv.authenticatedContext("lender1");

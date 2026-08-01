@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../providers/app_state_provider.dart';
+import 'settings/delete_account_dialog.dart';
+import 'settings/legal_document_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -160,6 +162,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
 
+          // Section: Legal Documents
+          _buildSectionHeader(context, 'Yasal Bilgiler', Icons.gavel_rounded),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.description_outlined, color: theme.colorScheme.primary),
+                  title: const Text('Kullanım Şartları'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showTOS(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.privacy_tip_outlined, color: theme.colorScheme.primary),
+                  title: const Text('Gizlilik Politikası'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showPrivacyPolicy(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.assignment_outlined, color: theme.colorScheme.primary),
+                  title: const Text('KVKK Aydınlatma Metni'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showKVKK(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Section 4: Account Actions
           _buildSectionHeader(context, 'Hesap Ayarları', Icons.person_outline_rounded),
           const SizedBox(height: 8),
@@ -193,6 +231,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     appState.signOut();
                     // Go back to the root of navigation (which will drop into AuthGate login)
                     Navigator.popUntil(context, (route) => route.isFirst);
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+                  title: const Text('Hesabımı sil', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const DeleteAccountDialog(),
+                    );
                   },
                 ),
               ],

@@ -93,7 +93,7 @@ describe("Cloud Functions - Moderation & Moderation Helper Suite (v0.9.0)", () =
     const invokeCallable = (data: any, uid?: string): Promise<any> => {
       const req: any = { data };
       if (uid) {
-        req.auth = { uid, token: {} };
+        req.auth = { uid, token: { email_verified: true } };
       }
       return (createReport as any).run(req);
     };

@@ -9,30 +9,45 @@ class EmailVerificationScreen extends StatefulWidget {
   State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
 }
 
-class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+class _EmailVerificationScreenState extends State<EmailVerificationScreen> with WidgetsBindingObserver {
   bool _isResending = false;
   bool _isChecking = false;
-  Timer? _verificationTimer;
+  int _resendCooldown = 0;
+  Timer? _cooldownTimer;
 
   @override
   void initState() {
     super.initState();
-    // Periodically reload user state to check if email has been verified
-    _verificationTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      _checkVerificationStatusSilent();
-    });
+    WidgetsBinding.instance.addObserver(this);
+    _sendInitialVerification();
   }
 
   @override
   void dispose() {
-    _verificationTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _cooldownTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkVerificationStatusSilent();
+    }
+  }
+
+  void _sendInitialVerification() async {
+    final appState = AppStateProvider.of(context);
+    if (!appState.isEmailVerified) {
+      try {
+        await appState.sendEmailVerification();
+      } catch (_) {}
+    }
   }
 
   void _checkVerificationStatusSilent() async {
     final appState = AppStateProvider.of(context);
     await appState.reloadUser();
-    // AuthGate will rebuild and route automatically when verified
   }
 
   void _checkVerificationStatusManual() async {
@@ -82,6 +97,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           ),
         );
       }
+      _startCooldown();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +114,22 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         });
       }
     }
+  }
+
+  void _startCooldown() {
+    setState(() {
+      _resendCooldown = 60;
+    });
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCooldown > 0) {
+        setState(() {
+          _resendCooldown--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   void _handleSignOut() async {
@@ -130,7 +162,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Icon layout
               Container(
                 height: 120,
                 alignment: Alignment.center,
@@ -154,8 +185,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Title
               Text(
                 'Doğrulama Bağlantısı Gönderildi',
                 style: theme.textTheme.headlineSmall?.copyWith(
@@ -164,8 +193,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-
-              // Message
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
@@ -186,8 +213,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // Manual Check Button
               ElevatedButton.icon(
                 onPressed: _isChecking ? null : _checkVerificationStatusManual,
                 icon: _isChecking
@@ -204,10 +229,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Resend Button
               OutlinedButton.icon(
-                onPressed: _isResending ? null : _resendVerificationEmail,
+                onPressed: (_isResending || _resendCooldown > 0) ? null : _resendVerificationEmail,
                 icon: _isResending
                     ? const SizedBox(
                         height: 16,
@@ -215,15 +238,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send_rounded),
-                label: const Text('Doğrulama E-postasını Yeniden Gönder'),
+                label: Text(_resendCooldown > 0
+                    ? 'Tekrar Gönder ($_resendCooldown sn)'
+                    : 'Doğrulama E-postasını Yeniden Gönder'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Cancel / Sign out text link
               TextButton(
                 onPressed: _handleSignOut,
                 child: const Text('Farklı bir e-posta adresiyle giriş yap'),

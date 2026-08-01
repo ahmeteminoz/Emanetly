@@ -1263,6 +1263,31 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteUserAccount(String password) async {
+    _setLoading(true);
+    try {
+      // 1. Re-authenticate locally
+      await _authService.reauthenticateWithPassword(password);
+      _addLog('Hesap silme öncesi yeniden kimlik doğrulandı.');
+
+      // 2. Call cloud function to clean up and delete user auth account
+      if (Firebase.apps.isNotEmpty) {
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('requestAccountDeletion');
+        await callable.call();
+      }
+
+      // 3. Clear local session / logout cleanly
+      await _authService.signOut();
+      _addLog('Hesap başarıyla silindi ve oturum kapatıldı.');
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'deleteUserAccount failed');
+      _addLog('Hesap silme hatası: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> sendEmailVerification() async {
     try {
       await _authService.sendEmailVerification();

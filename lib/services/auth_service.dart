@@ -15,6 +15,7 @@ abstract class AuthService {
   bool get isEmailVerified;
   Future<void> reloadUser();
   Future<void> sendPasswordResetEmail(String email);
+  Future<void> reauthenticateWithPassword(String password);
 
   // Unified mock management
   List<UserProfile> get availableMockUsers;
@@ -203,7 +204,10 @@ class MockAuthService implements AuthService {
     // Mock action
   }
 
-  // Helper method for the prototype to swap users easily
+  @override
+  Future<void> reauthenticateWithPassword(String password) async {
+    // Mock reauthentication is always successful
+  }
   void switchUser(String uid) {
     final user = _mockUsers.firstWhere((u) => u.uid == uid, orElse: () => _mockUsers[0]);
     _currentUser = user;
@@ -543,12 +547,25 @@ class FirebaseAuthService implements AuthService {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
       await user.reload();
+      await user.getIdToken(true);
     }
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  @override
+  Future<void> reauthenticateWithPassword(String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null && user.email != null) {
+      final credential = fb.EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+    }
   }
 
   @override

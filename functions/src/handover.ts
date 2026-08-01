@@ -20,6 +20,9 @@ export const confirmHandoverAction = onCall(callableRuntimeOptions, async (reque
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "Email verification required");
+  }
 
   const { requestId, action } = request.data;
   if (!requestId || typeof requestId !== "string") {

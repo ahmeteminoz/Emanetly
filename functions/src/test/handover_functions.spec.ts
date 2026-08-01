@@ -37,7 +37,7 @@ describe("Cloud Functions - Double-Confirm Handover System Suite (v0.9.1)", () =
   const invokeHandover = (data: any, uid?: string): Promise<any> => {
     const req: any = { data };
     if (uid) {
-      req.auth = { uid, token: {} };
+      req.auth = { uid, token: { email_verified: true } };
     }
     return (confirmHandoverAction as any).run(req);
   };

@@ -4,8 +4,9 @@ import * as logger from "firebase-functions/logger";
 import { runIdempotent, sendPushNotification, createInAppNotification, markSuppressed } from "./notifications";
 import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
 import { confirmHandoverAction } from "./handover";
+import { requestAccountDeletion } from "./account_deletion";
 
-export { createReport, toggleBlockUser, confirmHandoverAction };
+export { createReport, toggleBlockUser, confirmHandoverAction, requestAccountDeletion };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {

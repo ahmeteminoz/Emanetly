@@ -57,6 +57,9 @@ export const createReport = onCall(callableRuntimeOptions, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Rapor oluşturmak için giriş yapmış olmalısınız.");
   }
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "E-posta adresi doğrulanmamış kullanıcılar rapor oluşturamaz.");
+  }
 
   const reporterId = request.auth.uid;
   const data = request.data || {};
@@ -190,6 +193,9 @@ export const createReport = onCall(callableRuntimeOptions, async (request) => {
 export const toggleBlockUser = onCall(callableRuntimeOptions, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Bu işlemi gerçekleştirmek için giriş yapmış olmalısınız.");
+  }
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "E-posta adresi doğrulanmamış kullanıcılar engelleme işlemi yapamaz.");
   }
 
   const callerUid = request.auth.uid;
