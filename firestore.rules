@@ -47,11 +47,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create, delete: if false; // Only Admin SDK (Cloud Functions) can create/delete
         allow update: if isOwner(userId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt', 'dismissedAt'])
-          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['readAt'])
-              || (resource.data.readAt == null && request.resource.data.readAt == request.time))
-          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['dismissedAt'])
-              || (resource.data.dismissedAt == null && request.resource.data.dismissedAt == request.time));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt', 'dismissedAt']);
       }
 
       // Blocked Users Subcollection (v0.9.0 - Moderation)

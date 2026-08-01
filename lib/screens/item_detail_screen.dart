@@ -555,7 +555,9 @@ class ItemDetailScreen extends StatelessWidget {
                               child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
                                   ? null
                                   : Text(
-                                      item.lenderName[0].toUpperCase(),
+                                      (item.lenderName.isNotEmpty)
+                                          ? item.lenderName[0].toUpperCase()
+                                          : '?',
                                       style: TextStyle(
                                         color: theme.colorScheme.onPrimaryContainer,
                                         fontWeight: FontWeight.bold,
