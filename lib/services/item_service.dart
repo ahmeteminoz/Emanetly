@@ -352,6 +352,8 @@ class FirestoreItemService implements ItemService {
     // Listen to real-time updates from Firestore items collection
     _firestoreSubscription = _firestore
         .collection('items')
+        .where('status', isNotEqualTo: 'draft')
+        .orderBy('status')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .listen((snapshot) {
@@ -451,6 +453,8 @@ class FirestoreItemService implements ItemService {
       try {
         final snapshot = await _firestore
             .collection('items')
+            .where('status', isNotEqualTo: 'draft')
+            .orderBy('status')
             .orderBy('createdAt', descending: true)
             .get();
         _cachedItems = snapshot.docs.map((doc) => EmanetItem.fromMap(doc.data())).toList();

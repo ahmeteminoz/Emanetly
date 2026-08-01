@@ -15,10 +15,7 @@ service cloud.firestore {
       return isSignedIn() && get(/databases/$(database)/documents/items/$(itemId)).data.lenderId == request.auth.uid;
     }
 
-    function isParticipant(requestId) {
-      let req = get(/databases/$(database)/documents/borrowRequests/$(requestId)).data;
-      return isSignedIn() && (request.auth.uid == req.ownerId || request.auth.uid == req.requesterId);
-    }
+
 
     function isBlockedBetween(userA, userB) {
       return exists(/databases/$(database)/documents/users/$(userA)/blockedUsers/$(userB)) ||
@@ -133,14 +130,15 @@ service cloud.firestore {
 
     // 3. BorrowRequests Collection
     match /borrowRequests/{requestId} {
-      allow read: if isParticipant(requestId);
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.requesterId);
 
       allow create: if isSignedIn()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.status in ['onlyInquiry', 'pendingDiscussion', 'accepted', 'rejected', 'cancelled', 'expired', 'completed']
         && !isBlockedBetween(request.auth.uid, get(/databases/$(database)/documents/items/$(request.resource.data.itemId)).data.lenderId);
 
-      allow update: if isParticipant(requestId)
+      allow update: if isSignedIn()
+        && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.requesterId)
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.requesterId == resource.data.requesterId
         && request.resource.data.itemId == resource.data.itemId

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'comment.dart';
 
 enum EmanetStatus {
@@ -173,7 +174,9 @@ class EmanetItem {
         orElse: () => EmanetStatus.available,
       ),
       createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
+          ? (map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : DateTime.parse(map['createdAt'].toString()))
           : DateTime.now(),
       comments: map['comments'] != null
           ? List<EmanetComment>.from(
