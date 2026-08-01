@@ -565,6 +565,7 @@ class FirebaseAuthService implements AuthService {
         password: password,
       );
       await user.reauthenticateWithCredential(credential);
+      await user.getIdToken(true); // Force token refresh to sync with Functions client
     }
   }
 
