@@ -19,6 +19,7 @@ abstract class ItemService {
   Future<void> updateItem(EmanetItem item);
   Future<void> deleteItem(String itemId);
   
+  Future<EmanetItem?> getItemById(String itemId);
   Stream<List<EmanetItem>> get onItemsChanged;
 }
 
@@ -329,6 +330,15 @@ class MockItemService implements ItemService {
   }
 
   @override
+  Future<EmanetItem?> getItemById(String itemId) async {
+    try {
+      return _items.firstWhere((i) => i.id == itemId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Stream<List<EmanetItem>> get onItemsChanged => _controller.stream;
 }
 
@@ -583,6 +593,18 @@ class FirestoreItemService implements ItemService {
       });
     } catch (e) {
       print('Emanetly: Firestore completeDelivery error: $e');
+    }
+  }
+
+  @override
+  Future<EmanetItem?> getItemById(String itemId) async {
+    try {
+      final doc = await _firestore.collection('items').doc(itemId).get();
+      if (!doc.exists || doc.data() == null) return null;
+      return EmanetItem.fromMap(doc.data()!);
+    } catch (e) {
+      print('Emanetly: Firestore getItemById error: $e');
+      return null;
     }
   }
 

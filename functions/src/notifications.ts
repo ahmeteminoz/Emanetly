@@ -69,6 +69,24 @@ export async function runIdempotent(eventId: string, task: () => Promise<void>):
 }
 
 /**
+ * Record technical suppression outcome on notification event doc (Observability)
+ */
+export async function markSuppressed(eventId: string, reason: string): Promise<void> {
+  const docId = getEventDocId(eventId);
+  const eventRef = db.collection("notificationEvents").doc(docId);
+  try {
+    await eventRef.update({
+      status: "completed",
+      outcome: "suppressed",
+      reason: reason,
+      completedAt: FieldValue.serverTimestamp(),
+    });
+  } catch (_) {
+    // Ignore update failures on event doc
+  }
+}
+
+/**
  * Creates an in-app notification document under users/{userId}/notifications/{eventId}.
  * Uses create-if-absent semantics to prevent overwriting existing documents or resetting readAt on retries.
  */

@@ -13,6 +13,9 @@ import 'services/navigation_service.dart';
 import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
 
+import 'services/analytics_service.dart';
+import 'services/crashlytics_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -21,9 +24,11 @@ void main() async {
   BorrowRequestService borrowRequestService;
   ChatMessageService chatMessageService;
   StorageService storageService;
+  final crashlyticsService = CrashlyticsService();
+  final analyticsService = AnalyticsService();
 
   try {
-    // Attempt to initialize Firebase using platform options (overwritten by flutterfire configure)
+    // Attempt to initialize Firebase using platform options
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
@@ -32,7 +37,11 @@ void main() async {
     borrowRequestService = FirestoreBorrowRequestService();
     chatMessageService = FirestoreChatMessageService();
     storageService = FirebaseStorageService();
-    debugPrint('Emanetly: Firebase initialized successfully with Firestore support.');
+    
+    // Initialize global Crashlytics error handlers
+    await crashlyticsService.initialize();
+    
+    debugPrint('Emanetly: Firebase initialized successfully with Firestore, Analytics, and Crashlytics support.');
   } catch (e) {
     // Fallback if firebase options are not configured yet or throws UnimplementedError
     authService = MockAuthService();
@@ -54,6 +63,8 @@ void main() async {
     borrowRequestService: borrowRequestService,
     chatMessageService: chatMessageService,
     storageService: storageService,
+    analyticsService: analyticsService,
+    crashlyticsService: crashlyticsService,
   );
 
   runApp(

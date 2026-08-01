@@ -6,12 +6,14 @@ class ChatMessageBubble extends StatelessWidget {
   final ChatMessageModel message;
   final bool isMe;
   final String? senderNameOverride;
+  final VoidCallback? onLongPress;
 
   const ChatMessageBubble({
     super.key,
     required this.message,
     required this.isMe,
     this.senderNameOverride,
+    this.onLongPress,
   });
 
   @override
@@ -74,84 +76,87 @@ class ChatMessageBubble extends StatelessWidget {
     }
 
     // STANDARD CHAT MESSAGE BUBBLE
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        decoration: BoxDecoration(
-          color: isMe 
-              ? theme.colorScheme.primary 
-              : theme.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+    return GestureDetector(
+      onLongPress: onLongPress,
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.75,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+          decoration: BoxDecoration(
+            color: isMe 
+                ? theme.colorScheme.primary 
+                : theme.colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isMe ? 16 : 4),
+              bottomRight: Radius.circular(isMe ? 4 : 16),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!isMe) ...[
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isMe) ...[
+                Text(
+                  senderNameOverride ?? (message.senderName.trim().isNotEmpty ? message.senderName : 'Kullanıcı'),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+              ],
               Text(
-                senderNameOverride ?? (message.senderName.trim().isNotEmpty ? message.senderName : 'Kullanıcı'),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                  color: theme.colorScheme.primary,
+                message.text,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 3),
-            ],
-            Text(
-              message.text,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: isMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatTime(message.createdAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 9,
-                      color: isMe 
-                          ? theme.colorScheme.onPrimary.withOpacity(0.7) 
-                          : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _formatTime(message.createdAt),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 9,
+                        color: isMe 
+                            ? theme.colorScheme.onPrimary.withOpacity(0.7) 
+                            : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                  if (isMe) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.done_all_rounded,
-                      size: 13,
-                      color: message.isRead 
-                          ? (theme.brightness == Brightness.dark 
-                              ? const Color(0xFF1565C0) // Karanlık modda belirgin koyu mavi
-                              : const Color(0xFF80D8FF)) // Aydınlık modda açık mavi/cyan
-                          : theme.colorScheme.onPrimary.withOpacity(0.6),
-                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.done_all_rounded,
+                        size: 13,
+                        color: message.isRead 
+                            ? (theme.brightness == Brightness.dark 
+                                ? const Color(0xFF1565C0) // Karanlık modda belirgin koyu mavi
+                                : const Color(0xFF80D8FF)) // Aydınlık modda açık mavi/cyan
+                            : theme.colorScheme.onPrimary.withOpacity(0.6),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

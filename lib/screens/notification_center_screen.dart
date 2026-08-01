@@ -274,6 +274,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   .collection('users')
                   .doc(currentUserId)
                   .collection('notifications')
+                  .where('dismissedAt', isNull: true)
                   .orderBy('createdAt', descending: true)
                   .limit(50)
                   .snapshots(),

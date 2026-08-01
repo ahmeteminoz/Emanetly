@@ -43,8 +43,8 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Get fresh item data
-    final currentItem = appState.items.firstWhere(
+    // Get fresh item data (unfiltered by relation block so active route screen resolves item)
+    final currentItem = appState.allItems.firstWhere(
       (i) => i.id == widget.item.id,
       orElse: () => widget.item,
     );
@@ -74,13 +74,33 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buluşma & Teslimat Detayları'),
+        title: const Text('Buluşma ve Teslimat'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Description Banner
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: theme.colorScheme.primaryContainer.withOpacity(0.12),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Buluşma yerini, notları ve teslimat sürecini buradan yönetebilirsiniz.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Part 2: Buluşma Noktası Bilgisi & Actions

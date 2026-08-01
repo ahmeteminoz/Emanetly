@@ -13,7 +13,13 @@ import '../services/borrow_request_service.dart';
 import '../services/chat_message_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+
+import '../services/analytics_service.dart';
+import '../services/crashlytics_service.dart';
+import '../services/block_service.dart';
 
 enum ViewMode {
   compactGrid,
@@ -28,6 +34,8 @@ class AppState extends ChangeNotifier {
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
   final StorageService _storageService;
+  final AnalyticsService _analyticsService;
+  final CrashlyticsService _crashlyticsService;
 
   List<EmanetItem> _items = [];
   bool _isLoading = false;
@@ -57,20 +65,27 @@ class AppState extends ChangeNotifier {
     required BorrowRequestService borrowRequestService,
     required ChatMessageService chatMessageService,
     required StorageService storageService,
+    AnalyticsService? analyticsService,
+    CrashlyticsService? crashlyticsService,
   })  : _authService = authService,
         _itemService = itemService,
         _qrService = qrService,
         _borrowRequestService = borrowRequestService,
         _chatMessageService = chatMessageService,
-        _storageService = storageService {
+        _storageService = storageService,
+        _analyticsService = analyticsService ?? AnalyticsService(),
+        _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
     
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
       if (user != null) {
         _startRequestsSubscription(user.uid);
+        _startUserRelationsSubscription(user.uid);
         _setupNotifications(user.uid);
       } else {
         _cancelRequestsSubscription();
+        _userRelationsSubscription?.cancel();
+        _blockedRelationUserIds.clear();
       }
       notifyListeners();
     });
@@ -79,6 +94,7 @@ class AppState extends ChangeNotifier {
     final initialUser = _authService.currentUser;
     if (initialUser != null) {
       _startRequestsSubscription(initialUser.uid);
+      _startUserRelationsSubscription(initialUser.uid);
       _setupNotifications(initialUser.uid);
     }
 
@@ -101,7 +117,35 @@ class AppState extends ChangeNotifier {
   }
 
   // Getters
-  List<EmanetItem> get items => _items;
+  AnalyticsService get analytics => _analyticsService;
+  CrashlyticsService get crashlytics => _crashlyticsService;
+
+  List<EmanetItem> get items {
+    final list = _items.where((item) => item.status != EmanetStatus.archived && !isRelationBlocked(item.lenderId)).toList();
+    return List.unmodifiable(list);
+  }
+
+  List<EmanetItem> get allItems => List.unmodifiable(_items);
+
+  EmanetItem? findItemInMemory(String itemId) {
+    try {
+      return _items.firstWhere((i) => i.id == itemId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<EmanetItem?> getItemById(String itemId) async {
+    final cached = findItemInMemory(itemId);
+    if (cached != null) return cached;
+    try {
+      return await _itemService.getItemById(itemId);
+    } catch (e) {
+      debugPrint('Emanetly: getItemById error: $e');
+      return null;
+    }
+  }
+
   UserProfile? get currentUser => _authService.currentUser;
   bool get isLoading => _isLoading;
   List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
@@ -170,20 +214,101 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  BlockService? _blockService;
+  BlockService get blockService => _blockService ??= FirestoreBlockService();
+
+  final Set<String> _blockedRelationUserIds = {};
+  StreamSubscription? _userRelationsSubscription;
+
+  Set<String> get blockedRelationUserIds => _blockedRelationUserIds;
+
   // Blocked users logic
   bool isUserBlocked(String uid) {
     return _blockedUserIds.contains(uid);
   }
 
-  void toggleBlockUser(String uid) {
-    if (_blockedUserIds.contains(uid)) {
-      _blockedUserIds.remove(uid);
-      _addLog('Kullanıcı engeli kaldırıldı: $uid');
-    } else {
-      _blockedUserIds.add(uid);
-      _addLog('Kullanıcı engellendi: $uid');
+  bool isRelationBlocked(String uid) {
+    return _blockedUserIds.contains(uid) || _blockedRelationUserIds.contains(uid);
+  }
+
+  void _startUserRelationsSubscription(String userId) {
+    _userRelationsSubscription?.cancel();
+    if (Firebase.apps.isNotEmpty) {
+      _userRelationsSubscription = FirebaseFirestore.instance
+          .collection('userRelations')
+          .where('users', arrayContains: userId)
+          .where('interactionBlocked', isEqualTo: true)
+          .snapshots()
+          .listen((snapshot) {
+        final newSet = <String>{};
+        for (final doc in snapshot.docs) {
+          final users = List<String>.from(doc.data()['users'] ?? []);
+          for (final u in users) {
+            if (u != userId) newSet.add(u);
+          }
+        }
+        _blockedRelationUserIds.clear();
+        _blockedRelationUserIds.addAll(newSet);
+        notifyListeners();
+      }, onError: (e) {
+        debugPrint('Emanetly: userRelations stream error: $e');
+      });
     }
-    notifyListeners();
+  }
+
+  Future<void> blockUser(String targetUserId, {required String source}) async {
+    if (currentUser == null || targetUserId.isEmpty || currentUser!.uid == targetUserId) return;
+    
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('toggleBlockUser');
+        await callable.call({
+          'targetUserId': targetUserId,
+          'shouldBlock': true,
+          'source': source,
+        });
+      } else {
+        await blockService.blockUser(
+          currentUserId: currentUser!.uid,
+          blockedUserId: targetUserId,
+          source: source,
+        );
+      }
+      _blockedUserIds.add(targetUserId);
+      _blockedRelationUserIds.add(targetUserId);
+      _analyticsService.logUserBlocked(source: source);
+      _addLog('Kullanıcı engellendi: $targetUserId');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'blockUser failed');
+      rethrow;
+    }
+  }
+
+  Future<void> unblockUser(String targetUserId) async {
+    if (currentUser == null || targetUserId.isEmpty) return;
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('toggleBlockUser');
+        await callable.call({
+          'targetUserId': targetUserId,
+          'shouldBlock': false,
+        });
+      } else {
+        await blockService.unblockUser(
+          currentUserId: currentUser!.uid,
+          blockedUserId: targetUserId,
+        );
+      }
+      _blockedUserIds.remove(targetUserId);
+      _blockedRelationUserIds.remove(targetUserId);
+      _addLog('Kullanıcı engeli kaldırıldı: $targetUserId');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'unblockUser failed');
+      rethrow;
+    }
   }
 
   // Favorites logic
@@ -201,6 +326,12 @@ class AppState extends ChangeNotifier {
       
       // Perform atomic toggle via service
       await _authService.toggleFavorite(user.uid, itemId, !isAlreadyFav);
+      
+      final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
+      _analyticsService.logFavoriteToggled(
+        action: isAlreadyFav ? 'remove' : 'add',
+        category: itemCategory,
+      );
       
       if (isAlreadyFav) {
         _addLog('Ürün favorilerden çıkarıldı: $itemId');
@@ -247,9 +378,23 @@ class AppState extends ChangeNotifier {
   }) async {
     if (currentUser == null) return false;
     _setLoading(true);
+    final itemId = 'item_${DateTime.now().millisecondsSinceEpoch}';
+    final uploadedPaths = <String>[];
+    bool draftCreated = false;
+
     try {
-      final itemId = 'item_${DateTime.now().millisecondsSinceEpoch}';
-      
+      // Step 1: Create minimal draft document in Firestore so isOwnerOfItem rule succeeds in Storage
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('items').doc(itemId).set({
+          'lenderId': currentUser!.uid,
+          'status': 'draft',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        draftCreated = true;
+        debugPrint('Emanetly Upload Step 1: Draft item created in Firestore for $itemId');
+      }
+
+      // Step 2: Upload images to Storage
       final sourcePaths = List<String>.from(images);
       if (sourcePaths.isEmpty && imageUrl != null && imageUrl.isNotEmpty) {
         sourcePaths.add(imageUrl);
@@ -263,19 +408,23 @@ class AppState extends ChangeNotifier {
           if (path.startsWith('http')) {
             uploadedUrls.add(path);
           } else {
+            final file = File(path);
+            debugPrint('Emanetly Upload Step 3: Local file exists = ${file.existsSync()}, size = ${file.existsSync() ? file.lengthSync() : 0} bytes');
             final downloadUrl = await _storageService.uploadItemImage(
               itemId,
-              File(path),
+              file,
               onProgress: onProgress != null
                   ? (p) => onProgress((i + p) * progressScale)
                   : null,
             );
+            uploadedPaths.add(path);
             uploadedUrls.add(downloadUrl);
+            debugPrint('Emanetly Upload Step 6: Download URL = $downloadUrl');
           }
         }
       }
 
-      // Pick a random mock color for the grid photo placeholders if not selected
+      // Step 3: Transition draft item to available status with full item schema
       final colorOptions = [0xFF3B82F6, 0xFFEF4444, 0xFFF59E0B, 0xFF10B981, 0xFF8B5CF6, 0xFFEC4899];
       final finalColor = mockColorValue ?? colorOptions[DateTime.now().millisecond % colorOptions.length];
 
@@ -294,12 +443,32 @@ class AppState extends ChangeNotifier {
         comments: [],
         mockImageColorValue: finalColor,
       );
+      debugPrint('Emanetly Upload Step 7: Transitioning item status to available...');
       await _itemService.addItem(newItem);
+      _analyticsService.logListingCreated(category: category, durationBucket: 'standard');
       _addLog('${currentUser!.name}, yeni bir ilan yayınladı: "$title"');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Emanetly Upload ERROR: $e');
+      _crashlyticsService.recordError(e, stackTrace, reason: 'Eşya eklenirken hata');
       _addLog('Eşya eklenirken hata: $e');
-      return false;
+
+      // Best-effort cleanup of Storage images and draft Firestore document
+      if (draftCreated && Firebase.apps.isNotEmpty) {
+        try {
+          for (final p in uploadedPaths) {
+            await _storageService.deleteImage(p);
+          }
+        } catch (cleanupErr) {
+          debugPrint('Emanetly Cleanup Non-fatal: Storage cleanup failed: $cleanupErr');
+        }
+        try {
+          await FirebaseFirestore.instance.collection('items').doc(itemId).delete();
+        } catch (cleanupErr) {
+          debugPrint('Emanetly Cleanup Non-fatal: Draft doc cleanup failed: $cleanupErr');
+        }
+      }
+      rethrow;
     } finally {
       _setLoading(false);
     }
@@ -332,6 +501,10 @@ class AppState extends ChangeNotifier {
       );
 
       await _borrowRequestService.addBorrowRequest(newRequest);
+      _analyticsService.logBorrowRequestCreated(
+        category: item.category,
+        durationBucket: requestedDurationText,
+      );
 
       // System message
       await _chatMessageService.sendChatMessage(ChatMessageModel(
@@ -657,7 +830,10 @@ class AppState extends ChangeNotifier {
   List<BorrowRequestModel> get borrowRequests => _borrowRequests;
   
   List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
-    final list = _chatMessages.where((msg) => msg.requestId == requestId).toList();
+    final list = _chatMessages.where((msg) =>
+      msg.requestId == requestId &&
+      (msg.senderId == currentUser?.uid || msg.senderId == 'system' || !isUserBlocked(msg.senderId))
+    ).toList();
     list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return list;
   }
@@ -667,6 +843,7 @@ class AppState extends ChangeNotifier {
     return _chatMessages.where((msg) =>
       msg.requestId == requestId &&
       msg.senderId != currentUser!.uid &&
+      !isUserBlocked(msg.senderId) &&
       !msg.isRead
     ).length;
   }
@@ -675,6 +852,7 @@ class AppState extends ChangeNotifier {
     if (currentUser == null) return 0;
     return _chatMessages.where((msg) =>
       msg.senderId != currentUser!.uid &&
+      !isUserBlocked(msg.senderId) &&
       !msg.isRead
     ).length;
   }
@@ -723,6 +901,7 @@ class AppState extends ChangeNotifier {
       createdAt: DateTime.now().toUtc(),
     );
     await _chatMessageService.sendChatMessage(message);
+    _analyticsService.logChatMessageSent(messageType: 'text');
     _addLog('Mesaj gönderildi: "$text"');
   }
 
@@ -852,6 +1031,7 @@ class AppState extends ChangeNotifier {
     final request = _borrowRequests[reqIndex];
 
     await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.accepted);
+    _analyticsService.logBorrowRequestStatusChanged(requestStatus: 'accepted');
 
     // Update item status in ItemService
     final itemIndex = _items.indexWhere((i) => i.id == request.itemId);

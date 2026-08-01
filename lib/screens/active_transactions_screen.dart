@@ -30,8 +30,8 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
       );
     }
 
-    // 1. Filter active routing items
-    final allActiveItems = appState.items.where((item) {
+    // 1. Filter active routing items (unfiltered by relation block so physical return tasks stay visible)
+    final allActiveItems = appState.allItems.where((item) {
       final isParticipant = item.borrowerId == currentUser.uid || item.lenderId == currentUser.uid;
       final inProgress = item.status != EmanetStatus.available && item.status != EmanetStatus.archived;
       return isParticipant && inProgress;
@@ -205,16 +205,8 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                           ),
                           const SizedBox(height: 12),
                           ...activeChats.map((request) {
-                            // Find matching item details
-                            EmanetItem? matchingItem;
-                            try {
-                              matchingItem = appState.items.firstWhere((i) => i.id == request.itemId);
-                            } catch (_) {
-                              matchingItem = null;
-                            }
-
-                            if (matchingItem == null) return const SizedBox.shrink();
-                            
+                            // Find matching item details (unfiltered by relation block)
+                            final matchingItem = appState.findItemInMemory(request.itemId);
                             final isLender = request.ownerId == currentUser.uid;
                             final targetUserId = isLender ? request.requesterId : request.ownerId;
 
@@ -358,29 +350,43 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                               ],
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          if (hasUnread) ...[
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: theme.colorScheme.error,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Text(
-                                                unreadCount.toString(),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
+                                          if (appState.isUserBlocked(targetUserId)) ...[
+                                            TextButton.icon(
+                                              onPressed: () async {
+                                                await appState.unblockUser(targetUserId);
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                                                  );
+                                                }
+                                              },
+                                              icon: const Icon(Icons.lock_open_rounded, size: 14, color: Colors.red),
+                                              label: const Text('Engeli Kaldır', style: TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ] else ...[
+                                            if (hasUnread) ...[
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: theme.colorScheme.error,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Text(
+                                                  unreadCount.toString(),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
+                                              const SizedBox(width: 4),
+                                            ],
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: theme.colorScheme.outline,
                                             ),
-                                            const SizedBox(width: 4),
                                           ],
-                                          Icon(
-                                            Icons.chevron_right_rounded,
-                                            color: theme.colorScheme.outline,
-                                          ),
                                         ],
                                       ),
                                     ),
