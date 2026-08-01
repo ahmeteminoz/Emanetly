@@ -45,80 +45,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     super.dispose();
   }
 
-  void _showMockGalleryDialog() {
-    final colorOptions = [
-      {'name': 'Mavi Şablon', 'value': 0xFF3B82F6, 'icon': Icons.laptop_mac},
-      {'name': 'Kırmızı Şablon', 'value': 0xFFEF4444, 'icon': Icons.umbrella},
-      {'name': 'Turuncu Şablon', 'value': 0xFFF59E0B, 'icon': Icons.calculate},
-      {'name': 'Yeşil Şablon', 'value': 0xFF10B981, 'icon': Icons.menu_book},
-      {'name': 'Mor Şablon', 'value': 0xFF8B5CF6, 'icon': Icons.architecture},
-      {'name': 'Pembe Şablon', 'value': 0xFFEC4899, 'icon': Icons.category},
-    ];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Görsel Şablon Seç'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: GridView.builder(
-              shrinkWrap: true,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 1.1,
-              ),
-              itemCount: colorOptions.length,
-              itemBuilder: (context, index) {
-                final option = colorOptions[index];
-                final color = Color(option['value'] as int);
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedColorValue = option['value'] as int;
-                      _mockImageLabel = option['name'] as String;
-                      _selectedImagePath = option['name'] as String;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(option['icon'] as IconData, color: Colors.white, size: 28),
-                        const SizedBox(height: 8),
-                        Text(
-                          option['name'] as String,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Kapat'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _pickRealImage(ImageSource source) async {
     if (_selectedImagePaths.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -257,8 +183,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
           throw Exception("Görsel yüklemesi veya veri tabanı kaydı başarısız oldu.");
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
+      debugPrint('AddItemScreen publish failed: $e\n$stackTrace');
       
       final action = await showDialog<String>(
         context: context,
@@ -267,8 +194,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Yayınlama Başarısız', style: TextStyle(fontWeight: FontWeight.bold)),
-            content: const Text(
-              'İlan yayınlanırken bir hata oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
+            content: SingleChildScrollView(
+              child: Text(
+                'İlan yayınlanırken bir hata oluştu:\n\n$e',
+                style: const TextStyle(fontSize: 13, color: Colors.red),
+              ),
             ),
             actionsAlignment: MainAxisAlignment.spaceEvenly,
             actions: [
@@ -824,7 +754,6 @@ class _CameraSimulatorDialogState extends State<CameraSimulatorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(

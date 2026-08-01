@@ -2,9 +2,9 @@ import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/fire
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import { runIdempotent, sendPushNotification, createInAppNotification, markSuppressed } from "./notifications";
-import { checkMutualBlock, createReport } from "./moderation";
+import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
 
-export { createReport };
+export { createReport, toggleBlockUser };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {

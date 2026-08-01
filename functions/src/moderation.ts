@@ -182,3 +182,93 @@ export const createReport = onCall(callableRuntimeOptions, async (request) => {
 
   return { success: true, reportId: reportDocId };
 });
+
+/**
+ * Callable Cloud Function: toggleBlockUser
+ * Idempotently toggles block status and manages bidirectional userRelations document atomically.
+ */
+export const toggleBlockUser = onCall(callableRuntimeOptions, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Bu işlemi gerçekleştirmek için giriş yapmış olmalısınız.");
+  }
+
+  const callerUid = request.auth.uid;
+  const data = request.data || {};
+  const { targetUserId, shouldBlock, source } = data;
+
+  if (!targetUserId || typeof targetUserId !== "string" || targetUserId.trim().length === 0) {
+    throw new HttpsError("invalid-argument", "Geçersiz hedef kullanıcı (targetUserId).");
+  }
+
+  if (callerUid === targetUserId) {
+    throw new HttpsError("failed-precondition", "Kullanıcı kendisini engelleyemez.");
+  }
+
+  if (typeof shouldBlock !== "boolean") {
+    throw new HttpsError("invalid-argument", "shouldBlock boolean olmalıdır.");
+  }
+
+  // 1. Verify target user exists
+  const targetUserDoc = await db.collection("users").doc(targetUserId).get();
+  if (!targetUserDoc.exists) {
+    throw new HttpsError("not-found", "Engellenmek istenen kullanıcı bulunamadı.");
+  }
+
+  // 2. Deterministic SHA-256 Relation ID calculation
+  const sortedUids = [callerUid, targetUserId].sort();
+  const rawId = `${sortedUids[0]}:${sortedUids[1]}`;
+  const relationId = crypto.createHash("sha256").update(rawId).digest("hex");
+
+  const callerBlockRef = db.collection("users").doc(callerUid).collection("blockedUsers").doc(targetUserId);
+  const targetBlockRef = db.collection("users").doc(targetUserId).collection("blockedUsers").doc(callerUid);
+  const relationRef = db.collection("userRelations").doc(relationId);
+
+  await db.runTransaction(async (transaction) => {
+    const [callerBlockSnap, targetBlockSnap] = await Promise.all([
+      transaction.get(callerBlockRef),
+      transaction.get(targetBlockRef),
+    ]);
+
+    if (shouldBlock) {
+      // Create block doc if absent, preserving existing createdAt on idempotent calls
+      if (!callerBlockSnap.exists) {
+        transaction.set(callerBlockRef, {
+          blockedUserId: targetUserId,
+          createdAt: FieldValue.serverTimestamp(),
+          source: typeof source === "string" ? source : "profile",
+        });
+      }
+
+      // Upsert relation document (contains ONLY users, interactionBlocked, updatedAt)
+      transaction.set(relationRef, {
+        users: sortedUids,
+        interactionBlocked: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      logger.info(`Emanetly Moderation: User ${callerUid} blocked ${targetUserId}. Relation ${relationId} updated.`);
+    } else {
+      // Unblock: delete caller's block doc if exists
+      if (callerBlockSnap.exists) {
+        transaction.delete(callerBlockRef);
+      }
+
+      // Check if target user STILL blocks caller (reverse block)
+      if (targetBlockSnap.exists) {
+        // Reverse block remains active, keep relation document true
+        transaction.set(relationRef, {
+          users: sortedUids,
+          interactionBlocked: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        logger.info(`Emanetly Moderation: User ${callerUid} unblocked ${targetUserId}, but reverse block remains active.`);
+      } else {
+        // No blocks in either direction: delete relation document
+        transaction.delete(relationRef);
+        logger.info(`Emanetly Moderation: Bidirectional block cleared between ${callerUid} and ${targetUserId}. Relation ${relationId} deleted.`);
+      }
+    }
+  });
+
+  return { success: true, isBlocked: shouldBlock };
+});

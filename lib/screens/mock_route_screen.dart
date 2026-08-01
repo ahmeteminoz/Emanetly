@@ -43,8 +43,8 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Get fresh item data
-    final currentItem = appState.items.firstWhere(
+    // Get fresh item data (unfiltered by relation block so active route screen resolves item)
+    final currentItem = appState.allItems.firstWhere(
       (i) => i.id == widget.item.id,
       orElse: () => widget.item,
     );

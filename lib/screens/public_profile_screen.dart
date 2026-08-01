@@ -4,7 +4,6 @@ import '../models/user_profile.dart';
 import '../models/item.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
-import 'item_detail_screen.dart';
 import 'widgets/item_card.dart';
 import 'widgets/full_screen_image_viewer.dart';
 import 'widgets/report_dialog.dart';
@@ -16,20 +15,6 @@ class PublicProfileScreen extends StatelessWidget {
     super.key,
     required this.userId,
   });
-
-  void _showReportAction(BuildContext context, String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          action == 'report' 
-              ? 'Kullanıcı bildirme talebi alındı. İnceleme başlatılacaktır.' 
-              : 'Kullanıcı engellendi. Artık ilanlarınızı göremeyecek.',
-        ),
-        backgroundColor: action == 'report' ? Colors.orange : Colors.red,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +47,67 @@ class PublicProfileScreen extends StatelessWidget {
             .toList();
 
         final isSelf = appState.currentUser?.uid == userId;
-        final isBlocked = appState.isUserBlocked(userId);
+        final isRelationBlocked = appState.isRelationBlocked(userId);
+        final iBlockedThem = appState.isUserBlocked(userId);
+
+        if (!isSelf && isRelationBlocked) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Profil'),
+              centerTitle: true,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.lock_outline_rounded, size: 64, color: Colors.red),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Bu Profile Erişim Kısıtlandı',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      iBlockedThem
+                          ? 'Bu kullanıcıyı engellediniz. İlanlar ve detaylar gizlenmiştir.'
+                          : 'Bu kullanıcı ile erişim kısıtlanmıştır.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    if (iBlockedThem)
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await appState.unblockUser(userId);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.lock_open_rounded),
+                        label: const Text('Engeli Kaldır'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
 
         return Scaffold(
           appBar: AppBar(
@@ -72,7 +117,7 @@ class PublicProfileScreen extends StatelessWidget {
               PopupMenuButton<String>(
                 onSelected: (value) async {
                   if (value == 'block') {
-                    if (isBlocked) {
+                    if (iBlockedThem) {
                       await appState.unblockUser(userId);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -122,11 +167,11 @@ class PublicProfileScreen extends StatelessWidget {
                     child: Row(
                       children: [
                         Icon(
-                          isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
-                          color: isBlocked ? Colors.green : Colors.red,
+                          iBlockedThem ? Icons.lock_open_rounded : Icons.block_rounded,
+                          color: iBlockedThem ? Colors.green : Colors.red,
                         ),
                         const SizedBox(width: 8),
-                        Text(isBlocked ? 'Engeli Kaldır' : 'Kullanıcıyı Engelle'),
+                        Text(iBlockedThem ? 'Engeli Kaldır' : 'Kullanıcıyı Engelle'),
                       ],
                     ),
                   ),
@@ -539,7 +584,14 @@ class PublicProfileScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _showReportAction(context, 'report'),
+                  onPressed: () {
+                    ReportDialog.show(
+                      context,
+                      targetType: 'user',
+                      targetId: userId,
+                      targetTitle: '${user.name} Profilini Şikayet Et',
+                    );
+                  },
                   icon: const Icon(Icons.flag_outlined, size: 18),
                   label: const Text('Bildir'),
                   style: OutlinedButton.styleFrom(
@@ -559,18 +611,35 @@ class PublicProfileScreen extends StatelessWidget {
                       await appState.unblockUser(userId);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                          SnackBar(content: Text('${user.name} engeli kaldırıldı.')),
                         );
                       }
                     } else {
-                      await appState.blockUser(userId, source: 'profile');
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Kullanıcı engellendi.'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('${user.name} Engellensin mi?'),
+                          content: const Text('Bu kullanıcıyı engellediğinizde birbirinizle yeni mesajlaşamaz ve yeni ödünç talebi oluşturamazsınız.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                              child: const Text('Engelle'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await appState.blockUser(userId, source: 'profile');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${user.name} engellendi.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     }
                   },

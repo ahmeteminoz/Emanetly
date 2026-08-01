@@ -117,21 +117,35 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
       );
     }
 
-    // Fetch item
-    EmanetItem? item;
-    try {
-      item = appState.items.firstWhere((i) => i.id == request!.itemId);
-    } catch (_) {
-      item = null;
-    }
+    // Fetch item from raw memory list (unfiltered by relation block so active transaction item is never hidden)
+    final item = appState.findItemInMemory(request!.itemId);
 
     if (item == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Ürün Bulunamadı')),
-        body: const Center(child: Text('Talebe ait ürün bulunamadı.')),
+      return FutureBuilder<EmanetItem?>(
+        future: appState.getItemById(request.itemId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Ürün Yükleniyor')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          final fetchedItem = snapshot.data;
+          if (fetchedItem == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Ürün Bulunamadı')),
+              body: const Center(child: Text('Talebe ait ürün veritabanında bulunamadı.')),
+            );
+          }
+          return _buildBodyWithItem(context, appState, theme, request!, fetchedItem);
+        },
       );
     }
 
+    return _buildBodyWithItem(context, appState, theme, request!, item);
+  }
+
+  Widget _buildBodyWithItem(BuildContext context, AppState appState, ThemeData theme, BorrowRequestModel request, EmanetItem item) {
     final isOwner = appState.currentUser?.uid == request.ownerId;
     final messages = appState.getChatMessagesForRequest(widget.requestId);
     final hasUnread = messages.any((msg) => msg.senderId != appState.currentUser?.uid && !msg.isRead);
@@ -149,7 +163,10 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     _scrollToBottom();
 
     final targetUserId = isOwner ? request.requesterId : request.ownerId;
-    final lenderResponded = messages.any((msg) => msg.senderId == request!.ownerId);
+    final otherUserId = targetUserId;
+    final isBlockedRelation = appState.isRelationBlocked(otherUserId);
+    final iBlockedThem = appState.isUserBlocked(otherUserId);
+    final lenderResponded = messages.any((msg) => msg.senderId == request.ownerId);
 
     return Scaffold(
       appBar: AppBar(
@@ -160,18 +177,17 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             final profile = snapshot.data;
             String partyName = 'Bilinmeyen Kullanıcı';
             
-            if (isOwner) {
-              if (lenderResponded && profile != null) {
-                partyName = profile.name;
-              } else {
-                partyName = 'Bilinmeyen Kullanıcı';
-              }
+            if (isBlockedRelation) {
+              partyName = 'Gizli Kullanıcı';
+            } else if (profile != null) {
+              partyName = profile.name;
             } else {
-              partyName = item?.lenderName ?? 'Eşya Sahibi';
+              partyName = isOwner ? 'Bilinmeyen Kullanıcı' : item.lenderName;
             }
             
-            final canNavigate = partyName != 'Bilinmeyen Kullanıcı' && profile != null;
-            
+            final canNavigate = !isBlockedRelation && partyName != 'Bilinmeyen Kullanıcı' && partyName != 'Gizli Kullanıcı' && profile != null;
+            final showAvatar = !isBlockedRelation && profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty;
+
             return InkWell(
               onTap: canNavigate ? () {
                 Navigator.push(
@@ -190,12 +206,12 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                     CircleAvatar(
                       radius: 18,
                       backgroundColor: theme.colorScheme.primaryContainer,
-                      backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                      backgroundImage: showAvatar
                           ? (profile.avatarUrl!.startsWith('http')
                               ? NetworkImage(profile.avatarUrl!)
                               : FileImage(File(profile.avatarUrl!)) as ImageProvider)
                           : null,
-                      child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                      child: showAvatar
                           ? null
                           : Text(
                               partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
@@ -672,56 +688,113 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             SafeArea(
               top: false,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
                 ),
-                child: Row(
-                  children: [
-                    // Message Text Field
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: 'Mesaj yazın...',
-                          filled: true,
-                          fillColor: theme.colorScheme.surfaceContainerLow,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
+                child: appState.isUserBlocked(targetUserId)
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red.withOpacity(0.3)),
                         ),
-                        onSubmitted: (_) {
-                          if (_messageController.text.isNotEmpty) {
-                            appState.sendChatMessage(widget.requestId, _messageController.text.trim());
-                            _messageController.clear();
-                            _scrollToBottom();
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Send Button
-                    IconButton(
-                      icon: Icon(Icons.send_rounded, color: theme.colorScheme.primary),
-                      onPressed: () {
-                        if (_messageController.text.isNotEmpty) {
-                          appState.sendChatMessage(widget.requestId, _messageController.text.trim());
-                          _messageController.clear();
-                          _scrollToBottom();
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.block_rounded, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bu kullanıcıyı engellediğiniz için mesaj gönderemezsiniz.',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : isBlockedRelation
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.red.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.block_rounded, color: Colors.red, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    iBlockedThem
+                                        ? 'Engellediğiniz için yeni mesaj gönderilemez.'
+                                        : 'İletişim engellenmiştir.',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                                  ),
+                                ),
+                                if (iBlockedThem)
+                                  TextButton(
+                                    onPressed: () async {
+                                      await appState.unblockUser(otherUserId);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                                        );
+                                      }
+                                    },
+                                    child: const Text('Engeli Kaldır', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                              ],
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              // Message Text Field
+                              Expanded(
+                                child: TextField(
+                                  controller: _messageController,
+                                  textCapitalization: TextCapitalization.sentences,
+                                  decoration: InputDecoration(
+                                    hintText: 'Mesaj yazın...',
+                                    filled: true,
+                                    fillColor: theme.colorScheme.surfaceContainerLow,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  onSubmitted: (_) {
+                                    if (_messageController.text.isNotEmpty) {
+                                      appState.sendChatMessage(widget.requestId, _messageController.text.trim());
+                                      _messageController.clear();
+                                      _scrollToBottom();
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Send Button
+                              IconButton(
+                                icon: Icon(Icons.send_rounded, color: theme.colorScheme.primary),
+                                onPressed: () {
+                                  if (_messageController.text.isNotEmpty) {
+                                    appState.sendChatMessage(widget.requestId, _messageController.text.trim());
+                                    _messageController.clear();
+                                    _scrollToBottom();
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
               ),
             ),
 
           // 5. COMPLETED TRANSACTION FEEDBACK INVITATION CARD
-          if (request != null && request.status == BorrowRequestStatus.completed)
+          if (request.status == BorrowRequestStatus.completed)
             FutureBuilder<UserProfile?>(
               future: appState.getUserProfile(isOwner ? request.requesterId : request.ownerId),
               builder: (context, snapshot) {
