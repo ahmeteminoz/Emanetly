@@ -56,54 +56,102 @@ class PublicProfileScreen extends StatelessWidget {
               title: const Text('Profil'),
               centerTitle: true,
             ),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        shape: BoxShape.circle,
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
+                  // Avatar
+                  Center(
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      backgroundImage: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                          ? (user.avatarUrl!.startsWith('http')
+                              ? NetworkImage(user.avatarUrl!)
+                              : FileImage(File(user.avatarUrl!)) as ImageProvider)
+                          : null,
+                      child: (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                          ? null
+                          : Text(
+                              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                              style: theme.textTheme.headlineLarge?.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 36,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Name & Username
+                  Text(
+                    user.name,
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    user.username,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Warning/Info Card
+                  Card(
+                    elevation: 0,
+                    color: Colors.red.shade50.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.red.withOpacity(0.2)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.lock_outline_rounded, color: Colors.red, size: 32),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Bu Profile Erişim Kısıtlandı',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            iBlockedThem
+                                ? 'Bu kullanıcıyı engellediniz. Aktif iade/teslimat işlemleri dışındaki bio, güven skoru, rozetler ve diğer ilanlar gizlenmiştir.'
+                                : 'Bu kullanıcı ile erişim kısıtlanmıştır. Aktif iade/teslimat işlemleri dışındaki bio, güven skoru, rozetler ve diğer ilanlar gizlenmiştir.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.lock_outline_rounded, size: 64, color: Colors.red),
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Bu Profile Erişim Kısıtlandı',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      iBlockedThem
-                          ? 'Bu kullanıcıyı engellediniz. İlanlar ve detaylar gizlenmiştir.'
-                          : 'Bu kullanıcı ile erişim kısıtlanmıştır.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    if (iBlockedThem)
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await appState.unblockUser(userId);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.lock_open_rounded),
-                        label: const Text('Engeli Kaldır'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
+                  ),
+                  const SizedBox(height: 32),
+                  if (iBlockedThem)
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await appState.unblockUser(userId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Kullanıcı engeli kaldırıldı.')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.lock_open_rounded),
+                      label: const Text('Engeli Kaldır'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
           );
