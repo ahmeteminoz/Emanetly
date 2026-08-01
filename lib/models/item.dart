@@ -163,7 +163,7 @@ class EmanetItem {
       description: map['description'] ?? '',
       category: map['category'] ?? '',
       lenderId: map['lenderId'] ?? '',
-      lenderName: map['lenderName'] ?? '',
+      lenderName: (map['lenderName'] != null) ? map['lenderName'].toString() : '',
       borrowerId: map['borrowerId'],
       borrowerName: map['borrowerName'],
       location: map['location'] ?? '',

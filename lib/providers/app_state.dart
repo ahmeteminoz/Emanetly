@@ -472,16 +472,34 @@ class AppState extends ChangeNotifier {
     final uploadedPaths = <String>[];
     bool draftCreated = false;
 
+    // Safe lenderName resolution fallback logic
+    String resolvedLenderName = 'Bilinmeyen Kullanıcı';
+    final nameTrimmed = currentUser!.name.trim();
+    final usernameTrimmed = currentUser!.username.trim();
+    final emailTrimmed = currentUser!.email.trim();
+
+    if (nameTrimmed.isNotEmpty) {
+      resolvedLenderName = nameTrimmed;
+    } else if (usernameTrimmed.isNotEmpty) {
+      resolvedLenderName = usernameTrimmed;
+    } else if (emailTrimmed.isNotEmpty) {
+      final emailPart = emailTrimmed.split('@').first.trim();
+      if (emailPart.isNotEmpty) {
+        resolvedLenderName = emailPart;
+      }
+    }
+
     try {
       // Step 1: Create minimal draft document in Firestore so isOwnerOfItem rule succeeds in Storage
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance.collection('items').doc(itemId).set({
           'lenderId': currentUser!.uid,
+          'lenderName': resolvedLenderName,
           'status': 'draft',
           'createdAt': FieldValue.serverTimestamp(),
         });
         draftCreated = true;
-        debugPrint('Emanetly Upload Step 1: Draft item created in Firestore for $itemId');
+        debugPrint('Emanetly Upload Step 1: Draft item created in Firestore for $itemId with lenderName: $resolvedLenderName');
       }
 
       // Step 2: Upload images to Storage
@@ -524,7 +542,7 @@ class AppState extends ChangeNotifier {
         description: description,
         category: category,
         lenderId: currentUser!.uid,
-        lenderName: currentUser!.name,
+        lenderName: resolvedLenderName,
         location: location,
         imageUrl: uploadedUrls.isNotEmpty ? uploadedUrls.first : null,
         images: uploadedUrls,
@@ -536,7 +554,7 @@ class AppState extends ChangeNotifier {
       debugPrint('Emanetly Upload Step 7: Transitioning item status to available...');
       await _itemService.addItem(newItem);
       _analyticsService.logListingCreated(category: category, durationBucket: 'standard');
-      _addLog('${currentUser!.name}, yeni bir ilan yayınladı: "$title"');
+      _addLog('$resolvedLenderName, yeni bir ilan yayınladı: "$title"');
       return true;
     } catch (e, stackTrace) {
       debugPrint('Emanetly Upload ERROR: $e');
