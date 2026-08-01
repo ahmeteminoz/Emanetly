@@ -791,13 +791,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
         if (items.isNotEmpty) ...[
           Text(
-            'Aktif İlanlarım (${items.length})',
+            'İlanlarım (${items.length})',
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
           ),
           const SizedBox(height: 8),
           ...items.map((item) {
             final isBorrowed = item.status == EmanetStatus.borrowed;
             final isPending = item.status == EmanetStatus.pendingApproval || item.status == EmanetStatus.pendingReturn;
+            final isArchived = item.status == EmanetStatus.archived;
             return Card(
               elevation: 0,
               margin: const EdgeInsets.only(bottom: 12),
@@ -825,7 +826,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? Colors.blue.shade50 
                         : isPending 
                             ? Colors.orange.shade50 
-                            : Colors.green.shade50,
+                            : isArchived
+                                ? Colors.grey.shade100
+                                : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -833,7 +836,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? 'Ödünçte' 
                         : isPending 
                             ? 'İşlemde' 
-                            : 'Müsait',
+                            : isArchived
+                                ? 'Arşivlendi'
+                                : 'Müsait',
                     style: TextStyle(
                       fontSize: 10, 
                       fontWeight: FontWeight.bold, 
@@ -841,7 +846,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? Colors.blue.shade800 
                           : isPending 
                               ? Colors.orange.shade800 
-                              : Colors.green.shade800
+                              : isArchived
+                                  ? Colors.grey.shade700
+                                  : Colors.green.shade800
                     ),
                   ),
                 ),
@@ -901,15 +908,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : 'Ödünç Alındı (Tamamlandı)',
                   style: const TextStyle(fontSize: 12),
                 ),
-                trailing: const Icon(Icons.account_circle_outlined),
-                onTap: () async {
-                  final otherUserId = isLender ? request.requesterId : request.ownerId;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PublicProfileScreen(userId: otherUserId),
-                    ),
-                  );
+                trailing: IconButton(
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Kullanıcı Profili',
+                  onPressed: () {
+                    final otherUserId = isLender ? request.requesterId : request.ownerId;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PublicProfileScreen(userId: otherUserId),
+                      ),
+                    );
+                  },
+                ),
+                onTap: () {
+                  if (relatedItem != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ItemDetailScreen(item: relatedItem!),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Eşya bilgisi bulunamadı (silinmiş veya anonimleştirilmiş olabilir).'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
             );

@@ -33,30 +33,32 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
     super.dispose();
   }
 
-  void _submitReview(AppState appState) {
+  Future<void> _submitReview(AppState appState) async {
     final comment = _commentController.text.trim();
     String finalComment = comment.isNotEmpty ? comment : 'Sorunsuz ve güvenilir işlem.';
     if (_selectedTags.isNotEmpty) {
       finalComment += ' (${_selectedTags.join(', ')})';
     }
 
-    // Submit review to database
-    appState.addUserReview(
+    // Submit review to database and await completion
+    await appState.addUserReview(
       widget.targetUserId,
       finalComment,
       _currentRating,
       widget.requestId,
     );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Değerlendirmeniz iletildi, teşekkür ederiz!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Değerlendirmeniz iletildi, teşekkür ederiz!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-    // Redirect to home/main screen clean
-    Navigator.of(context).popUntil((route) => route.isFirst);
+      // Redirect to home/main screen clean
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   @override

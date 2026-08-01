@@ -57,6 +57,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<List<EmanetItem>>? _itemsSubscription;
   StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
   StreamSubscription<List<ChatMessageModel>>? _chatSubscription;
+  StreamSubscription? _blockedUsersSubscription;
 
   AppState({
     required AuthService authService,
@@ -81,11 +82,14 @@ class AppState extends ChangeNotifier {
       if (user != null) {
         _startRequestsSubscription(user.uid);
         _startUserRelationsSubscription(user.uid);
+        _startBlockedUsersSubscription(user.uid);
         _setupNotifications(user.uid);
       } else {
         _cancelRequestsSubscription();
         _userRelationsSubscription?.cancel();
+        _blockedUsersSubscription?.cancel();
         _blockedRelationUserIds.clear();
+        _blockedUserIds.clear();
       }
       notifyListeners();
     });
@@ -95,6 +99,7 @@ class AppState extends ChangeNotifier {
     if (initialUser != null) {
       _startRequestsSubscription(initialUser.uid);
       _startUserRelationsSubscription(initialUser.uid);
+      _startBlockedUsersSubscription(initialUser.uid);
       _setupNotifications(initialUser.uid);
     }
 
@@ -252,6 +257,31 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }, onError: (e) {
         debugPrint('Emanetly: userRelations stream error: $e');
+      });
+    }
+  }
+
+  void _startBlockedUsersSubscription(String userId) {
+    _blockedUsersSubscription?.cancel();
+    if (Firebase.apps.isNotEmpty) {
+      _blockedUsersSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('blockedUsers')
+          .snapshots()
+          .listen((snapshot) {
+        final newSet = <String>{};
+        for (final doc in snapshot.docs) {
+          final blockedUserId = doc.data()['blockedUserId'];
+          if (blockedUserId != null && blockedUserId is String) {
+            newSet.add(blockedUserId);
+          }
+        }
+        _blockedUserIds.clear();
+        _blockedUserIds.addAll(newSet);
+        notifyListeners();
+      }, onError: (e) {
+        debugPrint('Emanetly: blockedUsers stream error: $e');
       });
     }
   }
@@ -958,7 +988,9 @@ class AppState extends ChangeNotifier {
 
   int get totalUnreadCount {
     if (currentUser == null) return 0;
+    final myRequestIds = _borrowRequests.map((r) => r.id).toSet();
     return _chatMessages.where((msg) =>
+      myRequestIds.contains(msg.requestId) &&
       msg.senderId != currentUser!.uid &&
       !isUserBlocked(msg.senderId) &&
       !msg.isRead

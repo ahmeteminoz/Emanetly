@@ -46,8 +46,9 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().contains('wrong-password')
-              ? 'Girdiğiniz şifre hatalı.'
+          final errStr = e.toString().toLowerCase();
+          _errorMessage = (errStr.contains('wrong-password') || errStr.contains('invalid-credential'))
+              ? 'Girdiğiniz şifre hatalı. Lütfen tekrar deneyin.'
               : 'Hesap silinirken hata oluştu: ${e.toString().replaceAll('Exception: ', '')}';
         });
       }

@@ -998,16 +998,18 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                       finalComment,
                       currentRating,
                       widget.requestId,
-                    );
+                    ).then((_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    });
 
                     Navigator.pop(context); // Close dialog
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
