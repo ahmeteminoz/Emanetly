@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum BorrowRequestStatus {
   onlyInquiry,
   pendingDiscussion,
@@ -6,6 +8,7 @@ enum BorrowRequestStatus {
   cancelled,
   expired,
   completed,
+  borrowed,
 }
 
 class BorrowRequestModel {
@@ -21,6 +24,12 @@ class BorrowRequestModel {
   final String? meetingNote;
   final DateTime? meetingUpdatedAt;
 
+  // Double-Confirm Handover Timestamps (v0.9.1)
+  final DateTime? handoverLenderConfirmedAt;
+  final DateTime? handoverBorrowerConfirmedAt;
+  final DateTime? returnBorrowerConfirmedAt;
+  final DateTime? returnLenderConfirmedAt;
+
   BorrowRequestModel({
     required this.id,
     required this.itemId,
@@ -33,6 +42,10 @@ class BorrowRequestModel {
     this.meetingLocation,
     this.meetingNote,
     this.meetingUpdatedAt,
+    this.handoverLenderConfirmedAt,
+    this.handoverBorrowerConfirmedAt,
+    this.returnBorrowerConfirmedAt,
+    this.returnLenderConfirmedAt,
   });
 
   BorrowRequestModel copyWith({
@@ -47,6 +60,10 @@ class BorrowRequestModel {
     String? meetingLocation,
     String? meetingNote,
     DateTime? meetingUpdatedAt,
+    DateTime? handoverLenderConfirmedAt,
+    DateTime? handoverBorrowerConfirmedAt,
+    DateTime? returnBorrowerConfirmedAt,
+    DateTime? returnLenderConfirmedAt,
   }) {
     return BorrowRequestModel(
       id: id ?? this.id,
@@ -60,6 +77,10 @@ class BorrowRequestModel {
       meetingLocation: meetingLocation ?? this.meetingLocation,
       meetingNote: meetingNote ?? this.meetingNote,
       meetingUpdatedAt: meetingUpdatedAt ?? this.meetingUpdatedAt,
+      handoverLenderConfirmedAt: handoverLenderConfirmedAt ?? this.handoverLenderConfirmedAt,
+      handoverBorrowerConfirmedAt: handoverBorrowerConfirmedAt ?? this.handoverBorrowerConfirmedAt,
+      returnBorrowerConfirmedAt: returnBorrowerConfirmedAt ?? this.returnBorrowerConfirmedAt,
+      returnLenderConfirmedAt: returnLenderConfirmedAt ?? this.returnLenderConfirmedAt,
     );
   }
 
@@ -76,7 +97,18 @@ class BorrowRequestModel {
       'meetingLocation': meetingLocation,
       'meetingNote': meetingNote,
       'meetingUpdatedAt': meetingUpdatedAt?.toIso8601String(),
+      'handoverLenderConfirmedAt': handoverLenderConfirmedAt?.toIso8601String(),
+      'handoverBorrowerConfirmedAt': handoverBorrowerConfirmedAt?.toIso8601String(),
+      'returnBorrowerConfirmedAt': returnBorrowerConfirmedAt?.toIso8601String(),
+      'returnLenderConfirmedAt': returnLenderConfirmedAt?.toIso8601String(),
     };
+  }
+
+  static DateTime? _parseTimestamp(dynamic val) {
+    if (val == null) return null;
+    if (val is Timestamp) return val.toDate();
+    if (val is String) return DateTime.tryParse(val);
+    return null;
   }
 
   factory BorrowRequestModel.fromMap(Map<String, dynamic> map) {
@@ -92,13 +124,21 @@ class BorrowRequestModel {
       requestedDurationText: map['requestedDurationText'] ?? '',
       proposedMeetingPointId: map['proposedMeetingPointId'],
       createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
+          ? (map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : DateTime.parse(map['createdAt'].toString()))
           : DateTime.now(),
       meetingLocation: map['meetingLocation'],
       meetingNote: map['meetingNote'],
       meetingUpdatedAt: map['meetingUpdatedAt'] != null
-          ? DateTime.parse(map['meetingUpdatedAt'])
+          ? (map['meetingUpdatedAt'] is Timestamp
+              ? (map['meetingUpdatedAt'] as Timestamp).toDate()
+              : DateTime.parse(map['meetingUpdatedAt'].toString()))
           : null,
+      handoverLenderConfirmedAt: _parseTimestamp(map['handoverLenderConfirmedAt']),
+      handoverBorrowerConfirmedAt: _parseTimestamp(map['handoverBorrowerConfirmedAt']),
+      returnBorrowerConfirmedAt: _parseTimestamp(map['returnBorrowerConfirmedAt']),
+      returnLenderConfirmedAt: _parseTimestamp(map['returnLenderConfirmedAt']),
     );
   }
 }

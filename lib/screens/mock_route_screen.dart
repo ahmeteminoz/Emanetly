@@ -4,7 +4,6 @@ import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'transaction_success_screen.dart';
-import 'widgets/qr_scanner_screen.dart';
 
 class MockRouteScreen extends StatefulWidget {
   final EmanetItem item;
@@ -17,6 +16,7 @@ class MockRouteScreen extends StatefulWidget {
 class _MockRouteScreenState extends State<MockRouteScreen> {
   final _meetingLocationController = TextEditingController();
   final _meetingNoteController = TextEditingController();
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -43,29 +43,50 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     final appState = AppStateProvider.of(context);
     final theme = Theme.of(context);
 
-    // Get fresh item data (unfiltered by relation block so active route screen resolves item)
+    // Get fresh item data from memory
     final currentItem = appState.allItems.firstWhere(
       (i) => i.id == widget.item.id,
       orElse: () => widget.item,
     );
 
+    // Find the active request
+    BorrowRequestModel? activeRequest;
+    try {
+      activeRequest = appState.borrowRequests.firstWhere(
+        (r) => r.itemId == currentItem.id &&
+            (r.status == BorrowRequestStatus.accepted ||
+             r.status == BorrowRequestStatus.borrowed ||
+             r.status == BorrowRequestStatus.completed),
+      );
+    } catch (_) {}
+
     final isLender = currentItem.lenderId == appState.currentUser?.uid;
     final isBorrower = currentItem.borrowerId == appState.currentUser?.uid;
+    final requestId = activeRequest?.id ?? '';
 
-    if (currentItem.status == EmanetStatus.available || currentItem.status == EmanetStatus.archived) {
+    // If transaction is fully completed, navigate to Success Screen
+    if (activeRequest?.status == BorrowRequestStatus.completed || currentItem.status == EmanetStatus.archived) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final activeReq = appState.getRequestForActiveItem(widget.item.id);
+        // Trigger review dialog for borrower or lender before pushing success screen
+        final counterpartyName = isLender ? (currentItem.borrowerName ?? 'Ödünç Alan') : currentItem.lenderName;
+        final counterpartyId = isLender ? (currentItem.borrowerId ?? '') : currentItem.lenderId;
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => TransactionSuccessScreen(
               item: currentItem,
-              targetUserId: isLender ? (currentItem.borrowerId ?? '') : currentItem.lenderId,
-              targetName: isLender ? (currentItem.borrowerName ?? 'Ödünç Alan') : currentItem.lenderName,
-              requestId: activeReq?.id ?? '',
+              targetUserId: counterpartyId,
+              targetName: counterpartyName,
+              requestId: requestId,
             ),
           ),
         );
+
+        // Auto trigger review popup
+        if (counterpartyId.isNotEmpty) {
+          _showFeedbackDialog(context, counterpartyId, counterpartyName, appState, requestId);
+        }
       });
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -103,38 +124,41 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Part 2: Buluşma Noktası Bilgisi & Actions
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Emanet İşlemi: ${currentItem.title}',
+                    'Emanet Eşya: ${currentItem.title}',
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Ortaklar: ${currentItem.lenderName} (Lender) ➔ ${currentItem.borrowerName} (Borrower)',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    'Rolünüz: ${isLender ? "Eşya Sahibi (Veren)" : "Ödünç Alan"}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Meeting point card
-                  _buildMeetingPointCard(context, currentItem, isLender, appState),
+
+                  // Meeting Details Card
+                  _buildMeetingPointCard(context, currentItem, isLender, appState, activeRequest),
                   const SizedBox(height: 24),
-                  
-                  // Delivery status timeline
+
+                  // State Tracker Flow
                   Text(
-                    'Teslimat Durumu',
+                    'Onay ve İlerleme Süreci',
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  _buildDeliveryTimeline(context, currentItem.deliveryStatus ?? DeliveryStatus.requestSent),
+                  _buildStateConfirmationTimeline(context, activeRequest),
                   const SizedBox(height: 24),
-                  
-                  // Simulation helper control buttons
-                  _buildSimulationControls(context, currentItem, isLender, isBorrower, appState),
+
+                  // Action Buttons Card
+                  if (activeRequest != null)
+                    _buildDoubleConfirmActionCard(context, activeRequest, currentItem, isLender, isBorrower, appState),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -150,9 +174,9 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     EmanetItem item,
     bool isLender,
     AppState appState,
+    BorrowRequestModel? activeRequest,
   ) {
     final theme = Theme.of(context);
-    final activeRequest = appState.getRequestForActiveItem(item.id);
     final counterpartyName = isLender ? (item.borrowerName ?? 'Ödünç Alan') : item.lenderName;
 
     final locationText = activeRequest?.meetingLocation ?? 
@@ -171,7 +195,6 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Counterparty Info
             Row(
               children: [
                 CircleAvatar(
@@ -191,24 +214,9 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        isLender ? 'Eşyayı Ödünç Alan Öğrenci' : 'Eşya Sahibi (Lender)',
+                        isLender ? 'Ödünç Alan Öğrenci' : 'Eşya Sahibi',
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.verified_user_rounded, size: 14, color: Colors.green),
-                      SizedBox(width: 4),
-                      Text('Güvenilir', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -216,25 +224,18 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
             ),
             const Divider(height: 28),
 
-            // Item and Duration
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 18, color: Colors.blue),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Talep Süresi: ${activeRequest?.requestedDurationText ?? "1 Gün"}',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                const Icon(Icons.timer_outlined, size: 18, color: Colors.blue),
+                const SizedBox(width: 6),
+                Text(
+                  'Talep Süresi: ${activeRequest?.requestedDurationText ?? "1 Gün"}',
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Meeting Details Info
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -275,7 +276,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '📝 Ekstra Not (Kıyafet/Zaman vb.)',
+                          '📝 Buluşma Notu',
                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
@@ -290,13 +291,13 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
               ),
             ],
 
-            // Input form for Lender if status is pendingApproval or accepted
+            // Update meeting location fields
             if (isLender && item.status == EmanetStatus.pendingApproval) ...[
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 8),
               Text(
-                'Buluşma Detayı Ekle / Güncelle',
+                'Buluşma Detaylarını Güncelle',
                 style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -304,7 +305,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                 controller: _meetingLocationController,
                 decoration: const InputDecoration(
                   labelText: 'Buluşma Noktası',
-                  hintText: 'örn. İİBF Kantin Çardaklar',
+                  hintText: 'örn. Kütüphane Girişi',
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
@@ -315,7 +316,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                 controller: _meetingNoteController,
                 decoration: const InputDecoration(
                   labelText: 'Ekstra Not (Opsiyonel)',
-                  hintText: 'örn. Mavi montluyum, 09:15\'te orada olacağım',
+                  hintText: 'örn. Kırmızı montluyum',
                   isDense: true,
                   border: OutlineInputBorder(),
                 ),
@@ -353,72 +354,258 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     );
   }
 
-  Widget _buildDeliveryTimeline(BuildContext context, DeliveryStatus status) {
+  Widget _buildStateConfirmationTimeline(BuildContext context, BorrowRequestModel? request) {
     final theme = Theme.of(context);
+    if (request == null) return const SizedBox();
+
+    final hasLenderHandover = request.handoverLenderConfirmedAt != null;
+    final hasBorrowerReceipt = request.handoverBorrowerConfirmedAt != null;
+    final hasBorrowerReturn = request.returnBorrowerConfirmedAt != null;
+    final hasLenderReturnReceipt = request.returnLenderConfirmedAt != null;
+
     final steps = [
-      {'status': DeliveryStatus.requestSent, 'title': 'Talep Gönderildi'},
-      {'status': DeliveryStatus.accepted, 'title': 'Kabul Edildi'},
-      {'status': DeliveryStatus.meetingPointSet, 'title': 'Konum Belirlendi'},
-      {'status': DeliveryStatus.routingStarted, 'title': 'Rotada / Yolda'},
-      {'status': DeliveryStatus.delivered, 'title': 'Eşya Teslim Edildi'},
-      {'status': DeliveryStatus.completed, 'title': 'İşlem Tamamlandı'},
+      {
+        'title': '1. Sahip Teslim Onayı',
+        'subtitle': hasLenderHandover ? 'Teslim edildi' : 'Sahibin teslim onayı bekleniyor',
+        'isConfirmed': hasLenderHandover,
+      },
+      {
+        'title': '2. Alan Teslim Onayı',
+        'subtitle': hasBorrowerReceipt ? 'Teslim alındı' : 'Alan kişinin teslim onayı bekleniyor',
+        'isConfirmed': hasBorrowerReceipt,
+      },
+      if (request.status == BorrowRequestStatus.borrowed || hasBorrowerReturn || hasLenderReturnReceipt) ...[
+        {
+          'title': '3. Alan İade Onayı',
+          'subtitle': hasBorrowerReturn ? 'İade edildi' : 'Alan kişinin iade etmesi bekleniyor',
+          'isConfirmed': hasBorrowerReturn,
+        },
+        {
+          'title': '4. Sahip İade Teslim Onayı',
+          'subtitle': hasLenderReturnReceipt ? 'İade teslim alındı' : 'Sahibin iadeyi teslim alması bekleniyor',
+          'isConfirmed': hasLenderReturnReceipt,
+        },
+      ]
     ];
 
-    final activeIndex = steps.indexWhere((step) => step['status'] == status);
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: List.generate(steps.length, (index) {
+            final step = steps[index];
+            final isConfirmed = step['isConfirmed'] as bool;
 
-    return Column(
-      children: List.generate(steps.length, (index) {
-        final step = steps[index];
-        
-        final isCompleted = index < activeIndex;
-        final isActive = index == activeIndex;
-        
-        final color = isCompleted
-            ? Colors.green
-            : isActive
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant;
-                
-        final icon = isCompleted
-            ? Icons.check_circle
-            : isActive
-                ? Icons.radio_button_checked
-                : Icons.radio_button_off;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    isConfirmed ? Icons.check_circle : Icons.radio_button_off,
+                    color: isConfirmed ? Colors.green : theme.colorScheme.outline,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step['title'] as String,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: isConfirmed ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        Text(
+                          step['subtitle'] as String,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: isConfirmed ? Colors.green.shade700 : theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildDoubleConfirmActionCard(
+    BuildContext context,
+    BorrowRequestModel request,
+    EmanetItem item,
+    bool isLender,
+    bool isBorrower,
+    AppState appState,
+  ) {
+    final theme = Theme.of(context);
+
+    final hasLenderHandover = request.handoverLenderConfirmedAt != null;
+    final hasBorrowerReceipt = request.handoverBorrowerConfirmedAt != null;
+    final hasBorrowerReturn = request.returnBorrowerConfirmedAt != null;
+    final hasLenderReturnReceipt = request.returnLenderConfirmedAt != null;
+
+    String? statusInfoText;
+    String? buttonLabel;
+    String? actionType;
+    String? dialogMessage;
+
+    // 1. Handover Delivery Phase (accepted status)
+    if (request.status == BorrowRequestStatus.accepted) {
+      if (isLender) {
+        if (!hasLenderHandover) {
+          buttonLabel = 'Eşyayı Teslim Ettim';
+          actionType = 'lender_handover';
+          dialogMessage = 'Eşyayı ödünç alan öğrenciye fiziksel olarak teslim ettiğinizi onaylıyor musunuz?';
+        } else {
+          statusInfoText = 'Teslim ettiğinizi onayladınız. Karşı tarafın "Teslim Aldım" onayı bekleniyor...';
+        }
+      } else if (isBorrower) {
+        if (!hasBorrowerReceipt) {
+          buttonLabel = 'Eşyayı Teslim Aldım';
+          actionType = 'borrower_receipt';
+          dialogMessage = 'Eşyayı sahibinden fiziksel olarak teslim aldığınızı onaylıyor musunuz?';
+          if (hasLenderHandover) {
+            statusInfoText = 'Sahip eşyayı teslim ettiğini onayladı. Siz de teslim aldıysanız onaylayın.';
+          }
+        } else {
+          statusInfoText = 'Teslim aldığınızı onayladınız. Karşı tarafın "Teslim Ettim" onayı bekleniyor...';
+        }
+      }
+    }
+
+    // 2. Return Handover Phase (borrowed status)
+    if (request.status == BorrowRequestStatus.borrowed) {
+      if (isBorrower) {
+        if (!hasBorrowerReturn) {
+          buttonLabel = 'Eşyayı İade Ettim';
+          actionType = 'borrower_return';
+          dialogMessage = 'Eşyayı sahibine fiziksel olarak iade ettiğinizi onaylıyor musunuz?';
+        } else {
+          statusInfoText = 'İade ettiğinizi onayladınız. Sahibinin "İadeyi Teslim Aldım" onayı bekleniyor...';
+        }
+      } else if (isLender) {
+        if (!hasLenderReturnReceipt) {
+          buttonLabel = 'İadeyi Teslim Aldım';
+          actionType = 'lender_return_receipt';
+          dialogMessage = 'İade edilen eşyayı fiziksel olarak teslim aldığınızı onaylıyor musunuz?';
+          if (hasBorrowerReturn) {
+            statusInfoText = 'Alan kişi iade ettiğini onayladı. Siz de teslim aldıysanız onaylayın.';
+          }
+        } else {
+          statusInfoText = 'İadeyi teslim aldığınızı onayladınız. Karşı tarafın "İade Ettim" onayı bekleniyor...';
+        }
+      }
+    }
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.primaryContainer.withOpacity(0.06),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
           children: [
-            Column(
-              children: [
-                Icon(icon, size: 22, color: color),
-                if (index < steps.length - 1)
-                  Container(
-                    width: 2,
-                    height: 30,
-                    color: index < activeIndex ? Colors.green : theme.colorScheme.outlineVariant,
-                  ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  step['title'] as String,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive
-                        ? theme.colorScheme.onSurface
-                        : isCompleted
-                            ? theme.colorScheme.onSurface.withOpacity(0.7)
-                            : theme.colorScheme.outline,
-                  ),
+            if (statusInfoText != null) ...[
+              Text(
+                statusInfoText,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.primary,
                 ),
               ),
+              const SizedBox(height: 12),
+            ],
+            if (buttonLabel != null && actionType != null && dialogMessage != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isProcessing
+                      ? null
+                      : () => _confirmAction(context, request.id, actionType!, dialogMessage!, appState),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: _isProcessing
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(buttonLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ),
+            ] else if (statusInfoText == null) ...[
+              const Center(
+                child: Text(
+                  'Bu aşamada gerçekleştireceğiniz bir onay bulunmamaktadır.',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmAction(
+    BuildContext context,
+    String requestId,
+    String action,
+    String dialogMessage,
+    AppState appState,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Fiziksel Eylem Onayı'),
+          content: Text(dialogMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context); // Close dialog
+                setState(() => _isProcessing = true);
+                
+                final success = await appState.confirmHandoverAction(requestId, action);
+                
+                if (mounted) {
+                  setState(() => _isProcessing = false);
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Onayınız başarıyla kaydedildi!'), backgroundColor: Colors.green),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Onay gönderilirken hata oluştu.'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              child: const Text('Onayla'),
             ),
           ],
         );
-      }),
+      },
     );
   }
 
@@ -505,7 +692,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                           onSelected: (val) {
                             setDialogState(() {
                               if (val) {
-                                selectedTags.add(tag);
+                                  selectedTags.add(tag);
                               } else {
                                 selectedTags.remove(tag);
                               }
@@ -561,367 +748,4 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
       },
     );
   }
-
-  Widget _buildSimulationControls(
-    BuildContext context,
-    EmanetItem item,
-    bool isLender,
-    bool isBorrower,
-    AppState appState,
-  ) {
-    final theme = Theme.of(context);
-
-    // If status is available (not active process), don't show controls
-    if (item.status == EmanetStatus.available) {
-      return const SizedBox();
-    }
-
-    Widget buildButton({
-      required String label,
-      required IconData icon,
-      required VoidCallback onPressed,
-      Color? color,
-    }) {
-      return ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 18),
-        label: Text(label),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? theme.colorScheme.primary,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        ),
-      );
-    }
-
-    // Timeline control flows based on who clicks what
-    if (item.deliveryStatus == DeliveryStatus.requestSent) {
-      if (isLender) {
-        return buildButton(
-          label: 'Talebi Kabul Et',
-          icon: Icons.check,
-          onPressed: () => appState.approveBorrow(item.id),
-          color: Colors.green,
-        );
-      }
-      return const Center(child: Text('Eşya sahibinin talebi kabul etmesi bekleniyor...'));
-    }
-
-    if (item.deliveryStatus == DeliveryStatus.accepted) {
-      if (isLender) {
-        return const Center(child: Text('Lütfen yukarıdaki panelden bir buluşma noktası belirleyin.'));
-      }
-      return const Center(child: Text('Eşya sahibinin buluşma noktası girmesi bekleniyor...'));
-    }
-
-    if (item.deliveryStatus == DeliveryStatus.meetingPointSet) {
-      if (isBorrower) {
-        return buildButton(
-          label: 'Rotayı Başlat (Yola Çık)',
-          icon: Icons.navigation_outlined,
-          onPressed: () => appState.startRouting(item.id),
-        );
-      }
-      return const Center(child: Text('Ödünç alan öğrencinin rotayı başlatıp buluşma noktasına gelmesi bekleniyor...'));
-    }
-
-    if (item.deliveryStatus == DeliveryStatus.routingStarted) {
-      if (isLender) {
-        return buildButton(
-          label: 'QR Göster & Teslim Et',
-          icon: Icons.qr_code,
-          onPressed: () {
-            _showQrBottomSheet(context, item, 'borrow');
-          },
-          color: Colors.green,
-        );
-      }
-      return buildButton(
-        label: 'QR Tara & Teslim Al',
-        icon: Icons.qr_code_scanner_rounded,
-        onPressed: () async {
-          BorrowRequestModel? activeRequest;
-          try {
-            activeRequest = appState.borrowRequests.firstWhere(
-              (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
-            );
-          } catch (_) {}
-          final requestId = activeRequest?.id ?? 'mock';
-
-          final scanned = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QrScannerScreen(
-                action: 'borrow',
-                requestId: requestId,
-              ),
-            ),
-          );
-          if (scanned == true && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Eşya başarıyla teslim alındı!'), backgroundColor: Colors.green),
-            );
-          }
-        },
-        color: theme.colorScheme.secondary,
-      );
-    }
-
-    // 1. Handover Complete / Active Borrow State Controls
-    if (item.status == EmanetStatus.borrowed) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (isBorrower) ...[
-            buildButton(
-              label: 'İade Talebi Gönder',
-              icon: Icons.settings_backup_restore_rounded,
-              onPressed: () {
-                appState.requestReturn(item.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('İade talebi gönderildi. Eşyayı sahibine teslim ederken QR kodunuzu gösterebilirsiniz.')),
-                );
-              },
-              color: Colors.deepPurple,
-            ),
-          ] else if (isLender) ...[
-            const Center(
-              child: Text(
-                'Eşya şu an ödünçte. İade talebi bekleniyor...',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),
-            ),
-          ],
-        ],
-      );
-    }
-
-    // 2. Return Request Submitted State Controls
-    if (item.status == EmanetStatus.pendingReturn) {
-      if (isLender) {
-        return buildButton(
-          label: 'QR Tara & İade Al',
-          icon: Icons.qr_code_scanner_rounded,
-          onPressed: () async {
-            BorrowRequestModel? activeRequest;
-            try {
-              activeRequest = appState.borrowRequests.firstWhere(
-                (r) => r.itemId == item.id && r.status == BorrowRequestStatus.accepted
-              );
-            } catch (_) {}
-            final requestId = activeRequest?.id ?? 'mock';
-
-            final scanned = await Navigator.push<bool>(
-              context,
-              MaterialPageRoute(
-                builder: (context) => QrScannerScreen(
-                  action: 'return',
-                  requestId: requestId,
-                ),
-              ),
-            );
-            if (scanned == true && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Eşya başarıyla iade alındı!'), backgroundColor: Colors.green),
-              );
-            }
-          },
-          color: Colors.green,
-        );
-      }
-      return buildButton(
-        label: 'QR Göster (İade Ediyorum)',
-        icon: Icons.qr_code,
-        onPressed: () {
-          _showQrBottomSheet(context, item, 'return');
-        },
-        color: Colors.deepPurple,
-      );
-    }
-
-    return const SizedBox();
-  }
-
-  void _showQrBottomSheet(
-    BuildContext parentContext,
-    EmanetItem item,
-    String action,
-  ) {
-    final appState = AppStateProvider.of(parentContext);
-    final theme = Theme.of(parentContext);
-
-    BorrowRequestModel? activeRequest;
-    try {
-      activeRequest = appState.borrowRequests.firstWhere(
-        (r) => r.itemId == item.id && 
-               (r.status == BorrowRequestStatus.accepted ||
-                r.status == BorrowRequestStatus.pendingDiscussion ||
-                r.status == BorrowRequestStatus.onlyInquiry ||
-                r.status == BorrowRequestStatus.completed)
-      );
-    } catch (_) {}
-
-    final requestId = activeRequest?.id ?? 'mock_request_id_${item.id}';
-
-    final qrData = appState.qrService.generateQrData(
-      requestId: requestId,
-      action: action,
-    );
-
-    showModalBottomSheet(
-      context: parentContext,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              Text(
-                action == 'borrow' ? 'Emanet Teslim QR Kodu' : 'İade Alım QR Kodu',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              
-              Text(
-                action == 'borrow'
-                    ? 'Eşyayı alan öğrencinin bu QR kodu kendi kamerasından taramasını sağlayın.'
-                    : 'İade eden öğrencinin size eşyayı getirmesiyle bu QR kodunu taranabilir yapın.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-              ),
-              const SizedBox(height: 32),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: CustomPaint(
-                  size: const Size(200, 200),
-                  painter: MockQrPainter(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              Text(
-                'Kod: $qrData',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: theme.colorScheme.outline,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    Navigator.pop(sheetContext);
-                    
-                    final errorMessage = await appState.processQrCode(qrData);
-
-                    if (parentContext.mounted) {
-                      if (errorMessage == null) {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              action == 'borrow'
-                                  ? 'Emanet başarıyla teslim edildi!'
-                                  : 'İade başarıyla onaylandı ve eşya geri alındı!',
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(parentContext).showSnackBar(
-                          SnackBar(
-                            content: Text(errorMessage),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Karşı Taraf Taramasını Simüle Et (Prototip)'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// Custom Painter to draw QR code fallback preview
-class MockQrPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintBlack = Paint()..color = Colors.black;
-    final paintWhite = Paint()..color = Colors.white;
-
-    // Background white box
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paintWhite);
-
-    // Three outer position detection boxes
-    // Top-Left
-    canvas.drawRect(const Rect.fromLTWH(10, 10, 45, 45), paintBlack);
-    canvas.drawRect(const Rect.fromLTWH(17, 17, 31, 31), paintWhite);
-    canvas.drawRect(const Rect.fromLTWH(22, 22, 21, 21), paintBlack);
-
-    // Top-Right
-    canvas.drawRect(Rect.fromLTWH(size.width - 55, 10, 45, 45), paintBlack);
-    canvas.drawRect(Rect.fromLTWH(size.width - 48, 17, 31, 31), paintWhite);
-    canvas.drawRect(Rect.fromLTWH(size.width - 43, 22, 21, 21), paintBlack);
-
-    // Bottom-Left
-    canvas.drawRect(Rect.fromLTWH(10, size.height - 55, 45, 45), paintBlack);
-    canvas.drawRect(Rect.fromLTWH(17, size.height - 48, 31, 31), paintWhite);
-    canvas.drawRect(Rect.fromLTWH(22, size.height - 43, 21, 21), paintBlack);
-
-    // Draw some random pixels inside to look like a QR code
-    final double pixelSize = 5.0;
-    for (double y = 60; y < size.height - 10; y += pixelSize * 2) {
-      for (double x = 60; x < size.width - 10; x += pixelSize * 2) {
-        if ((x + y).hashCode % 3 == 0) {
-          canvas.drawRect(Rect.fromLTWH(x, y, pixelSize, pixelSize), paintBlack);
-        }
-        if ((x * y).hashCode % 4 == 0) {
-          canvas.drawRect(Rect.fromLTWH(x, y + pixelSize, pixelSize, pixelSize), paintBlack);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

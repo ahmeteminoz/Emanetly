@@ -72,6 +72,13 @@ class BorrowRequestStatusCard extends StatelessWidget {
         statusSubtitle = 'Eşya iade edildi ve süreç tamamlandı. Katkınız için teşekkürler!';
         icon = Icons.assignment_turned_in_outlined;
         break;
+      case BorrowRequestStatus.borrowed:
+        cardColor = Colors.indigo.shade50;
+        textColor = Colors.indigo.shade900;
+        statusTitle = 'Eşya Teslim Alındı / Ödünçte';
+        statusSubtitle = 'Eşya şu anda ödünç alan kullanıcıdadır. İade işlemini buradan takip edebilirsiniz.';
+        icon = Icons.handshake_outlined;
+        break;
     }
 
     return Container(

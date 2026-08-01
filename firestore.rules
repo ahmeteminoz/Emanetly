@@ -107,6 +107,11 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && request.resource.data.lenderId == resource.data.lenderId
         && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        // Client cannot transition status to borrowed or archived directly
+        && !(request.resource.data.status in ['borrowed', 'archived'])
+        // Client cannot set deliveryStatus to delivered directly
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['deliveryStatus'])
+            || request.resource.data.deliveryStatus != 'delivered')
         && (
           // Lender can update details or transition draft -> available
           isOwnerOfItem(itemId)
@@ -117,9 +122,8 @@ service cloud.firestore {
             && (
               // Valid State Transition Pairs
               (resource.data.status == 'available' && request.resource.data.status == 'pendingApproval') ||
-              (resource.data.status == 'pendingApproval' && (request.resource.data.status == 'borrowed' || request.resource.data.status == 'available')) ||
-              (resource.data.status == 'borrowed' && request.resource.data.status == 'pendingReturn') ||
-              (resource.data.status == 'pendingReturn' && (request.resource.data.status == 'available' || request.resource.data.status == 'archived'))
+              (resource.data.status == 'pendingApproval' && request.resource.data.status == 'available') ||
+              (resource.data.status == 'borrowed' && request.resource.data.status == 'pendingReturn')
             )
           )
         );
@@ -141,12 +145,17 @@ service cloud.firestore {
         && request.resource.data.requesterId == resource.data.requesterId
         && request.resource.data.itemId == resource.data.itemId
         && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        // Client cannot modify double-confirm timestamps
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'handoverLenderConfirmedAt', 'handoverBorrowerConfirmedAt',
+          'returnBorrowerConfirmedAt', 'returnLenderConfirmedAt'
+        ])
         && (
           // Requester can only cancel
           (request.auth.uid == resource.data.requesterId && request.resource.data.status == 'cancelled')
           ||
-          // Owner can accept, reject, or mark completed
-          (request.auth.uid == resource.data.ownerId && request.resource.data.status in ['accepted', 'rejected', 'completed', 'pendingDiscussion'])
+          // Owner can accept, reject, or set pendingDiscussion (but NOT complete or borrow directly)
+          (request.auth.uid == resource.data.ownerId && request.resource.data.status in ['accepted', 'rejected', 'pendingDiscussion'])
         );
 
       allow delete: if false;

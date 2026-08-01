@@ -603,7 +603,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
               ),
             ),
 
-          if (isAccepted)
+          if (isAccepted || request.status == BorrowRequestStatus.borrowed)
             SafeArea(
               top: false,
               child: Container(
@@ -622,7 +622,9 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Talep kabul edildi! Teslimat süreci başladı.',
+                            request.status == BorrowRequestStatus.borrowed
+                                ? 'Eşya teslim alındı! Ödünç süreci başladı.'
+                                : 'Talep kabul edildi! Teslimat süreci başladı.',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface,
@@ -684,7 +686,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             ),
 
           // 4. MESSAGE INPUT BOX BAR
-          if (isOnlyInquiry || isPendingDiscussion || isAccepted)
+          if (isOnlyInquiry || isPendingDiscussion || isAccepted || request.status == BorrowRequestStatus.borrowed)
             SafeArea(
               top: false,
               child: Container(
