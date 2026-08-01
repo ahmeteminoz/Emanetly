@@ -641,8 +641,8 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.directions_run_rounded),
-                      label: const Text('Teslimat & Rota Takibine Git'),
+                      icon: const Icon(Icons.handshake_outlined),
+                      label: const Text('Buluşma ve Teslimat Detayları'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: theme.colorScheme.onPrimary,

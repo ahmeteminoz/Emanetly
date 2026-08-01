@@ -773,8 +773,8 @@ class ItemDetailScreen extends StatelessWidget {
                   ),
                 );
               },
-              icon: const Icon(Icons.navigation_rounded),
-              label: const Text('Buluşma & Rota Takibine Git', style: TextStyle(fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.handshake_outlined),
+              label: const Text('Buluşma ve Teslimat Detayları', style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
