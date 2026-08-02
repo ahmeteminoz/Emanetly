@@ -226,12 +226,6 @@ export const requestAccountDeletion = onCall(callableRuntimeOptions, async (requ
         batch.delete(blockDoc.ref);
       }
 
-      // Delete my reviews & clean reviews targeting me
-      const reviewsTargetingMe = await db.collectionGroup("reviews").where("targetUserId", "==", uid).get();
-      for (const rDoc of reviewsTargetingMe.docs) {
-        batch.delete(rDoc.ref);
-      }
-
       await batch.commit();
 
       await jobRef.update({
