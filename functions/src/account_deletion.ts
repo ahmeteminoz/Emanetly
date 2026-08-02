@@ -215,9 +215,13 @@ export const requestAccountDeletion = onCall(callableRuntimeOptions, async (requ
       }
 
       // Delete other users' block targeting this user (collectionGroup query)
-      const groupBlockQuery = await db.collectionGroup("blockedUsers").where("blockedUserId", "==", uid).get();
-      for (const blockDoc of groupBlockQuery.docs) {
-        batch.delete(blockDoc.ref);
+      try {
+        const groupBlockQuery = await db.collectionGroup("blockedUsers").where("blockedUserId", "==", uid).get();
+        for (const blockDoc of groupBlockQuery.docs) {
+          batch.delete(blockDoc.ref);
+        }
+      } catch (e) {
+        logger.warn(`Emanetly Deletion [${uid}]: Non-critical error query collectionGroup blockedUsers (index might be missing/building):`, e);
       }
 
       // Delete my blockedUsers subcollection
