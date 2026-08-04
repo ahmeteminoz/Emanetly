@@ -7,6 +7,7 @@ import 'add_item_screen.dart';
 import '../models/item.dart';
 import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
+import '../services/notification_service.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -16,6 +17,15 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
+  @override
+  void initState() {
+    super.initState();
+    // Navigator bu noktada hazır — terminated state deep-link'leri burada işle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.checkPendingDeepLink();
+    });
+  }
+
   int _currentIndex = 0;
 
   final List<Widget> _screens = [

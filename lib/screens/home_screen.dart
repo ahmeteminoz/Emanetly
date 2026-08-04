@@ -23,9 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.instance.checkPendingDeepLink();
-    });
   }
   String _searchQuery = '';
   List<String> _selectedCategories = ['Hepsi'];
