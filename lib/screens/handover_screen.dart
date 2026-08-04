@@ -5,15 +5,15 @@ import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'transaction_success_screen.dart';
 
-class MockRouteScreen extends StatefulWidget {
+class HandoverScreen extends StatefulWidget {
   final EmanetItem item;
-  const MockRouteScreen({super.key, required this.item});
+  const HandoverScreen({super.key, required this.item});
 
   @override
-  State<MockRouteScreen> createState() => _MockRouteScreenState();
+  State<HandoverScreen> createState() => _HandoverScreenState();
 }
 
-class _MockRouteScreenState extends State<MockRouteScreen> {
+class _HandoverScreenState extends State<HandoverScreen> {
   final _meetingLocationController = TextEditingController();
   final _meetingNoteController = TextEditingController();
   bool _isProcessing = false;

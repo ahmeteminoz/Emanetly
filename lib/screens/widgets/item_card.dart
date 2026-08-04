@@ -50,13 +50,7 @@ class ItemCard extends StatelessWidget {
       end: Alignment.bottomRight,
     );
 
-    // Determine trust score mock rating
-    String rating = '4.9';
-    if (item.lenderId == 'user_1') {
-      rating = '4.8';
-    } else if (item.lenderId == 'user_3') {
-      rating = '4.7';
-    }
+
 
     // Determine status badge color
     Color statusColor = Colors.green;
@@ -188,29 +182,6 @@ class ItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Trust Rating Badge (Bottom-Right)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
-                            const SizedBox(width: 2),
-                            Text(
-                              rating,
-                              style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -255,15 +226,6 @@ class ItemCard extends StatelessWidget {
                                   fontSize: 10,
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Maks: 3g',
-                              style: TextStyle(
-                                      fontSize: 9,
-                                color: theme.colorScheme.outline,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
@@ -359,26 +321,6 @@ class ItemCard extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ),
-                      // Trust Rating Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ],
                         ),
                       ),
                     ],

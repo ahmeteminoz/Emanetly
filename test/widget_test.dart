@@ -4,7 +4,6 @@ import 'package:emanetly/providers/app_state.dart';
 import 'package:emanetly/providers/app_state_provider.dart';
 import 'package:emanetly/services/auth_service.dart';
 import 'package:emanetly/services/item_service.dart';
-import 'package:emanetly/services/qr_service.dart';
 import 'package:emanetly/services/borrow_request_service.dart';
 import 'package:emanetly/services/chat_message_service.dart';
 import 'package:emanetly/services/storage_service.dart';
@@ -14,14 +13,12 @@ void main() {
     // Setup mock services and application state
     final authService = MockAuthService();
     final itemService = MockItemService();
-    final qrService = MockQrService();
     final borrowRequestService = MockBorrowRequestService();
     final chatMessageService = MockChatMessageService();
     final storageService = MockStorageService();
     final appState = AppState(
       authService: authService,
       itemService: itemService,
-      qrService: qrService,
       borrowRequestService: borrowRequestService,
       chatMessageService: chatMessageService,
       storageService: storageService,

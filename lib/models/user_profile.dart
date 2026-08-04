@@ -37,7 +37,10 @@ class UserReview {
 class UserProfile {
   final String uid;
   final String name;
-  final String username;
+  final String? username;
+  final String? usernameNormalized;
+  final String usernameSource;
+  final bool onboardingComplete;
   final String studentId;
   final String email;
   final String department;
@@ -62,7 +65,10 @@ class UserProfile {
   UserProfile({
     required this.uid,
     required this.name,
-    required this.username,
+    this.username,
+    this.usernameNormalized,
+    this.usernameSource = 'unset',
+    this.onboardingComplete = false,
     required this.studentId,
     required this.email,
     required this.department,
@@ -87,6 +93,9 @@ class UserProfile {
     String? uid,
     String? name,
     String? username,
+    String? usernameNormalized,
+    String? usernameSource,
+    bool? onboardingComplete,
     String? studentId,
     String? email,
     String? department,
@@ -110,6 +119,9 @@ class UserProfile {
       uid: uid ?? this.uid,
       name: name ?? this.name,
       username: username ?? this.username,
+      usernameNormalized: usernameNormalized ?? this.usernameNormalized,
+      usernameSource: usernameSource ?? this.usernameSource,
+      onboardingComplete: onboardingComplete ?? this.onboardingComplete,
       studentId: studentId ?? this.studentId,
       email: email ?? this.email,
       department: department ?? this.department,
@@ -172,6 +184,9 @@ class UserProfile {
       'uid': uid,
       'name': name,
       'username': username,
+      'usernameNormalized': usernameNormalized,
+      'usernameSource': usernameSource,
+      'onboardingComplete': onboardingComplete,
       'studentId': studentId,
       'email': email,
       'department': department,
@@ -198,7 +213,10 @@ class UserProfile {
     return UserProfile(
       uid: map['uid'] ?? '',
       name: map['name'] ?? '',
-      username: map['username'] ?? '',
+      username: map['username'],
+      usernameNormalized: map['usernameNormalized'],
+      usernameSource: map['usernameSource'] ?? 'unset',
+      onboardingComplete: map['onboardingComplete'] ?? false,
       studentId: map['studentId'] ?? '',
       email: map['email'] ?? '',
       department: map['department'] ?? '',

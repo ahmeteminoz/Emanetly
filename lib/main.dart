@@ -5,7 +5,6 @@ import 'providers/app_state.dart';
 import 'providers/app_state_provider.dart';
 import 'services/auth_service.dart';
 import 'services/item_service.dart';
-import 'services/qr_service.dart';
 import 'services/borrow_request_service.dart';
 import 'services/chat_message_service.dart';
 import 'services/storage_service.dart';
@@ -52,14 +51,10 @@ void main() async {
     debugPrint('Emanetly: Firebase config fallback to Mock. Notice: $e');
   }
 
-  // Instantiate services
-  final qrService = MockQrService();
-
   // Instantiate application state controller
   final appState = AppState(
     authService: authService,
     itemService: itemService,
-    qrService: qrService,
     borrowRequestService: borrowRequestService,
     chatMessageService: chatMessageService,
     storageService: storageService,

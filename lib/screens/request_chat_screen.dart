@@ -8,7 +8,7 @@ import '../providers/app_state_provider.dart';
 import 'widgets/chat_message_bubble.dart';
 import 'widgets/report_dialog.dart';
 import 'widgets/borrow_request_status_card.dart';
-import 'mock_route_screen.dart';
+import 'handover_screen.dart';
 import 'item_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../services/notification_service.dart';
@@ -131,13 +131,25 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             );
           }
           final fetchedItem = snapshot.data;
-          if (fetchedItem == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Ürün Bulunamadı')),
-              body: const Center(child: Text('Talebe ait ürün veritabanında bulunamadı.')),
-            );
-          }
-          return _buildBodyWithItem(context, appState, theme, request!, fetchedItem);
+          final isOwner = appState.currentUser?.uid == request!.ownerId;
+          final fallbackItem = fetchedItem ?? EmanetItem(
+            id: request.itemId,
+            title: 'İlan artık mevcut değil',
+            description: 'Ürün bilgilerine erişilemiyor.',
+            category: 'Diğer',
+            lenderId: request.ownerId,
+            lenderName: isOwner ? 'Sen' : 'Eşya Sahibi',
+            location: 'Bilinmeyen Konum',
+            pickupLocationTitle: 'Bilinmeyen Konum',
+            pickupAddressText: '',
+            pickupLatitude: 0.0,
+            pickupLongitude: 0.0,
+            locationVisibility: false,
+            status: EmanetStatus.archived,
+            createdAt: DateTime.now(),
+            mockImageColorValue: 0xFF9E9E9E,
+          );
+          return _buildBodyWithItem(context, appState, theme, request!, fallbackItem);
         },
       );
     }
@@ -639,7 +651,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => MockRouteScreen(item: item!),
+                            builder: (context) => HandoverScreen(item: item!),
                           ),
                         );
                       },

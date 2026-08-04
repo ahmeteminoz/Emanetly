@@ -91,7 +91,7 @@ class PublicProfileScreen extends StatelessWidget {
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    user.username,
+                    user.username ?? '',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w600,
@@ -296,29 +296,28 @@ class PublicProfileScreen extends StatelessWidget {
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    user.username,
+                    user.username ?? '',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Department & Campus info
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.school_outlined, size: 16, color: theme.colorScheme.outline),
                       const SizedBox(width: 4),
-                      Text(
-                        '${user.department} • İstanbul',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                      Expanded(
+                        child: Text(
+                          '${user.department} • Bandırma Onyedi Eylül Üni.',
+                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Emanetly Üyesi: Güz 2024',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                   ),
                   const SizedBox(height: 12),
                   // Bio
@@ -339,7 +338,7 @@ class PublicProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 2. Large Trust Score Card
+          // 2. Large Rating Card
           Card(
             elevation: 0,
             color: theme.colorScheme.primaryContainer.withOpacity(0.15),
@@ -352,23 +351,17 @@ class PublicProfileScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
+                      color: theme.colorScheme.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withOpacity(0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        )
-                      ],
                     ),
-                    child: Center(
-                      child: Text(
-                        '${user.trustScore}',
-                        style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                    child: const Center(
+                      child: Icon(
+                        Icons.star_rounded,
+                        color: Colors.amber,
+                        size: 32,
                       ),
                     ),
                   ),
@@ -378,7 +371,7 @@ class PublicProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Güven Skoru',
+                          'Değerlendirme Ortalaması',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
@@ -387,17 +380,16 @@ class PublicProfileScreen extends StatelessWidget {
                           spacing: 4,
                           runSpacing: 2,
                           children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
                             Text(
                               user.reviewCount == 0
                                   ? 'Henüz değerlendirilmedi'
                                   : '${user.averageRating}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             if (user.reviewCount > 0)
                               Text(
                                 '(${user.reviewCount} Değerlendirme)',
-                                style: TextStyle(color: theme.colorScheme.outline, fontSize: 11),
+                                style: TextStyle(color: theme.colorScheme.outline, fontSize: 12),
                               ),
                           ],
                         ),
@@ -470,47 +462,40 @@ class PublicProfileScreen extends StatelessWidget {
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
           ),
           const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.8,
-            children: [
-              _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
-              _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
-              _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
-              _buildStatCard(theme, 'Yanıt Süresi', user.avgResponseTime, Icons.flash_on_outlined),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // 6. Preferred Handover Areas
-          Text(
-            'Tercih Ettiği Teslim Bölgeleri',
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Column(
-                children: [
-                  _buildLocationTile(theme, 'Kütüphane önü', 'Merkez Kütüphane ana giriş kapısı'),
-                  const Divider(height: 1, indent: 48),
-                  _buildLocationTile(theme, 'Mühendislik Fakültesi çevresi', 'Mühendislik B Blok giriş merdivenleri'),
-                  const Divider(height: 1, indent: 48),
-                  _buildLocationTile(theme, 'Kampüs giriş kapısı', 'Ana nizamiye metro çıkışı'),
-                ],
+          if (user.successfulBorrows == 0 && user.successfulLends == 0 && user.reviewCount == 0)
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
               ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Center(
+                  child: Text(
+                    'Henüz tamamlanmış işlem yok',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                  ),
+                ),
+              ),
+            )
+          else
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 2.2,
+              children: [
+                if (user.successfulBorrows > 0)
+                  _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
+                if (user.successfulLends > 0)
+                  _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
+                if (user.successfulBorrows > 0)
+                  _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
+              ],
             ),
-          ),
           const SizedBox(height: 24),
 
           // 7. Active Listings (Dolap style Grid)

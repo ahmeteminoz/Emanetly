@@ -35,16 +35,14 @@ service cloud.firestore {
       allow create: if isOwner(userId)
         && request.resource.data.uid == userId
         && (!('trustScore' in request.resource.data) || request.resource.data.trustScore == 100)
-        && (!('reviewCount' in request.resource.data) || request.resource.data.reviewCount == 0);
+        && (!('reviewCount' in request.resource.data) || request.resource.data.reviewCount == 0)
+        && request.resource.data.onboardingComplete == false
+        && request.resource.data.usernameSource == "unset"
+        && (!('username' in request.resource.data) || request.resource.data.username == null)
+        && (!('usernameNormalized' in request.resource.data) || request.resource.data.usernameNormalized == null);
 
       allow update: if isOwner(userId)
-        && request.resource.data.uid == resource.data.uid
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
-        && (!('trustScore' in resource.data) || request.resource.data.trustScore == resource.data.trustScore)
-        && (!('reviewCount' in resource.data) || request.resource.data.reviewCount == resource.data.reviewCount)
-        && (!('successfulBorrows' in resource.data) || request.resource.data.successfulBorrows == resource.data.successfulBorrows)
-        && (!('successfulLends' in resource.data) || request.resource.data.successfulLends == resource.data.successfulLends)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone', 'department', 'userBadges']);
 
       allow delete: if false;
 
@@ -81,6 +79,11 @@ service cloud.firestore {
       allow create, update, delete: if false; // Only Admin SDK (Callable Cloud Function) writes
     }
 
+    // Usernames Collection (v0.9.3 - Enforces uniqueness, only Admin SDK writes)
+    match /usernames/{username} {
+      allow read, write: if false;
+    }
+
     // 2. Items Collection
     match /items/{itemId} {
       // Draft items can ONLY be read by the lender; published items are public
@@ -105,7 +108,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && request.resource.data.lenderId == resource.data.lenderId
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdAt' in resource.data) || resource.data.status == 'draft' || request.resource.data.createdAt == resource.data.createdAt)
         // Client cannot transition status to borrowed or archived directly
         && !(request.resource.data.status in ['borrowed', 'archived'])
         // Client cannot set deliveryStatus to delivered directly

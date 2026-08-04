@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
 import '../models/borrow_request.dart';
-import 'mock_route_screen.dart';
+import 'handover_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
 
@@ -54,8 +54,18 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
     final outgoingChats = allDiscussionRequests.where((r) => r.requesterId == currentUser.uid).toList();
     final outgoingDeliveries = allActiveItems.where((i) => i.borrowerId == currentUser.uid).toList();
 
-    // Active arrays for rendering
-    final activeChats = _selectedTab == 0 ? incomingChats : outgoingChats;
+    // Active arrays for rendering (filtered to hide orphaned inactive inquiries)
+    final activeChats = (_selectedTab == 0 ? incomingChats : outgoingChats).where((request) {
+      final matchingItem = appState.findItemInMemory(request.itemId);
+      if (matchingItem == null) {
+        final isInactiveOrphan = request.status == BorrowRequestStatus.onlyInquiry ||
+                                 request.status == BorrowRequestStatus.rejected ||
+                                 request.status == BorrowRequestStatus.cancelled ||
+                                 request.status == BorrowRequestStatus.expired;
+        return !isInactiveOrphan;
+      }
+      return true;
+    }).toList();
     final activeDeliveries = _selectedTab == 0 ? incomingDeliveries : outgoingDeliveries;
 
     final isListEmpty = activeChats.isEmpty && activeDeliveries.isEmpty;
@@ -241,7 +251,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                   }
                                 } else {
                                   roleLabel = 'Eşya Sahibi';
-                                  partyName = matchingItem!.lenderName;
+                                  partyName = matchingItem?.lenderName ?? 'Bilinmeyen Kullanıcı';
                                 }
 
                                 return Card(
@@ -499,7 +509,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => MockRouteScreen(item: item),
+                                        builder: (context) => HandoverScreen(item: item),
                                       ),
                                     );
                                   }
@@ -603,7 +613,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => MockRouteScreen(item: item),
+                                                    builder: (context) => HandoverScreen(item: item),
                                                   ),
                                                 );
                                               }

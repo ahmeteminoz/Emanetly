@@ -202,11 +202,32 @@ export const requestAccountDeletion = onCall(callableRuntimeOptions, async (requ
     }
   }
 
-  // Step 5: Clean Blocks, userRelations, and Favorites
+  // Step 5: Clean Blocks, userRelations, and Favorites, and Delete Username Claim
   if (!job.stage_blocked_cleaned) {
     try {
-      logger.info(`Emanetly Deletion [${uid}]: Cleaning blocked lists & relations...`);
+      logger.info(`Emanetly Deletion [${uid}]: Cleaning blocked lists & relations and username claim...`);
       const batch = db.batch();
+
+      // Read profile doc to get usernameNormalized
+      const profileSnap = await db.collection("users").doc(uid).get();
+      if (profileSnap.exists) {
+        const profileData = profileSnap.data() || {};
+        const usernameNormalized = profileData.usernameNormalized;
+        if (usernameNormalized) {
+          const claimRef = db.collection("usernames").doc(usernameNormalized);
+          const claimSnap = await claimRef.get();
+          if (claimSnap.exists) {
+            const claimData = claimSnap.data() || {};
+            // Verify claim ownership before deletion
+            if (claimData.uid === uid) {
+              batch.delete(claimRef);
+              logger.info(`Emanetly Deletion [${uid}]: Queued username claim deletion for: ${usernameNormalized}`);
+            } else {
+              logger.warn(`Emanetly Deletion [${uid}]: Claim owner mismatch for username: ${usernameNormalized}, not deleting.`);
+            }
+          }
+        }
+      }
 
       // Delete userRelations containing this user
       const relationsQuery = await db.collection("userRelations").where("users", "array-contains", uid).get();

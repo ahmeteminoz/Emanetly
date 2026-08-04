@@ -5,8 +5,9 @@ import { runIdempotent, sendPushNotification, createInAppNotification, markSuppr
 import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
 import { confirmHandoverAction } from "./handover";
 import { requestAccountDeletion } from "./account_deletion";
+import { setUsername } from "./username_callable";
 
-export { createReport, toggleBlockUser, confirmHandoverAction, requestAccountDeletion };
+export { createReport, toggleBlockUser, confirmHandoverAction, requestAccountDeletion, setUsername };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {

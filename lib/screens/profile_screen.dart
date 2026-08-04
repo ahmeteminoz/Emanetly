@@ -331,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       
                       // Username
                       Text(
-                        currentUser.username,
+                        currentUser.username ?? '',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -345,9 +345,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Icon(Icons.school_outlined, size: 16, color: theme.colorScheme.outline),
                           const SizedBox(width: 4),
-                          Text(
-                            '${currentUser.department} • İstanbul',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                          Expanded(
+                            child: Text(
+                              '${currentUser.department} • Bandırma Onyedi Eylül Üni.',
+                              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -443,25 +448,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Circular Trust Score representation
+                // Star icon instead of circular score
                 Container(
-                  width: 76,
-                  height: 76,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: theme.colorScheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
                   ),
-                  child: Center(
-                    child: Text(
-                      '${user.trustScore}',
-                      style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold),
+                  child: const Center(
+                    child: Icon(
+                      Icons.star_rounded,
+                      color: Colors.amber,
+                      size: 32,
                     ),
                   ),
                 ),
@@ -473,7 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         children: [
                           const Text(
-                            'Güven Skoru',
+                            'Değerlendirme Ortalaması',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 6),
@@ -486,7 +485,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         spacing: 4,
                         runSpacing: 2,
                         children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                           Text(
                             user.reviewCount == 0
                                 ? 'Henüz değerlendirilmedi'
@@ -530,26 +528,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 20),
 
-        // 3. 2x2 Statistics Grid
+        // 3. Statistics Grid
         Text(
           'İşlem İstatistikleri',
           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
         ),
         const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.7,
-          children: [
-            _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
-            _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
-            _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
-            _buildStatCard(theme, 'Yanıt Süresi', user.avgResponseTime, Icons.flash_on_outlined),
-          ],
-        ),
+        if (user.successfulBorrows == 0 && user.successfulLends == 0 && user.reviewCount == 0)
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Text(
+                  'Henüz tamamlanmış işlem yok',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                ),
+              ),
+            ),
+          )
+        else
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.2,
+            children: [
+              if (user.successfulBorrows > 0)
+                _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
+              if (user.successfulLends > 0)
+                _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
+              if (user.successfulBorrows > 0)
+                _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
+            ],
+          ),
         const SizedBox(height: 8),
         // Late returns warning label if any
         if (user.lateReturnsCount > 0)

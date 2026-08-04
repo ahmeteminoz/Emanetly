@@ -35,6 +35,9 @@ class MockAuthService implements AuthService {
       uid: 'user_1',
       name: 'Ahmet Öz',
       username: '@ahmetoz',
+      usernameNormalized: 'ahmetoz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220101001',
       email: 'ahmet@kampus.edu.tr',
       department: 'Bilgisayar Mühendisliği',
@@ -74,6 +77,9 @@ class MockAuthService implements AuthService {
       uid: 'user_2',
       name: 'Ayşe Yılmaz',
       username: '@ayseyilmaz',
+      usernameNormalized: 'ayseyilmaz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220202002',
       email: 'ayse@kampus.edu.tr',
       department: 'Endüstriyel Tasarım',
@@ -101,6 +107,9 @@ class MockAuthService implements AuthService {
       uid: 'user_3',
       name: 'Can Demir',
       username: '@candemir',
+      usernameNormalized: 'candemir',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20210303003',
       email: 'can@kampus.edu.tr',
       department: 'Elektrik-Elektronik Mühendisliği',
@@ -153,7 +162,10 @@ class MockAuthService implements AuthService {
     final newUser = UserProfile(
       uid: 'user_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
-      username: '@${email.split('@')[0]}',
+      username: null,
+      usernameNormalized: null,
+      usernameSource: 'unset',
+      onboardingComplete: false,
       studentId: '20220${DateTime.now().millisecondsSinceEpoch % 100000}',
       email: email,
       department: 'Kampüs Üyesi',
@@ -319,6 +331,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_1',
       name: 'Ahmet Öz',
       username: '@ahmetoz',
+      usernameNormalized: 'ahmetoz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220101001',
       email: 'ahmet@kampus.edu.tr',
       department: 'Bilgisayar Mühendisliği',
@@ -339,6 +354,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_2',
       name: 'Ayşe Yılmaz',
       username: '@ayseyilmaz',
+      usernameNormalized: 'ayseyilmaz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220202002',
       email: 'ayse@kampus.edu.tr',
       department: 'Endüstriyel Tasarım',
@@ -359,6 +377,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_3',
       name: 'Can Demir',
       username: '@candemir',
+      usernameNormalized: 'candemir',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20210303003',
       email: 'can@kampus.edu.tr',
       department: 'Elektrik-Elektronik Mühendisliği',
@@ -418,6 +439,9 @@ class FirebaseAuthService implements AuthService {
         uid: user.uid,
         name: user.displayName ?? matched.name,
         username: matched.username,
+        usernameNormalized: matched.usernameNormalized,
+        usernameSource: matched.usernameSource,
+        onboardingComplete: matched.onboardingComplete,
         studentId: matched.studentId,
         email: email,
         department: matched.department,
@@ -440,7 +464,10 @@ class FirebaseAuthService implements AuthService {
     return UserProfile(
       uid: user.uid,
       name: user.displayName ?? email.split('@')[0],
-      username: '@${email.split('@')[0]}',
+      username: null,
+      usernameNormalized: null,
+      usernameSource: 'unset',
+      onboardingComplete: false,
       studentId: '10000000000',
       email: email,
       department: 'Kampüs Üyesi',
@@ -499,7 +526,8 @@ class FirebaseAuthService implements AuthService {
       final freshUser = _firebaseAuth.currentUser ?? credential.user!;
       
       // Write profile directly to Firestore on registration success
-      final defaultProfile = _mapFirebaseUser(freshUser);
+      var defaultProfile = _mapFirebaseUser(freshUser);
+      defaultProfile = defaultProfile.copyWith(name: name.trim());
       try {
         await FirebaseFirestore.instance
             .collection('users')
@@ -547,7 +575,11 @@ class FirebaseAuthService implements AuthService {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
       await user.reload();
-      await user.getIdToken(true);
+      final freshUser = _firebaseAuth.currentUser;
+      if (freshUser != null) {
+        await freshUser.getIdToken(true);
+        await _loadUserProfileFromFirestore(freshUser);
+      }
     }
   }
 

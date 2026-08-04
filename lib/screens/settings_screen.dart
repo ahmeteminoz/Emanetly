@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../providers/app_state_provider.dart';
 import 'settings/delete_account_dialog.dart';
 import 'settings/legal_document_screen.dart';
+import 'settings/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,9 +12,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Privacy states
-  bool _approxLocation = true;
-  bool _exactLocationPostRequest = true;
 
   // Notification states
   bool _notifyRequests = true;
@@ -73,46 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
 
-          // Section 2: Privacy Settings
-          _buildSectionHeader(context, 'Gizlilik Ayarları', Icons.security_outlined),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-            ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('Yaklaşık konum göster'),
-                  subtitle: const Text('Diğer öğrenciler eşyalarınızın yaklaşık bölgesini görebilir.', style: TextStyle(fontSize: 12)),
-                  value: _approxLocation,
-                  onChanged: (val) {
-                    setState(() {
-                      _approxLocation = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Tam konumu sadece talep sonrası göster'),
-                  subtitle: const Text('Buluşma noktası tam adresi sadece talep kabul edilirse paylaşılır.', style: TextStyle(fontSize: 12)),
-                  value: _exactLocationPostRequest,
-                  onChanged: (val) {
-                    setState(() {
-                      _exactLocationPostRequest = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
 
           // Section 3: Notification Settings
           _buildSectionHeader(context, 'Bildirimler', Icons.notifications_none_rounded),
@@ -214,10 +173,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Profil bilgilerini düzenle'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Profil düzenleme özelliği sonraki sürümde eklenecek.'),
-                        duration: Duration(seconds: 2),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen(),
                       ),
                     );
                   },

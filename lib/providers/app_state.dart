@@ -8,7 +8,6 @@ import '../models/chat_message.dart';
 import '../models/meeting_point_proposal.dart';
 import '../services/auth_service.dart';
 import '../services/item_service.dart';
-import '../services/qr_service.dart';
 import '../services/borrow_request_service.dart';
 import '../services/chat_message_service.dart';
 import '../services/storage_service.dart';
@@ -16,6 +15,7 @@ import '../services/notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/analytics_service.dart';
 import '../services/crashlytics_service.dart';
@@ -30,7 +30,6 @@ enum ViewMode {
 class AppState extends ChangeNotifier {
   final AuthService _authService;
   final ItemService _itemService;
-  final QrService _qrService;
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
   final StorageService _storageService;
@@ -62,7 +61,6 @@ class AppState extends ChangeNotifier {
   AppState({
     required AuthService authService,
     required ItemService itemService,
-    required QrService qrService,
     required BorrowRequestService borrowRequestService,
     required ChatMessageService chatMessageService,
     required StorageService storageService,
@@ -70,7 +68,6 @@ class AppState extends ChangeNotifier {
     CrashlyticsService? crashlyticsService,
   })  : _authService = authService,
         _itemService = itemService,
-        _qrService = qrService,
         _borrowRequestService = borrowRequestService,
         _chatMessageService = chatMessageService,
         _storageService = storageService,
@@ -164,7 +161,6 @@ class AppState extends ChangeNotifier {
 
   AuthService get authService => _authService;
   ItemService get itemService => _itemService;
-  QrService get qrService => _qrService;
 
   void _loadInitialData() async {
     _isLoading = true;
@@ -505,7 +501,7 @@ class AppState extends ChangeNotifier {
     // Safe lenderName resolution fallback logic
     String resolvedLenderName = 'Bilinmeyen Kullanıcı';
     final nameTrimmed = currentUser!.name.trim();
-    final usernameTrimmed = currentUser!.username.trim();
+    final usernameTrimmed = (currentUser!.username ?? '').trim();
     final emailTrimmed = currentUser!.email.trim();
 
     if (nameTrimmed.isNotEmpty) {
@@ -879,88 +875,6 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       _addLog('İade onaylama hatası: $e');
-    }
-  }
-
-  // Handle QR Scan Verification
-  Future<String?> processQrCode(String qrCodeData) async {
-    _setLoading(true);
-    try {
-      final result = await _qrService.scanQrCode(qrCodeData);
-      if (result == null) {
-        return 'QR Kod ayrıştırılamadı veya geçersiz format.';
-      }
-
-      // 1. Request gerçekten var mı
-      final reqIndex = _borrowRequests.indexWhere((r) => r.id == result.requestId);
-      if (reqIndex == -1) {
-        return 'İlgili ödünç talebi bulunamadı.';
-      }
-      final request = _borrowRequests[reqIndex];
-      
-      // Find matching item details
-      final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
-      if (itemIndex == -1) {
-        return 'İlgili ilan bulunamadı.';
-      }
-      final item = _items[itemIndex];
-
-      // 2. Süre koruması (5 dakika geçerlilik)
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final differenceSeconds = (now - result.timestamp) / 1000;
-      if (differenceSeconds < 0 || differenceSeconds > 300) {
-        return 'Bu QR kodun süresi dolmuş. Lütfen yeni bir kod oluşturup tekrar deneyin.';
-      }
-
-      // 3. Doğru kullanıcı mı (tarayan kişi kim olmalı?)
-      if (currentUser == null) {
-        return 'Doğrulama için lütfen giriş yapın.';
-      }
-      
-      if (result.isBorrow) {
-        // Alıcı, vericinin QR'ını tarar. Tarayan kişi alıcı (requester) olmalı.
-        if (currentUser!.uid != request.requesterId) {
-          return 'Bu işlem sadece ödünç alan kullanıcı tarafından onaylanabilir.';
-        }
-        
-        // 4. Beklenen durumda mı & işlem daha önce tamamlanmış mı (Tekrar Okutma Koruması)
-        if (item.status == EmanetStatus.borrowed || item.deliveryStatus == DeliveryStatus.completed) {
-          return 'Bu işlem zaten tamamlandı.';
-        }
-        if (item.status != EmanetStatus.pendingApproval || item.deliveryStatus != DeliveryStatus.routingStarted) {
-          return 'Eşya henüz teslim aşamasına gelmemiş veya durum uyumsuz.';
-        }
-
-        // Teslimatı tamamla
-        await _itemService.completeDelivery(item.id);
-        _addLog('QR Kod doğrulandı: Ödünç teslimatı tamamlandı.');
-        return null; // Başarılı
-      } else if (result.isReturn) {
-        // Verici, alıcının QR'ını tarar. Tarayan kişi verici (owner) olmalı.
-        if (currentUser!.uid != request.ownerId) {
-          return 'Bu işlem sadece eşya sahibi tarafından onaylanabilir.';
-        }
-
-        // 4. Beklenen durumda mı & işlem daha önce tamamlanmış mı (Tekrar Okutma Koruması)
-        if (item.status == EmanetStatus.available) {
-          return 'Bu işlem zaten tamamlandı.';
-        }
-        if (item.status != EmanetStatus.pendingReturn) {
-          return 'Eşya iade bekleme durumunda değil.';
-        }
-
-        // İadeyi tamamla
-        await approveReturn(item.id);
-        _addLog('QR Kod doğrulandı: İade alma işlemi onaylandı.');
-        return null; // Başarılı
-      }
-      
-      return 'Bilinmeyen işlem türü.';
-    } catch (e) {
-      _addLog('QR Okuma Hatası: $e');
-      return 'QR okuma işlemi sırasında hata oluştu: $e';
-    } finally {
-      _setLoading(false);
     }
   }
 
@@ -1341,6 +1255,62 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> setUsername(String newUsername) async {
+    _setLoading(true);
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        // Force refresh ID token first so the Functions emulator/prod receives latest email_verified claim
+        await reloadUser();
+        
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw FirebaseAuthException(code: 'unauthenticated', message: 'Oturum bulunamadı.');
+        }
+        
+        final tokenResult = await user.getIdTokenResult(true);
+        debugPrint(
+          'Username setup auth status: uid=${user.uid}, '
+          'verified=${user.emailVerified}, '
+          'tokenVerified=${tokenResult.claims?['email_verified']}',
+        );
+
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+            .httpsCallable('setUsername');
+        final result = await callable.call(<String, dynamic>{
+          'username': newUsername,
+        });
+        
+        // Log results
+        final data = result.data as Map<dynamic, dynamic>;
+        if (data['success'] == true) {
+          _addLog('Kullanıcı adı başarıyla güncellendi: $newUsername');
+        }
+      } else {
+        // Mock fallback for unit tests and local mock builds
+        final user = currentUser;
+        if (user != null) {
+          final updated = user.copyWith(
+            username: newUsername,
+            usernameNormalized: newUsername.toLowerCase(),
+            usernameSource: 'custom',
+            onboardingComplete: true,
+          );
+          await _authService.updateUserProfile(updated);
+        }
+      }
+      
+      // Reload profile from database to get fresh UserProfile with new fields
+      await reloadUser();
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'setUsername failed');
+      _addLog('Kullanıcı adı ayarlama hatası: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _authService.sendPasswordResetEmail(email);
@@ -1507,6 +1477,33 @@ class AppState extends ChangeNotifier {
     }
     
     notifyListeners();
+  }
+
+  Future<void> updateProfile({
+    required String name,
+    required String bio,
+    required String department,
+  }) async {
+    final user = currentUser;
+    if (user == null) return;
+    
+    _setLoading(true);
+    try {
+      final updated = user.copyWith(
+        name: name.trim(),
+        bio: bio.trim(),
+        department: department.trim(),
+      );
+      await _authService.updateUserProfile(updated);
+      _addLog('Profil başarıyla güncellendi.');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'updateProfile failed');
+      _addLog('Profil güncelleme hatası: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   @override
