@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'favorites_screen.dart';
@@ -8,6 +9,7 @@ import '../models/item.dart';
 import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
 import '../services/notification_service.dart';
+import 'request_chat_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -17,14 +19,36 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
+  StreamSubscription<NotificationClickEvent>? _notifClickSub;
+
   @override
   void initState() {
     super.initState();
-    // Navigator bu noktada hazır — terminated state deep-link'leri burada işle
+
+    // Bildirim click stream'ini dinle — background, foreground, terminated hepsi buraya gelir
+    _notifClickSub =
+        NotificationService.instance.onNotificationClick.listen((event) {
+      if (!mounted) return;
+      debugPrint('Emanetly MainLayout: notification click → ${event.requestId}');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RequestChatScreen(requestId: event.requestId),
+        ),
+      );
+    });
+
+    // Terminated state'ten gelen bekleyen click'i işle (stream artık dinlendiği için emit eder)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.instance.checkPendingDeepLink();
+      NotificationService.instance.checkPendingClick();
     });
   }
+
+  @override
+  void dispose() {
+    _notifClickSub?.cancel();
+    super.dispose();
+  }
+
 
   int _currentIndex = 0;
 

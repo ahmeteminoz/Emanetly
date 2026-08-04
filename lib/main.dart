@@ -36,11 +36,11 @@ void main() async {
     try {
       final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
-        debugPrint('Emanetly: Found initial message in main(): ${initialMessage.data}');
-        NotificationService.instance.pendingDeepLink = initialMessage.data;
+        debugPrint('Emanetly main: Found initial message: ${initialMessage.data}');
+        NotificationService.instance.setPendingClick(initialMessage.data);
       }
     } catch (e) {
-      debugPrint('Emanetly: Error checking initial message in main(): $e');
+      debugPrint('Emanetly main: getInitialMessage error: $e');
     }
     authService = FirebaseAuthService();
     itemService = FirestoreItemService();
