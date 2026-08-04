@@ -32,51 +32,50 @@ class NotificationService {
       _fcm ??= FirebaseMessaging.instance;
       final fcm = _fcm!;
 
-      // 1. Request Permission
-      final settings = await fcm.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      // 1. Request Permission (Non-blocking)
+      try {
+        await fcm.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      } catch (_) {}
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional) {
-        // 2. Initialize Local Notifications for Foreground
-        await _initLocalNotifications();
+      // 2. Initialize Local Notifications for Foreground
+      await _initLocalNotifications();
 
-        // 3. Get FCM Token
-        try {
-          final token = await fcm.getToken();
-          if (token != null) {
-            onTokenReceived(token);
-          }
-        } catch (_) {}
-
-        // 4. Token Refresh Listener
-        _tokenRefreshSubscription = fcm.onTokenRefresh.listen((newToken) {
-          onTokenReceived(newToken);
-        });
-
-        // 5. Foreground Message Listener
-        _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          // Skip showing local push notification if user is already viewing this chat
-          final payloadRequestId = message.data["requestId"];
-          if (payloadRequestId != null && payloadRequestId == activeChatRequestId) {
-            return;
-          }
-          _showLocalNotification(message);
-        });
-
-        // 6. Background Message Clicked Listener
-        _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-          _handleNotificationClick(message.data);
-        });
-
-        // 7. Initial Message Check (App opened from terminated state)
-        final initialMessage = await fcm.getInitialMessage();
-        if (initialMessage != null) {
-          _handleNotificationClick(initialMessage.data);
+      // 3. Get FCM Token
+      try {
+        final token = await fcm.getToken();
+        if (token != null) {
+          onTokenReceived(token);
         }
+      } catch (_) {}
+
+      // 4. Token Refresh Listener
+      _tokenRefreshSubscription = fcm.onTokenRefresh.listen((newToken) {
+        onTokenReceived(newToken);
+      });
+
+      // 5. Foreground Message Listener
+      _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        // Skip showing local push notification if user is already viewing this chat
+        final payloadRequestId = message.data["requestId"];
+        if (payloadRequestId != null && payloadRequestId == activeChatRequestId) {
+          return;
+        }
+        _showLocalNotification(message);
+      });
+
+      // 6. Background Message Clicked Listener
+      _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _handleNotificationClick(message.data);
+      });
+
+      // 7. Initial Message Check (App opened from terminated state)
+      final initialMessage = await fcm.getInitialMessage();
+      if (initialMessage != null) {
+        _handleNotificationClick(initialMessage.data);
       }
     } catch (_) {}
   }
