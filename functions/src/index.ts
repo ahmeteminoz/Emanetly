@@ -54,6 +54,12 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
+      // Skip initial inquiry messages to prevent duplicate notifications
+      if (message.customPayload === "initial_inquiry" || message.customPayload === "initial_request") {
+        logger.info("Emanetly FCM: Initial request/inquiry message, skipping notification to prevent duplicates.");
+        return;
+      }
+
       const requestId = message.requestId;
       const senderId = message.senderId;
       const senderName = message.senderName || "Bir kullanıcı";
@@ -302,6 +308,8 @@ export const onRequestCreated = onDocumentCreated(
       const recipientData = recipientDoc.data();
       const preferences = recipientData?.notificationPreferences || {};
       const newBorrowRequestsEnabled = preferences.newBorrowRequests !== false;
+
+      logger.info(`Emanetly Trigger Log [${requestId}]: ownerId=${recipientUid}, requesterId=${senderUid}, status=${status}, newBorrowRequestsEnabled=${newBorrowRequestsEnabled}, fcmTokensCount=${recipientData?.fcmTokens?.length || 0}`);
 
       // 4. Resolve notification texts based on status
       let notifTitle = "";

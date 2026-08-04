@@ -1171,7 +1171,7 @@ class ItemDetailScreen extends StatelessWidget {
 
                   final request = await appState.requestBorrow(currentItem.id, isOfficialRequest: false);
                   if (request != null) {
-                    await appState.sendChatMessage(request.id, text);
+                    await appState.sendChatMessage(request.id, text, customPayload: 'initial_inquiry');
                     if (context.mounted) {
                       Navigator.push(
                         context,

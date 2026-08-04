@@ -934,7 +934,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Pre-Agreement Actions
-  Future<void> sendChatMessage(String requestId, String text) async {
+  Future<void> sendChatMessage(String requestId, String text, {String? customPayload}) async {
     if (currentUser == null) return;
 
     String validSenderName = currentUser!.name.trim();
@@ -953,6 +953,7 @@ class AppState extends ChangeNotifier {
       text: text,
       type: ChatMessageType.text,
       createdAt: DateTime.now().toUtc(),
+      customPayload: customPayload,
     );
     await _chatMessageService.sendChatMessage(message);
     _analyticsService.logChatMessageSent(messageType: 'text');
