@@ -42,7 +42,15 @@ service cloud.firestore {
         && (!('usernameNormalized' in request.resource.data) || request.resource.data.usernameNormalized == null);
 
       allow update: if isOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone', 'department', 'userBadges']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences'])
+        && (
+          !('notificationPreferences' in request.resource.data) || (
+            request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.newMessages is bool &&
+            request.resource.data.notificationPreferences.newBorrowRequests is bool
+          )
+        );
 
       allow delete: if false;
 

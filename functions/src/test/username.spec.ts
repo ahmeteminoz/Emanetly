@@ -104,7 +104,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
         username: "alice77",
         usernameNormalized: "alice77",
         usernameSource: "custom",
-        onboardingComplete: true
+        onboardingComplete: true,
       }));
 
       // Succeeds with correct unset values
@@ -115,7 +115,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
         usernameSource: "unset",
         onboardingComplete: false,
         trustScore: 100,
-        reviewCount: 0
+        reviewCount: 0,
       }));
     });
 
@@ -135,7 +135,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
           reviewCount: 0,
           successfulBorrows: 0,
           successfulLends: 0,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
       });
 
@@ -145,6 +145,41 @@ describe("v0.9.3 Username Privacy Suite", () => {
       
       // Allowed updates to other fields like bio
       await assertSucceeds(ref.update({ bio: "New bio text" }));
+
+      // Client CANNOT update userBadges (strict security rule check)
+      await assertFails(ref.update({ userBadges: ["Süper Satıcı"] }));
+
+      // Client CAN update notificationPreferences with correct keys and bool values
+      await assertSucceeds(ref.update({
+        notificationPreferences: {
+          newMessages: false,
+          newBorrowRequests: true,
+        },
+      }));
+
+      // Client CANNOT update notificationPreferences with non-boolean values
+      await assertFails(ref.update({
+        notificationPreferences: {
+          newMessages: "string",
+          newBorrowRequests: true,
+        },
+      }));
+
+      // Client CANNOT update notificationPreferences with missing keys (must have both)
+      await assertFails(ref.update({
+        notificationPreferences: {
+          newMessages: true,
+        },
+      }));
+
+      // Client CANNOT update notificationPreferences with extra keys
+      await assertFails(ref.update({
+        notificationPreferences: {
+          newMessages: true,
+          newBorrowRequests: false,
+          extraKey: true,
+        },
+      }));
     });
   });
 
@@ -205,7 +240,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
       await db.collection("users").doc("user_alice").set({
         uid: "user_alice",
         usernameSource: "unset",
-        onboardingComplete: false
+        onboardingComplete: false,
       });
 
       const res = await invokeSetUsername("alice77");
@@ -247,7 +282,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
         username: "alice77",
         usernameNormalized: "alice77",
         usernameSource: "custom",
-        onboardingComplete: true
+        onboardingComplete: true,
       });
       await db.collection("usernames").doc("alice77").set({ uid: "user_alice" });
 
@@ -264,7 +299,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
         username: "alice77",
         usernameNormalized: "alice77",
         usernameSource: "legacy",
-        onboardingComplete: false
+        onboardingComplete: false,
       });
       await db.collection("usernames").doc("alice77").set({ uid: "user_alice" });
 
@@ -283,7 +318,7 @@ describe("v0.9.3 Username Privacy Suite", () => {
       await db.collection("users").doc("user_alice").set({
         uid: "user_alice",
         usernameNormalized: "alice77",
-        onboardingComplete: true
+        onboardingComplete: true,
       });
       await db.collection("usernames").doc("alice77").set({ uid: "user_alice" });
       

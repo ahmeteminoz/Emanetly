@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state_provider.dart';
 import 'settings/delete_account_dialog.dart';
 import 'settings/legal_document_screen.dart';
@@ -12,11 +13,78 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-
   // Notification states
+  bool _isLoaded = false;
   bool _notifyRequests = true;
   bool _notifyMessages = true;
-  bool _notifyReminders = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isLoaded) {
+      _loadNotificationPreferences();
+      _isLoaded = true;
+    }
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    final appState = AppStateProvider.of(context);
+    final user = appState.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          final data = doc.data();
+          final prefs = data?['notificationPreferences'] as Map<String, dynamic>?;
+          if (prefs != null) {
+            setState(() {
+              _notifyRequests = prefs['newBorrowRequests'] ?? true;
+              _notifyMessages = prefs['newMessages'] ?? true;
+            });
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _updatePreference(String key, bool value) async {
+    final appState = AppStateProvider.of(context);
+    final user = appState.currentUser;
+    if (user == null) return;
+
+    final oldRequests = _notifyRequests;
+    final oldMessages = _notifyMessages;
+
+    setState(() {
+      if (key == 'newBorrowRequests') {
+        _notifyRequests = value;
+      } else if (key == 'newMessages') {
+        _notifyMessages = value;
+      }
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'notificationPreferences': {
+          'newBorrowRequests': _notifyRequests,
+          'newMessages': _notifyMessages,
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _notifyRequests = oldRequests;
+        _notifyMessages = oldMessages;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ayarlar güncellenirken bir hata oluştu.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,36 +152,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Column(
               children: [
-                SwitchListTile(
-                  title: const Text('Yeni talep bildirimleri'),
+                 SwitchListTile(
+                  title: const Text('Yeni soru ve talep bildirimleri'),
                   value: _notifyRequests,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyRequests = val;
-                    });
-                  },
+                  onChanged: (val) => _updatePreference('newBorrowRequests', val),
                   activeColor: theme.colorScheme.primary,
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Yeni mesaj bildirimleri'),
                   value: _notifyMessages,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyMessages = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Teslim / iade hatırlatmaları'),
-                  value: _notifyReminders,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyReminders = val;
-                    });
-                  },
+                  onChanged: (val) => _updatePreference('newMessages', val),
                   activeColor: theme.colorScheme.primary,
                 ),
               ],

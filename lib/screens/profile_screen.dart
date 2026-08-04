@@ -569,32 +569,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         const SizedBox(height: 8),
-        // Late returns warning label if any
-        if (user.lateReturnsCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
-                const SizedBox(width: 4),
-                Text(
-                  'Geç İade Sayısı: ${user.lateReturnsCount}',
-                  style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          )
-        else
-          Row(
-            children: [
-              const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-              const SizedBox(width: 4),
-              Text(
-                'Gecikmiş İade: Yok',
-                style: TextStyle(color: Colors.green[800], fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
         const SizedBox(height: 24),
 
         // 4. Achievement User Badges

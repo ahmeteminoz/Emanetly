@@ -46,7 +46,7 @@ export const setUsername = onCall(callableRuntimeOptions, async (request) => {
   const exactReserved = [
     "admin", "administrator", "emanetly", "support", "destek",
     "moderator", "mod", "official", "system", "root",
-    "deleteduser", "eskikullanici"
+    "deleteduser", "eskikullanici",
   ];
   
   if (exactReserved.includes(normalized)) {
@@ -147,7 +147,7 @@ export const setUsername = onCall(callableRuntimeOptions, async (request) => {
     if (error instanceof HttpsError) {
       throw error;
     }
-    logger.error(`Emanetly setUsername error:`, error);
+    logger.error("Emanetly setUsername error:", error);
     throw new HttpsError("internal", "Kullanıcı adı belirlenirken bilinmeyen bir hata oluştu.");
   }
 });

@@ -187,17 +187,17 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
           future: appState.getUserProfile(targetUserId),
           builder: (context, snapshot) {
             final profile = snapshot.data;
-            String partyName = 'Bilinmeyen Kullanıcı';
+            String partyName = 'Yükleniyor...';
             
             if (isBlockedRelation) {
               partyName = 'Gizli Kullanıcı';
             } else if (profile != null) {
               partyName = profile.name;
             } else {
-              partyName = isOwner ? 'Bilinmeyen Kullanıcı' : item.lenderName;
+              partyName = isOwner ? 'Yükleniyor...' : item.lenderName;
             }
             
-            final canNavigate = !isBlockedRelation && partyName != 'Bilinmeyen Kullanıcı' && partyName != 'Gizli Kullanıcı' && profile != null;
+            final canNavigate = !isBlockedRelation && partyName != 'Yükleniyor...' && partyName != 'Gizli Kullanıcı' && profile != null;
             final showAvatar = !isBlockedRelation && profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty;
 
             return InkWell(
@@ -475,16 +475,10 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 final message = messages[index];
                 final isMe = message.senderId == appState.currentUser?.uid;
                 
-                // İlan sahibi henüz yanıt vermediyse karşı tarafın adını baloncukta maskeliyoruz
-                String? senderNameOverride;
-                if (!isMe && isOwner && !lenderResponded) {
-                  senderNameOverride = 'Bilinmeyen Kullanıcı';
-                }
-
                 return ChatMessageBubble(
                   message: message,
                   isMe: isMe,
-                  senderNameOverride: senderNameOverride,
+                  senderNameOverride: null,
                   onLongPress: isMe ? null : () {
                     ReportDialog.show(
                       context,

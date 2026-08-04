@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../screens/request_chat_screen.dart';
+import 'navigation_service.dart';
 
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
@@ -90,7 +93,12 @@ class NotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle local notification tap
+        if (response.payload != null) {
+          try {
+            final Map<String, dynamic> data = jsonDecode(response.payload!);
+            _handleNotificationClick(data);
+          } catch (_) {}
+        }
       },
     );
   }
@@ -114,12 +122,16 @@ class NotificationService {
       notification.title,
       notification.body,
       details,
-      payload: message.data['type'],
+      payload: jsonEncode(message.data),
     );
   }
 
   void _handleNotificationClick(Map<String, dynamic> data) {
-    // NavigationService routing can be triggered based on payload
+    final route = data['route'];
+    final requestId = data['requestId'];
+    if (route == 'request_chat' && requestId != null && requestId is String) {
+      NavigationService.navigateTo(RequestChatScreen(requestId: requestId));
+    }
   }
 
   void dispose() {

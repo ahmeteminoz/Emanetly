@@ -239,19 +239,16 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               future: appState.getUserProfile(targetUserId),
                               builder: (context, snapshot) {
                                 final profile = snapshot.data;
-                                
-                                String partyName = 'Bilinmeyen Kullanıcı';
+                                String partyName = 'Yükleniyor...';
                                 String roleLabel = '';
                                 if (isLender) {
                                   roleLabel = 'Alıcı Adayı';
-                                  if (lenderResponded && profile != null) {
+                                  if (profile != null) {
                                     partyName = profile.name;
-                                  } else {
-                                    partyName = 'Bilinmeyen Kullanıcı';
                                   }
                                 } else {
                                   roleLabel = 'Eşya Sahibi';
-                                  partyName = matchingItem?.lenderName ?? 'Bilinmeyen Kullanıcı';
+                                  partyName = matchingItem?.lenderName ?? 'Yükleniyor...';
                                 }
 
                                 return Card(
@@ -261,7 +258,6 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                     borderRadius: BorderRadius.circular(16),
                                     side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                                   ),
-                                  color: Colors.orange.shade50.withOpacity(0.08),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
                                     onTap: () {
@@ -278,7 +274,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                         children: [
                                           // Avatar (Dokunulduğunda Profil Sayfasına Geçiş)
                                           GestureDetector(
-                                            onTap: (partyName != 'Bilinmeyen Kullanıcı' && profile != null)
+                                            onTap: (profile != null)
                                                 ? () {
                                                     Navigator.push(
                                                       context,
@@ -291,12 +287,12 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                             child: CircleAvatar(
                                               radius: 24,
                                               backgroundColor: theme.colorScheme.primaryContainer,
-                                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
                                                    ? (profile.avatarUrl!.startsWith('http')
                                                        ? NetworkImage(profile.avatarUrl!)
                                                        : FileImage(File(profile.avatarUrl!)) as ImageProvider)
                                                    : null,
-                                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
                                                   ? null
                                                   : Text(
                                                       partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
