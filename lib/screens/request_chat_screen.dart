@@ -57,46 +57,6 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     });
   }
 
-  void _showDurationSelectionSheet(BuildContext context, Function(String duration) onSelected) {
-    final theme = Theme.of(context);
-    final options = ['1 Saat', '2 Saat', '6 Saat', '1 Gün', '3 Gün', '1 Hafta'];
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Ödünç Alma Süresi Seçin',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ...options.map((option) {
-                  return ListTile(
-                    leading: const Icon(Icons.timer_outlined),
-                    title: Text(option),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelected(option);
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
@@ -551,18 +511,16 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {
-                        _showDurationSelectionSheet(context, (selectedDuration) async {
-                          await appState.upgradeToOfficialRequest(widget.requestId, requestedDurationText: selectedDuration);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Ödünç talebi başarıyla gönderildi!'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
-                        });
+                      onPressed: () async {
+                        await appState.upgradeToOfficialRequest(widget.requestId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ödünç talebi başarıyla gönderildi!'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.shopping_bag_outlined),
                       label: const Text('Ödünç Talep Et', style: TextStyle(fontWeight: FontWeight.bold)),

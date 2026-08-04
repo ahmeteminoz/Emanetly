@@ -18,8 +18,6 @@ abstract class AuthService {
   Future<void> sendPasswordResetEmail(String email);
   Future<void> reauthenticateWithPassword(String password);
 
-  // Unified mock management
-  List<UserProfile> get availableMockUsers;
   Future<void> addReviewToUser(String targetUserId, UserReview review);
   Future<UserProfile?> getUserProfile(String uid);
   Future<void> updateUserProfile(UserProfile updatedProfile);
@@ -626,7 +624,7 @@ class FirebaseAuthService implements AuthService {
   }
 
   @override
-  List<UserProfile> get availableMockUsers => _mappedMockUsers;
+  List<UserProfile> get availableMockUsers => [];
 
   @override
   Future<UserProfile?> getUserProfile(String uid) async {

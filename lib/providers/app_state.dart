@@ -106,8 +106,11 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to Chat Messages changes globally
-    _chatSubscription = _chatMessageService.listenToAllChatMessages().listen((newMessages) {
+    // Listen to Chat Messages changes (request bazlı, verimli)
+    // Başlangıçta boş — requests yüklenince _restartChatSubscription çağrılır
+    _chatSubscription = _chatMessageService
+        .listenToMessagesForRequests([])
+        .listen((newMessages) {
       _chatMessages.clear();
       _chatMessages.addAll(newMessages);
       notifyListeners();
@@ -663,19 +666,15 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Upgrade inquiry to official borrow request
-  Future<void> upgradeToOfficialRequest(String requestId, {required String requestedDurationText}) async {
+  // Inquiry'yi resmi ödünç talebine yükselt (süre seçimi kaldırıldı)
+  Future<void> upgradeToOfficialRequest(String requestId) async {
     _setLoading(true);
     try {
       final index = _borrowRequests.indexWhere((r) => r.id == requestId);
       if (index != -1) {
-        // Use updateBorrowRequestStatus (→ .update()) instead of addBorrowRequest (→ .set())
-        // to avoid re-triggering onRequestCreated Cloud Function.
         await _borrowRequestService.updateBorrowRequestStatus(
           requestId, BorrowRequestStatus.pendingDiscussion,
         );
-        
-        // Add a system message in the chat
         await _chatMessageService.sendChatMessage(ChatMessageModel(
           id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
           requestId: requestId,
@@ -685,7 +684,6 @@ class AppState extends ChangeNotifier {
           type: ChatMessageType.system,
           createdAt: DateTime.now(),
         ));
-        
         _addLog('Ödünç talebi resmiyete döküldü.');
         notifyListeners();
       }
@@ -1450,9 +1448,25 @@ class AppState extends ChangeNotifier {
     _requestsSubscription = _borrowRequestService.listenToBorrowRequests(userId).listen((newRequests) {
       _borrowRequests.clear();
       _borrowRequests.addAll(newRequests);
+      // Request listesi değişince chat subscription'ı güncelle
+      _restartChatSubscription();
       notifyListeners();
     }, onError: (e) {
       _addLog('Talep verisi dinleme hatası: $e');
+    });
+  }
+
+  void _restartChatSubscription() {
+    final requestIds = _borrowRequests.map((r) => r.id).toList();
+    _chatSubscription?.cancel();
+    _chatSubscription = _chatMessageService
+        .listenToMessagesForRequests(requestIds)
+        .listen((newMessages) {
+      _chatMessages.clear();
+      _chatMessages.addAll(newMessages);
+      notifyListeners();
+    }, onError: (e) {
+      debugPrint('Emanetly: chat stream error: $e');
     });
   }
 
