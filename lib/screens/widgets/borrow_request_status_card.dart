@@ -113,15 +113,6 @@ class BorrowRequestStatusCard extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'İstenen Süre: $requestedDurationText',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                    fontSize: 10,
-                  ),
-                ),
               ],
             ),
           ),

@@ -492,8 +492,6 @@ class PublicProfileScreen extends StatelessWidget {
                   _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
                 if (user.successfulLends > 0)
                   _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
-                if (user.successfulBorrows > 0)
-                  _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
               ],
             ),
           const SizedBox(height: 24),

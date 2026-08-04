@@ -11,6 +11,8 @@ import 'services/storage_service.dart';
 import 'services/navigation_service.dart';
 import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/analytics_service.dart';
 import 'services/crashlytics_service.dart';
@@ -31,6 +33,15 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    try {
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('Emanetly: Found initial message in main(): ${initialMessage.data}');
+        NotificationService.instance.pendingDeepLink = initialMessage.data;
+      }
+    } catch (e) {
+      debugPrint('Emanetly: Error checking initial message in main(): $e');
+    }
     authService = FirebaseAuthService();
     itemService = FirestoreItemService();
     borrowRequestService = FirestoreBorrowRequestService();

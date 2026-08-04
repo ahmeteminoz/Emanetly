@@ -324,6 +324,7 @@ class FirebaseAuthService implements AuthService {
   final fb.FirebaseAuth _firebaseAuth = fb.FirebaseAuth.instance;
   final StreamController<UserProfile?> _controller = StreamController<UserProfile?>.broadcast();
   UserProfile? _currentUser;
+  StreamSubscription<DocumentSnapshot>? _profileSubscription;
   
   // Mutable cache list to support interactive evaluation in real-auth sessions
   final List<UserProfile> _mappedMockUsers = [
@@ -400,11 +401,33 @@ class FirebaseAuthService implements AuthService {
 
   FirebaseAuthService() {
     _firebaseAuth.authStateChanges().listen((fb.User? user) async {
+      _profileSubscription?.cancel();
       if (user == null) {
         _currentUser = null;
         _controller.add(null);
       } else {
         _loadUserProfileFromFirestore(user);
+        
+        // Listen to Firestore profile updates reactively
+        _profileSubscription = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .snapshots()
+            .listen((doc) {
+              if (doc.exists && doc.data() != null) {
+                _currentUser = UserProfile.fromMap(doc.data()!);
+                // Update local mapped cache
+                final index = _mappedMockUsers.indexWhere((u) => u.uid == user.uid);
+                if (index != -1) {
+                  _mappedMockUsers[index] = _currentUser!;
+                } else {
+                  _mappedMockUsers.add(_currentUser!);
+                }
+                _controller.add(_currentUser);
+              }
+            }, onError: (e) {
+              print('Emanetly: Error listening to profile snapshots: $e');
+            });
       }
     });
   }

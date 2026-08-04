@@ -41,18 +41,35 @@ service cloud.firestore {
         && (!('username' in request.resource.data) || request.resource.data.username == null)
         && (!('usernameNormalized' in request.resource.data) || request.resource.data.usernameNormalized == null);
 
-      allow update: if isOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
+      allow update: if isSignedIn()
         && (
-          !('notificationPreferences' in request.resource.data) || (
-            request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
-            request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
-            request.resource.data.notificationPreferences.newMessages is bool &&
-            request.resource.data.notificationPreferences.newBorrowRequests is bool
+          (
+            isOwner(userId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
+            && (
+              !('notificationPreferences' in request.resource.data) || (
+                request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
+                request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
+                request.resource.data.notificationPreferences.newMessages is bool &&
+                request.resource.data.notificationPreferences.newBorrowRequests is bool
+              )
+            )
+            && (
+              !('fcmTokens' in request.resource.data) || request.resource.data.fcmTokens is list
+            )
           )
-        )
-        && (
-          !('fcmTokens' in request.resource.data) || request.resource.data.fcmTokens is list
+          ||
+          (
+            // Other users can submit reviews
+            !isOwner(userId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviews', 'averageRating', 'reviewCount'])
+            && request.resource.data.reviews is list
+            && request.resource.data.reviewCount == (resource.data.reviewCount == null ? 1 : resource.data.reviewCount + 1)
+            && (
+              resource.data.reviews == null ||
+              request.resource.data.reviews.size() == resource.data.reviews.size() + 1
+            )
+          )
         );
 
       allow delete: if false;
@@ -165,8 +182,13 @@ service cloud.firestore {
           'returnBorrowerConfirmedAt', 'returnLenderConfirmedAt'
         ])
         && (
-          // Requester can only cancel
-          (request.auth.uid == resource.data.requesterId && request.resource.data.status == 'cancelled')
+          // Requester can only cancel, or upgrade onlyInquiry -> pendingDiscussion
+          (
+            request.auth.uid == resource.data.requesterId && (
+              request.resource.data.status == 'cancelled' ||
+              (resource.data.status == 'onlyInquiry' && request.resource.data.status == 'pendingDiscussion')
+            )
+          )
           ||
           // Owner can accept, reject, or set pendingDiscussion (but NOT complete or borrow directly)
           (request.auth.uid == resource.data.ownerId && request.resource.data.status in ['accepted', 'rejected', 'pendingDiscussion'])

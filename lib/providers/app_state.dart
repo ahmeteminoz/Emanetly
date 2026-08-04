@@ -647,8 +647,8 @@ class AppState extends ChangeNotifier {
         senderId: 'system',
         senderName: 'Sistem',
         text: isOfficialRequest 
-            ? 'Ödünç talebi oluşturuldu: Görüşme aşamasında (Süre: $requestedDurationText).'
-            : 'Eşya hakkında soru soruldu: Bilgi alınıyor.',
+            ? 'Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.'
+            : 'Ön görüşme odası oluşturuldu.',
         type: ChatMessageType.system,
         createdAt: DateTime.now(),
       ));
@@ -683,7 +683,7 @@ class AppState extends ChangeNotifier {
           requestId: requestId,
           senderId: 'system',
           senderName: 'Sistem',
-          text: 'Kullanıcı ödünç alma talebi gönderdi (Süre: $requestedDurationText).',
+          text: 'Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.',
           type: ChatMessageType.system,
           createdAt: DateTime.now(),
         ));
@@ -1124,7 +1124,7 @@ class AppState extends ChangeNotifier {
       requestId: requestId,
       senderId: 'system',
       senderName: 'Sistem',
-      text: 'Talep kabul edildi. Teslimat süreci başladı!',
+      text: 'Talep kabul edildi. Buluşma detaylarını konuşabilirsiniz.',
       type: ChatMessageType.requestStatusUpdate,
       createdAt: DateTime.now(),
     );

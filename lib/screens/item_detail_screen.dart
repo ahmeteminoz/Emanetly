@@ -882,24 +882,22 @@ class ItemDetailScreen extends StatelessWidget {
             Expanded(
               flex: 3,
               child: ElevatedButton(
-                onPressed: () {
-                  _showDurationSelectionSheet(context, (selectedDuration) async {
-                    await appState.upgradeToOfficialRequest(activeRequest.id, requestedDurationText: selectedDuration);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ödünç talebi başarıyla iletildi!'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RequestChatScreen(requestId: activeRequest.id),
-                        ),
-                      );
-                    }
-                  });
+                onPressed: () async {
+                  await appState.upgradeToOfficialRequest(activeRequest.id, requestedDurationText: 'Belirtilmedi');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Ödünç talebi başarıyla iletildi!'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -917,26 +915,53 @@ class ItemDetailScreen extends StatelessWidget {
         );
       }
 
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+      String buttonText = 'Talebiniz Gönderildi';
+      if (activeRequest.status == BorrowRequestStatus.accepted) {
+        buttonText = 'Talebiniz Kabul Edildi';
+      } else if (activeRequest.status == BorrowRequestStatus.borrowed) {
+        buttonText = 'Eşya Sizde';
+      }
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: null, // Disabled
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            );
-          },
-          icon: const Icon(Icons.chat_outlined),
-          label: const Text('Ön Görüşme Odasına Git'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Text(
+                buttonText,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.chat_outlined),
+              label: const Text('Ön Görüşme Odasına Git'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -945,7 +970,6 @@ class ItemDetailScreen extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-
           Row(
             children: [
               // Soru Sor / Chat Button
@@ -966,28 +990,26 @@ class ItemDetailScreen extends StatelessWidget {
               Expanded(
                 flex: 3,
                 child: ElevatedButton(
-                  onPressed: () {
-                    _showDurationSelectionSheet(context, (selectedDuration) async {
-                      final request = await appState.requestBorrow(
-                        item.id,
-                        isOfficialRequest: true,
-                        requestedDurationText: selectedDuration,
+                  onPressed: () async {
+                    final request = await appState.requestBorrow(
+                      item.id,
+                      isOfficialRequest: true,
+                      requestedDurationText: 'Belirtilmedi',
+                    );
+                    if (context.mounted && request != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
+                          backgroundColor: Colors.orange,
+                        ),
                       );
-                      if (context.mounted && request != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Ödünç talebi ve ön görüşme odası oluşturuldu!'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RequestChatScreen(requestId: request.id),
-                          ),
-                        );
-                      }
-                    });
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestChatScreen(requestId: request.id),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,

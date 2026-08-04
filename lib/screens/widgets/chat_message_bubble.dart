@@ -5,6 +5,7 @@ import 'meeting_point_proposal_card.dart';
 class ChatMessageBubble extends StatelessWidget {
   final ChatMessageModel message;
   final bool isMe;
+  final bool? isOwner;
   final String? senderNameOverride;
   final VoidCallback? onLongPress;
 
@@ -12,9 +13,42 @@ class ChatMessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.isMe,
+    this.isOwner,
     this.senderNameOverride,
     this.onLongPress,
   });
+
+  String _getMappedSystemText(bool isLender) {
+    final text = message.text;
+    if (text.contains('Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.')) {
+      return isLender ? 'Yeni bir ödünç talebi aldınız.' : 'Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.';
+    }
+    if (text.contains('Ön görüşme odası oluşturuldu.')) {
+      return isLender ? 'Yeni bir soru aldınız.' : 'Ön görüşme odası oluşturuldu.';
+    }
+    if (text.contains('Talep kabul edildi') || text.contains('kabul edildi')) {
+      return isLender ? 'Talebi kabul ettiniz.' : 'Talebiniz kabul edildi. 🎉';
+    }
+    if (text.contains('reddedildi')) {
+      return isLender ? 'Talebi reddettiniz.' : 'Talebiniz reddedildi.';
+    }
+    if (text.contains('İptal edildi') || text.contains('iptal etti') || text.contains('iptal edildi')) {
+      return isLender ? 'Ödünç talebi iptal edildi.' : 'Talebi iptal ettiniz.';
+    }
+    if (text.contains('teslim ettiğini onayladı') || text.contains('Teslim ettiğinizi onayladınız')) {
+      return isLender ? 'Teslim ettiğinizi onayladınız.' : 'Eşya sahibi teslim ettiğini onayladı.';
+    }
+    if (text.contains('teslim aldığını onayladı') || text.contains('Teslim aldığınızı onayladınız')) {
+      return isLender ? 'Karşı taraf eşyayı teslim aldığını onayladı.' : 'Teslim aldığınızı onayladınız.';
+    }
+    if (text.contains('iade ettiğini onayladı') || text.contains('İade ettiğinizi onayladınız')) {
+      return isLender ? 'Karşı taraf eşyayı iade ettiğini onayladı.' : 'İade ettiğinizi onayladınız.';
+    }
+    if (text.contains('İade tamamlandı') || text.contains('iadeyi teslim aldınız') || text.contains('İadeyi teslim aldınız')) {
+      return isLender ? 'İadeyi teslim aldınız. İşlem tamamlandı.' : 'İade tamamlandı. Teşekkürler!';
+    }
+    return text;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +66,7 @@ class ChatMessageBubble extends StatelessWidget {
           border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
         ),
         child: Text(
-          message.text,
+          _getMappedSystemText(isOwner ?? false),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,

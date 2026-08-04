@@ -372,22 +372,27 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   child: Row(
                     children: [
                       // Small Image Representative
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(item.mockImageColorValue).withOpacity(0.8),
-                              Color(item.mockImageColorValue),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.inventory_2_outlined, size: 24, color: Colors.white),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: item.displayImages.isNotEmpty
+                              ? (item.displayImages.first.startsWith('http')
+                                  ? Image.network(
+                                      item.displayImages.first,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
+                                    )
+                                  : Image.file(
+                                      File(item.displayImages.first),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
+                                    ))
+                              : const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -436,21 +441,33 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         ),
                       ),
                       // Trust Rating representation
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
+                      FutureBuilder<UserProfile?>(
+                        future: appState.getUserProfile(targetUserId),
+                        builder: (context, snapshot) {
+                          final profile = snapshot.data;
+                          if (profile == null || profile.reviewCount == 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                              const SizedBox(width: 2),
-                              const Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    profile.averageRating.toStringAsFixed(1),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                isOwner ? 'Talep Eden' : 'Sahip Puanı',
+                                style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
+                              ),
                             ],
-                          ),
-                          Text(
-                            isOwner ? 'Talep Eden' : 'Sahip Puanı',
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -478,6 +495,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 return ChatMessageBubble(
                   message: message,
                   isMe: isMe,
+                  isOwner: isOwner,
                   senderNameOverride: null,
                   onLongPress: isMe ? null : () {
                     ReportDialog.show(
@@ -630,7 +648,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                           child: Text(
                             request.status == BorrowRequestStatus.borrowed
                                 ? 'Eşya teslim alındı! Ödünç süreci başladı.'
-                                : 'Talep kabul edildi! Teslimat süreci başladı.',
+                                : 'Talep kabul edildi! Buluşma detaylarını konuşabilirsiniz.',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface,

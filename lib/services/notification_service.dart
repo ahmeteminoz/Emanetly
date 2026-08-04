@@ -125,11 +125,30 @@ class NotificationService {
     );
   }
 
+  Map<String, dynamic>? pendingDeepLink;
+
+  void checkPendingDeepLink() {
+    if (pendingDeepLink != null) {
+      final data = pendingDeepLink!;
+      pendingDeepLink = null;
+      _handleNotificationClick(data);
+    }
+  }
+
   void _handleNotificationClick(Map<String, dynamic> data) {
+    print('Emanetly: _handleNotificationClick called with data: $data');
     final route = data['route'];
     final requestId = data['requestId'];
     if (route == 'request_chat' && requestId != null && requestId is String) {
-      NavigationService.navigateTo(RequestChatScreen(requestId: requestId));
+      if (NavigationService.navigatorKey.currentState == null) {
+        print('Emanetly: navigatorKey.currentState is null. Storing pendingDeepLink.');
+        pendingDeepLink = data;
+      } else {
+        print('Emanetly: navigatorKey.currentState is ready. Navigating to RequestChatScreen.');
+        NavigationService.navigateTo(RequestChatScreen(requestId: requestId));
+      }
+    } else {
+      print('Emanetly: Ignored click handler due to missing or mismatched payload: route=$route, requestId=$requestId');
     }
   }
 
