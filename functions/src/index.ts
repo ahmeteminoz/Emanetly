@@ -77,6 +77,18 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
+      // Check if this is the initial user message in the request conversation to prevent double notification
+      const querySnap = await db.collection("chatMessages")
+        .where("requestId", "==", requestId)
+        .get();
+
+      const userMessages = querySnap.docs.filter((doc) => doc.data().type !== "system");
+      if (userMessages.length <= 1) {
+        logger.info(`Emanetly FCM: First user message in conversation for request ${requestId}, skipping notification to prevent duplicate.`);
+        await markSuppressed(eventId, "first_user_message");
+        return;
+      }
+
       const request = requestDoc.data();
       if (!request) return;
 
