@@ -256,6 +256,7 @@ export const onRequestStatusChanged = onDocumentUpdated(
           data: {
             type: status,
             requestId: requestId,
+            route: "request_chat",
           },
         });
       }

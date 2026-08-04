@@ -213,7 +213,9 @@ service cloud.firestore {
           )
         );
 
-      allow update: if isSignedIn(); // Allows markMessagesAsRead batch updates for isRead
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+        && request.auth.uid != resource.data.senderId;
 
       allow delete: if false;
     }

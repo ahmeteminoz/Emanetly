@@ -426,7 +426,7 @@ class FirebaseAuthService implements AuthService {
                 _controller.add(_currentUser);
               }
             }, onError: (e) {
-              print('Emanetly: Error listening to profile snapshots: $e');
+              debugPrint('Emanetly: Error listening to profile snapshots: $e');
             });
       }
     });
@@ -446,7 +446,7 @@ class FirebaseAuthService implements AuthService {
       }
       _controller.add(_currentUser);
     } catch (e) {
-      print('Emanetly: Error loading user profile from Firestore: $e');
+      debugPrint('Emanetly: Error loading user profile from Firestore: $e');
       // Offline fallback: map user from in-memory template
       _currentUser = _mapFirebaseUser(user);
       _controller.add(_currentUser);
@@ -557,7 +557,7 @@ class FirebaseAuthService implements AuthService {
             .doc(freshUser.uid)
             .set(defaultProfile.toMap());
       } catch (e) {
-        print('Emanetly: Error writing user profile on signUp: $e');
+        debugPrint('Emanetly: Error writing user profile on signUp: $e');
       }
       
       _currentUser = defaultProfile;
@@ -643,7 +643,7 @@ class FirebaseAuthService implements AuthService {
         return profile;
       }
     } catch (e) {
-      print('Emanetly: Error getting user profile from Firestore: $e');
+      debugPrint('Emanetly: Error getting user profile from Firestore: $e');
     }
 
     // Fallback to cache if database read fails or profile is not found

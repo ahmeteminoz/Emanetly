@@ -669,13 +669,11 @@ class AppState extends ChangeNotifier {
     try {
       final index = _borrowRequests.indexWhere((r) => r.id == requestId);
       if (index != -1) {
-        final req = _borrowRequests[index];
-        final updatedReq = req.copyWith(
-          status: BorrowRequestStatus.pendingDiscussion,
-          requestedDurationText: requestedDurationText,
+        // Use updateBorrowRequestStatus (→ .update()) instead of addBorrowRequest (→ .set())
+        // to avoid re-triggering onRequestCreated Cloud Function.
+        await _borrowRequestService.updateBorrowRequestStatus(
+          requestId, BorrowRequestStatus.pendingDiscussion,
         );
-        
-        await _borrowRequestService.addBorrowRequest(updatedReq);
         
         // Add a system message in the chat
         await _chatMessageService.sendChatMessage(ChatMessageModel(
@@ -841,7 +839,9 @@ class AppState extends ChangeNotifier {
       // Mark the corresponding accepted borrow request as completed in Firestore
       try {
         final reqIndex = _borrowRequests.indexWhere(
-          (r) => r.itemId == itemId && r.status == BorrowRequestStatus.accepted
+          (r) => r.itemId == itemId &&
+                 (r.status == BorrowRequestStatus.accepted ||
+                  r.status == BorrowRequestStatus.borrowed)
         );
         if (reqIndex != -1) {
           final request = _borrowRequests[reqIndex];
@@ -1394,9 +1394,17 @@ class AppState extends ChangeNotifier {
           _addLog('İlan silme engellendi: Aktif işlemdeki ilanlar silinemez.');
           return;
         }
-        // İlan silinirken Storage'daki görseli de temizliyoruz
-        if (item.imageUrl != null && item.imageUrl!.isNotEmpty) {
-          await _storageService.deleteImage(item.imageUrl!);
+        // Tüm resimleri Storage'dan temizle (çoklu resim desteği)
+        final allImageUrls = <String>{
+          ...item.images.where((u) => u.startsWith('http')),
+          if (item.imageUrl != null && item.imageUrl!.isNotEmpty) item.imageUrl!,
+        };
+        for (final url in allImageUrls) {
+          try {
+            await _storageService.deleteImage(url);
+          } catch (e) {
+            debugPrint('Emanetly: Storage image cleanup non-fatal: $e');
+          }
         }
       }
       await _itemService.deleteItem(itemId);
@@ -1513,6 +1521,8 @@ class AppState extends ChangeNotifier {
     _itemsSubscription?.cancel();
     _requestsSubscription?.cancel();
     _chatSubscription?.cancel();
+    _blockedUsersSubscription?.cancel();
+    _userRelationsSubscription?.cancel();
     super.dispose();
   }
 }

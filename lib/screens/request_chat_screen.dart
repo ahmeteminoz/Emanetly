@@ -833,7 +833,10 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 final targetUser = snapshot.data;
                 if (targetUser == null) return const SizedBox.shrink();
 
-                final hasReviewed = targetUser.reviews.any((r) => r.requestId == widget.requestId);
+                final hasReviewed = targetUser.reviews.any(
+                  (r) => r.requestId == widget.requestId &&
+                         r.authorName == (appState.currentUser?.name ?? ''),
+                );
                 final targetName = isOwner ? (request!.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
 
                 return SafeArea(
