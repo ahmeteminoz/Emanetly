@@ -10,7 +10,6 @@ import 'widgets/item_card.dart';
 import 'request_chat_screen.dart';
 import 'notification_center_screen.dart';
 
-import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

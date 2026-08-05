@@ -883,7 +883,7 @@ class ItemDetailScreen extends StatelessWidget {
               flex: 3,
               child: ElevatedButton(
                 onPressed: () async {
-                  await appState.upgradeToOfficialRequest(activeRequest.id, requestedDurationText: 'Belirtilmedi');
+                  await appState.upgradeToOfficialRequest(activeRequest.id);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -994,7 +994,6 @@ class ItemDetailScreen extends StatelessWidget {
                     final request = await appState.requestBorrow(
                       item.id,
                       isOfficialRequest: true,
-                      requestedDurationText: 'Belirtilmedi',
                     );
                     if (context.mounted && request != null) {
                       ScaffoldMessenger.of(context).showSnackBar(

@@ -6,6 +6,7 @@ import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
 import { confirmHandoverAction } from "./handover";
 import { requestAccountDeletion } from "./account_deletion";
 import { setUsername } from "./username_callable";
+import { onCall } from "firebase-functions/v2/https";
 
 export { createReport, toggleBlockUser, confirmHandoverAction, requestAccountDeletion, setUsername };
 
@@ -30,6 +31,88 @@ export const callableRuntimeOptions = {
   timeoutSeconds: 15,
   maxInstances: 10,
 };
+
+/**
+ * Güvenli değerlendirme yazma — sunucu tarafında doğrulama yapar.
+ * Client direkt users/{id}/reviews yazmak yerine bunu çağırır.
+ */
+export const addReview = onCall(
+  { ...callableRuntimeOptions },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth) throw new Error("Unauthenticated");
+
+    const { targetUserId, comment, rating, requestId } = request.data as {
+      targetUserId: string;
+      comment: string;
+      rating: number;
+      requestId: string;
+    };
+
+    if (!targetUserId || !requestId || typeof rating !== "number") {
+      throw new Error("Missing required fields");
+    }
+    if (rating < 1 || rating > 5) throw new Error("Rating must be between 1-5");
+    if (auth.uid === targetUserId) throw new Error("Cannot review yourself");
+
+    const db = admin.firestore();
+
+    // 1. Request var mı ve completed mı?
+    const reqDoc = await db.collection("borrowRequests").doc(requestId).get();
+    if (!reqDoc.exists) throw new Error("Request not found");
+    const reqData = reqDoc.data()!;
+    if (reqData.status !== "completed") throw new Error("Request is not completed yet");
+
+    // 2. Çağıran kişi bu transaction'ın tarafı mı?
+    const isParticipant =
+      reqData.ownerId === auth.uid || reqData.requesterId === auth.uid;
+    if (!isParticipant) throw new Error("Not a participant of this request");
+
+    // 3. Hedef kullanıcı bu transaction'ın diğer tarafı mı?
+    const isValidTarget =
+      reqData.ownerId === targetUserId || reqData.requesterId === targetUserId;
+    if (!isValidTarget) throw new Error("Target is not a participant of this request");
+
+    // 4. Bu requestId için daha önce değerlendirme yapıldı mı?
+    const targetRef = db.collection("users").doc(targetUserId);
+    const targetDoc = await targetRef.get();
+    if (!targetDoc.exists) throw new Error("Target user not found");
+    const targetData = targetDoc.data()!;
+    const existingReviews: Array<{ requestId: string, rating: string }> = targetData.reviews ?? [];
+    const alreadyReviewed = existingReviews.some(
+      (r) => r.requestId === requestId
+    );
+    if (alreadyReviewed) throw new Error("Already reviewed this request");
+
+    // 5. Review yaz ve ortalamayı güncelle
+    const authorDoc = await db.collection("users").doc(auth.uid).get();
+    const authorName = authorDoc.data()?.name ?? "Kullanıcı";
+
+    const newReview = {
+      authorId: auth.uid,
+      authorName,
+      rating: rating.toFixed(1),
+      comment: comment || "Sorunsuz ve güvenilir işlem.",
+      dateText: new Date().toLocaleDateString("tr-TR"),
+      requestId,
+    };
+
+    const updatedReviews = [...existingReviews, newReview];
+    const avgRating =
+      updatedReviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) /
+      updatedReviews.length;
+
+    await targetRef.update({
+      reviews: updatedReviews,
+      averageRating: parseFloat(avgRating.toFixed(2)),
+      reviewCount: updatedReviews.length,
+    });
+
+    logger.info(`Emanetly addReview: ${auth.uid} reviewed ${targetUserId} for request ${requestId}`);
+    return { success: true };
+  }
+);
+
 
 /**
  * Triggered when a new chat message is created.
