@@ -128,7 +128,7 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                '${widget.item.title} adlı eşya başarıyla iade edildi ve süreç kapatıldı. Kampüste yardımlaşma kültürünü desteklediğiniz için teşekkürler!',
+                '${widget.item.title} başarıyla iade edildi. Kampüste yardımlaşma kültürünü desteklediğin için teşekkürler! 🙏',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.5,
