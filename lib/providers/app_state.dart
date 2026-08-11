@@ -45,6 +45,7 @@ class AppState extends ChangeNotifier {
   int _selectedPaletteIndex = 0;
   ViewMode _gridViewMode = ViewMode.standardGrid;
   final Set<String> _favoriteItemIds = {};
+  bool _favoritesInitialized = false;
   final Set<String> _blockedUserIds = {};
 
   // Pre-agreement negotiation collections
@@ -77,6 +78,14 @@ class AppState extends ChangeNotifier {
     // Listen to Auth State changes
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
       if (user != null) {
+        // Favorileri Firestore'dan gelen kullanıcı verisiyle senkronize et
+        // (Sadece ilk kez — sonraki güncellemeler optimistic local state'i bozmasın)
+        if (!_favoritesInitialized) {
+          _favoriteItemIds
+            ..clear()
+            ..addAll(user.favoriteItemIds);
+          _favoritesInitialized = true;
+        }
         _startRequestsSubscription(user.uid);
         _startUserRelationsSubscription(user.uid);
         _startBlockedUsersSubscription(user.uid);
@@ -87,6 +96,8 @@ class AppState extends ChangeNotifier {
         _blockedUsersSubscription?.cancel();
         _blockedRelationUserIds.clear();
         _blockedUserIds.clear();
+        _favoriteItemIds.clear();
+        _favoritesInitialized = false;
       }
       notifyListeners();
     });
@@ -429,44 +440,48 @@ class AppState extends ChangeNotifier {
 
   // Favorites logic
   bool isFavorite(String itemId) {
-    if (currentUser != null) {
-      return currentUser!.favoriteItemIds.contains(itemId);
-    }
     return _favoriteItemIds.contains(itemId);
   }
 
   void toggleFavorite(String itemId) async {
-    if (currentUser != null) {
-      final user = currentUser!;
-      final bool isAlreadyFav = user.favoriteItemIds.contains(itemId);
-      
-      // Perform atomic toggle via service
-      await _authService.toggleFavorite(user.uid, itemId, !isAlreadyFav);
-      
+    if (currentUser == null) return;
+
+    final bool isAlreadyFav = isFavorite(itemId);
+
+    // 1. Optimistic local update — UI anında tepki verir
+    if (isAlreadyFav) {
+      _favoriteItemIds.remove(itemId);
+    } else {
+      _favoriteItemIds.add(itemId);
+    }
+    notifyListeners();
+
+    // 2. Firestore'a async yaz
+    try {
+      await _authService.toggleFavorite(currentUser!.uid, itemId, !isAlreadyFav);
+
       final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
       _analyticsService.logFavoriteToggled(
         action: isAlreadyFav ? 'remove' : 'add',
         category: itemCategory,
       );
-      
       if (isAlreadyFav) {
         _addLog('Ürün favorilerden çıkarıldı: $itemId');
       } else {
         _addLog('Ürün favorilere eklendi: $itemId');
       }
-      notifyListeners();
-    } else {
-      // Offline / Fallback mode
-      if (_favoriteItemIds.contains(itemId)) {
-        _favoriteItemIds.remove(itemId);
-        _addLog('Ürün favorilerden çıkarıldı: $itemId');
-      } else {
+    } catch (e) {
+      // Hata durumunda geri al
+      if (isAlreadyFav) {
         _favoriteItemIds.add(itemId);
-        _addLog('Ürün favorilere eklendi: $itemId');
+      } else {
+        _favoriteItemIds.remove(itemId);
       }
+      _addLog('Favori güncelleme hatası, geri alındı: $e');
       notifyListeners();
     }
   }
+
 
   Future<UserProfile?> getUserProfile(String uid) async {
     return _authService.getUserProfile(uid);
