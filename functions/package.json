@@ -11,7 +11,7 @@
     "test": "npm run build && mocha --timeout 10000 lib/test/**/*.spec.js"
   },
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {
