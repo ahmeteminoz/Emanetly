@@ -33,31 +33,56 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
     super.dispose();
   }
 
+  bool _isSubmitting = false;
+
   Future<void> _submitReview(AppState appState) async {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
     final comment = _commentController.text.trim();
     String finalComment = comment.isNotEmpty ? comment : 'Sorunsuz ve güvenilir işlem.';
     if (_selectedTags.isNotEmpty) {
       finalComment += ' (${_selectedTags.join(', ')})';
     }
 
-    // Submit review to database and await completion
-    await appState.addUserReview(
-      widget.targetUserId,
-      finalComment,
-      _currentRating,
-      widget.requestId,
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Değerlendirmeniz iletildi, teşekkür ederiz!'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      // Submit review to database and await completion
+      await appState.addUserReview(
+        widget.targetUserId,
+        finalComment,
+        _currentRating,
+        widget.requestId,
       );
 
-      // Redirect to home/main screen clean
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Değerlendirmeniz iletildi, teşekkür ederiz!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Redirect to home/main screen clean
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Değerlendirme gönderilirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -212,7 +237,7 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
 
               // 4. Action Buttons
               ElevatedButton(
-                onPressed: () => _submitReview(appState),
+                onPressed: _isSubmitting ? null : () => _submitReview(appState),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
@@ -220,7 +245,16 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   elevation: 0,
                 ),
-                child: const Text('Değerlendir & Ana Sayfaya Dön', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: _isSubmitting
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Text('Değerlendir & Ana Sayfaya Dön', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
               const SizedBox(height: 12),
               TextButton(

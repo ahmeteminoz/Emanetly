@@ -225,6 +225,7 @@ export const onMessageCreated = onDocumentCreated(
           data: {
             type: "chat",
             requestId: requestId,
+            route: "request_chat",
           },
         });
       } else {

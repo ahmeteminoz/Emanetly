@@ -68,8 +68,15 @@ class _HandoverScreenState extends State<HandoverScreen> {
     if (activeRequest?.status == BorrowRequestStatus.completed || currentItem.status == EmanetStatus.archived) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // Trigger review dialog for borrower or lender before pushing success screen
-        final counterpartyName = isLender ? (currentItem.borrowerName ?? 'Ödünç Alan') : currentItem.lenderName;
-        final counterpartyId = isLender ? (currentItem.borrowerId ?? '') : currentItem.lenderId;
+        final rawBorrowerName = (currentItem.borrowerName != null && currentItem.borrowerName!.isNotEmpty && currentItem.borrowerName != 'Ödünç Alan')
+            ? currentItem.borrowerName!
+            : null;
+        final borrowerId = currentItem.borrowerId ?? activeRequest?.requesterId ?? '';
+        
+        final counterpartyId = isLender ? borrowerId : currentItem.lenderId;
+        final counterpartyName = isLender 
+            ? (rawBorrowerName ?? 'Kullanıcı') 
+            : currentItem.lenderName;
         
         Navigator.pushReplacement(
           context,

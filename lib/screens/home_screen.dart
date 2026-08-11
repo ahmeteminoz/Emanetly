@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListTile(
                 leading: Icon(Icons.mark_chat_unread, color: theme.colorScheme.onPrimaryContainer),
                 title: Text(
-                  'Yeni Görüşme Talebi ($count)',
+                  'Yeni Ödünç Talebi ($count)',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onPrimaryContainer,

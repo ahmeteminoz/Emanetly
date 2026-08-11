@@ -117,14 +117,18 @@ class NotificationService {
   void _emitClickEvent(Map<String, dynamic> data) {
     debugPrint('Emanetly NS: _emitClickEvent data=$data');
     final route = data['route'] as String?;
+    final type = data['type'] as String?;
     final requestId = data['requestId'] as String?;
-    if (route == 'request_chat' && requestId != null && requestId.isNotEmpty) {
+
+    final isChatRoute = route == 'request_chat' || type == 'chat' || (requestId != null && requestId.isNotEmpty);
+
+    if (isChatRoute && requestId != null && requestId.isNotEmpty) {
       _clickController.add(
-        NotificationClickEvent(route: route!, requestId: requestId),
+        NotificationClickEvent(route: route ?? 'request_chat', requestId: requestId),
       );
     } else {
       debugPrint(
-          'Emanetly NS: unhandled payload — route=$route, requestId=$requestId');
+          'Emanetly NS: unhandled payload — route=$route, type=$type, requestId=$requestId');
     }
   }
 
