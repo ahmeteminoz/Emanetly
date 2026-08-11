@@ -42,35 +42,20 @@ service cloud.firestore {
         && (!('usernameNormalized' in request.resource.data) || request.resource.data.usernameNormalized == null);
 
       allow update: if isSignedIn()
+        && isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
         && (
-          (
-            isOwner(userId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
-            && (
-              !('notificationPreferences' in request.resource.data) || (
-                request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
-                request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
-                request.resource.data.notificationPreferences.newMessages is bool &&
-                request.resource.data.notificationPreferences.newBorrowRequests is bool
-              )
-            )
-            && (
-              !('fcmTokens' in request.resource.data) || request.resource.data.fcmTokens is list
-            )
+          !('notificationPreferences' in request.resource.data) || (
+            request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.newMessages is bool &&
+            request.resource.data.notificationPreferences.newBorrowRequests is bool
           )
-          ||
-          (
-            // Other users can submit reviews
-            !isOwner(userId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reviews', 'averageRating', 'reviewCount'])
-            && request.resource.data.reviews is list
-            && request.resource.data.reviewCount == (resource.data.reviewCount == null ? 1 : resource.data.reviewCount + 1)
-            && (
-              resource.data.reviews == null ||
-              request.resource.data.reviews.size() == resource.data.reviews.size() + 1
-            )
-          )
+        )
+        && (
+          !('fcmTokens' in request.resource.data) || request.resource.data.fcmTokens is list
         );
+      // Reviews, averageRating, reviewCount: Sadece Cloud Function (Admin SDK) yazar — client yazamaz
 
       allow delete: if false;
 

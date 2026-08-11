@@ -699,7 +699,7 @@ class FirebaseAuthService implements AuthService {
     try {
       await docRef.set(profileWithBadges.toMap(), SetOptions(merge: true));
     } catch (e) {
-      print('Emanetly: Error updating user profile in Firestore: $e');
+      debugPrint('Emanetly: Error updating user profile in Firestore: $e');
       rethrow;
     }
     if (_currentUser?.uid == profileWithBadges.uid) {

@@ -1155,18 +1155,29 @@ class AppState extends ChangeNotifier {
 
   Future<void> addUserReview(String targetUserId, String comment, double ratingRating, String requestId) async {
     if (currentUser == null) return;
-    
-    final review = UserReview(
-      authorName: currentUser!.name,
-      rating: ratingRating.toStringAsFixed(1),
-      comment: comment,
-      dateText: 'Bugün',
-      requestId: requestId,
-    );
 
-    await _authService.addReviewToUser(targetUserId, review);
-    notifyListeners();
+    try {
+      // Cloud Function üzerinden yaz — sunucu tarafında doğrulama yapar
+      // (transaction completed mı, taraf mı, daha önce yazdı mı kontrolleri)
+      final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+          .httpsCallable('addReview');
+
+      await callable.call({
+        'targetUserId': targetUserId,
+        'comment': comment,
+        'rating': ratingRating,
+        'requestId': requestId,
+      });
+
+      _addLog('Değerlendirme başarıyla gönderildi: $targetUserId');
+      notifyListeners();
+    } catch (e, stack) {
+      _crashlyticsService.recordError(e, stack, reason: 'addUserReview failed');
+      _addLog('Değerlendirme hatası: $e');
+      rethrow;
+    }
   }
+
 
   // Wrapper Authentication Methods for the entire application
   Future<UserProfile?> signIn(String email, String password) async {
