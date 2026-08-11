@@ -282,9 +282,10 @@ export const onRequestStatusChanged = onDocumentUpdated(
       let statusText = "";
 
       switch (status) {
+        case "pendingDiscussion":
         case "pendingApproval":
           recipients.push(ownerId);
-          statusText = `"${itemTitle}" için yeni bir ödünç alma talebiniz var.`;
+          statusText = `"${itemTitle}" ilanınız için yeni bir ödünç talebi var.`;
           break;
         case "accepted":
           recipients.push(requesterId);

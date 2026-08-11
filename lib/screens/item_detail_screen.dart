@@ -671,45 +671,7 @@ class ItemDetailScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          // Fallback direct action button options
-          if (isOwnItem && item.status == EmanetStatus.pendingApproval)
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => appState.rejectBorrow(item.id),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Reddet'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HandoverScreen(item: item),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondary,
-                      foregroundColor: theme.colorScheme.onSecondary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Teslim Et'),
-                  ),
-                ),
-              ],
-            ),
+
 
         ],
       );
@@ -915,27 +877,29 @@ class ItemDetailScreen extends StatelessWidget {
         );
       }
 
-      String buttonText = 'Talebiniz Gönderildi';
+      String statusTitle = 'Talebiniz Gönderildi';
       if (activeRequest.status == BorrowRequestStatus.accepted) {
-        buttonText = 'Talebiniz Kabul Edildi';
+        statusTitle = 'Talep Kabul Edildi';
       } else if (activeRequest.status == BorrowRequestStatus.borrowed) {
-        buttonText = 'Eşya Sizde';
+        statusTitle = 'Eşya Teslim Edildi';
       }
 
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
+          Container(
             width: double.infinity,
-            child: OutlinedButton(
-              onPressed: null, // Disabled
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              statusTitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onPrimaryContainer,
               ),
             ),
           ),
@@ -947,15 +911,15 @@ class ItemDetailScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => RequestChatScreen(requestId: activeRequest.id),
+                    builder: (context) => HandoverScreen(item: item),
                   ),
                 );
               },
-              icon: const Icon(Icons.chat_outlined),
-              label: const Text('Ön Görüşme Odasına Git'),
+              icon: const Icon(Icons.handshake_outlined),
+              label: const Text('Buluşma ve Teslimat Süreci', style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
