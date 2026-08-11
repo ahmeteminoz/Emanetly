@@ -6,7 +6,6 @@ import 'active_transactions_screen.dart';
 import 'profile_screen.dart';
 import 'add_item_screen.dart';
 import '../models/item.dart';
-import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
 import '../services/notification_service.dart';
 import 'request_chat_screen.dart';

@@ -117,12 +117,8 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     });
 
-    // Listen to Chat Messages changes globally
-    _chatSubscription = _chatMessageService.listenToAllChatMessages().listen((newMessages) {
-      _chatMessages.clear();
-      _chatMessages.addAll(newMessages);
-      notifyListeners();
-    });
+    // Active Chat Room Subscription setup (Per-request subscription for optimal Firestore usage)
+    // Global subscription removed; instead, active chat room is subscribed on demand via setActiveChatRoom().
 
     // Initialize list
     _loadInitialData();
@@ -895,6 +891,24 @@ class AppState extends ChangeNotifier {
   // Pre-Agreement Chat and Proposal Getters
   List<BorrowRequestModel> get borrowRequests => _borrowRequests;
   
+  String? _activeChatRequestId;
+
+  void setActiveChatRoom(String? requestId) {
+    if (_activeChatRequestId == requestId) return;
+    _activeChatRequestId = requestId;
+    _chatSubscription?.cancel();
+    _chatSubscription = null;
+
+    if (requestId != null && requestId.isNotEmpty) {
+      _chatSubscription = _chatMessageService.listenToChatMessages(requestId).listen((newMessages) {
+        // Replace or merge messages for active request
+        _chatMessages.removeWhere((msg) => msg.requestId == requestId);
+        _chatMessages.addAll(newMessages);
+        notifyListeners();
+      });
+    }
+  }
+
   List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
     final list = _chatMessages.where((msg) =>
       msg.requestId == requestId &&

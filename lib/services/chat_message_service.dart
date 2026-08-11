@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/chat_message.dart';
 
+import 'package:flutter/foundation.dart';
+
 abstract class ChatMessageService {
   Future<void> sendChatMessage(ChatMessageModel message);
   Stream<List<ChatMessageModel>> listenToAllChatMessages();
+  Stream<List<ChatMessageModel>> listenToChatMessages(String requestId);
   Future<void> markMessagesAsRead(String requestId, String currentUserId);
 }
 
@@ -18,7 +21,7 @@ class FirestoreChatMessageService implements ChatMessageService {
           .doc(message.id)
           .set(message.toMap());
     } catch (e) {
-      print('Emanetly: Firestore sendChatMessage error: $e');
+      debugPrint('Emanetly: Firestore sendChatMessage error: $e');
       rethrow;
     }
   }
@@ -27,6 +30,20 @@ class FirestoreChatMessageService implements ChatMessageService {
   Stream<List<ChatMessageModel>> listenToAllChatMessages() {
     return _firestore
         .collection('chatMessages')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ChatMessageModel.fromMap(doc.data()))
+          .toList();
+    });
+  }
+
+  @override
+  Stream<List<ChatMessageModel>> listenToChatMessages(String requestId) {
+    return _firestore
+        .collection('chatMessages')
+        .where('requestId', isEqualTo: requestId)
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) {
@@ -59,7 +76,7 @@ class FirestoreChatMessageService implements ChatMessageService {
         await batch.commit();
       }
     } catch (e) {
-      print('Emanetly: Firestore markMessagesAsRead error: $e');
+      debugPrint('Emanetly: Firestore markMessagesAsRead error: $e');
     }
   }
 }
@@ -72,6 +89,11 @@ class MockChatMessageService implements ChatMessageService {
 
   @override
   Stream<List<ChatMessageModel>> listenToAllChatMessages() {
+    return const Stream.empty();
+  }
+
+  @override
+  Stream<List<ChatMessageModel>> listenToChatMessages(String requestId) {
     return const Stream.empty();
   }
 
