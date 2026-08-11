@@ -61,9 +61,9 @@ class ChatMessageBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+          border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
         ),
         child: Text(
           _getMappedSystemText(isOwner ?? false),
@@ -132,7 +132,7 @@ class ChatMessageBubble extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -170,8 +170,8 @@ class ChatMessageBubble extends StatelessWidget {
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 9,
                         color: isMe 
-                            ? theme.colorScheme.onPrimary.withOpacity(0.7) 
-                            : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            ? theme.colorScheme.onPrimary.withValues(alpha: 0.7) 
+                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                     ),
                     if (isMe) ...[
@@ -183,7 +183,7 @@ class ChatMessageBubble extends StatelessWidget {
                             ? (theme.brightness == Brightness.dark 
                                 ? const Color(0xFF1565C0) // Karanlık modda belirgin koyu mavi
                                 : const Color(0xFF80D8FF)) // Aydınlık modda açık mavi/cyan
-                            : theme.colorScheme.onPrimary.withOpacity(0.6),
+                            : theme.colorScheme.onPrimary.withValues(alpha: 0.6),
                       ),
                     ],
                   ],

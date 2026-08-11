@@ -439,10 +439,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // 1. Large Trust Score Card
         Card(
           elevation: 0,
-          color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+            side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -453,7 +453,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -522,7 +522,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: Text(badge, style: const TextStyle(fontSize: 11)),
               backgroundColor: theme.colorScheme.surfaceContainer,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             );
           }).toList(),
         ),
@@ -539,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -582,9 +582,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.08),
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -620,7 +620,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -715,7 +715,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color: theme.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -794,7 +794,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -802,7 +802,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Color(item.mockImageColorValue).withOpacity(0.1),
+                    color: Color(item.mockImageColorValue).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.inventory_2_outlined, color: Color(item.mockImageColorValue)),
@@ -878,7 +878,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -886,7 +886,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Color(colorVal).withOpacity(0.1),
+                    color: Color(colorVal).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.history_rounded, color: Color(colorVal)),

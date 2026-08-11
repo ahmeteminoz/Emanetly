@@ -105,7 +105,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -125,7 +125,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
             top: MediaQuery.of(context).padding.top + 10,
             left: 10,
             child: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.5),
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(context),

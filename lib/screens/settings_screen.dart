@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
@@ -148,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
@@ -156,14 +156,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Yeni soru ve talep bildirimleri'),
                   value: _notifyRequests,
                   onChanged: (val) => _updatePreference('newBorrowRequests', val),
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Yeni mesaj bildirimleri'),
                   value: _notifyMessages,
                   onChanged: (val) => _updatePreference('newMessages', val),
-                  activeColor: theme.colorScheme.primary,
+                  activeThumbColor: theme.colorScheme.primary,
                 ),
               ],
             ),
@@ -177,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
@@ -213,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [

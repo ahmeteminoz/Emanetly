@@ -70,19 +70,6 @@ class _MainLayoutState extends State<MainLayout> {
       (i) => i.status == EmanetStatus.pendingApproval || i.status == EmanetStatus.pendingReturn
     ).length;
 
-    // Count active discussions (chats) where the current user is a participant
-    final discussionRequestsCount = appState.borrowRequests.where((req) {
-      final isParticipant = req.ownerId == appState.currentUser?.uid || req.requesterId == appState.currentUser?.uid;
-      return isParticipant && req.status == BorrowRequestStatus.pendingDiscussion;
-    }).length;
-
-    // Count active deliveries for tracking badge
-    final activeTrackingCount = appState.items.where((item) {
-      final isParticipant = item.borrowerId == appState.currentUser?.uid || item.lenderId == appState.currentUser?.uid;
-      final inProgress = item.status != EmanetStatus.available;
-      return isParticipant && inProgress;
-    }).length;
-
     final totalUnreadMessages = appState.totalUnreadCount;
 
     return Scaffold(
@@ -95,7 +82,7 @@ class _MainLayoutState extends State<MainLayout> {
             ),
             if (appState.isLoading)
               Container(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 child: const Center(
                   child: Card(
                     child: Padding(

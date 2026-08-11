@@ -172,7 +172,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> with 
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                     ),

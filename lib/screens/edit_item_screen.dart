@@ -275,7 +275,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     height: 150,
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
@@ -373,7 +373,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                                       right: 4,
                                       child: CircleAvatar(
                                         radius: 12,
-                                        backgroundColor: Colors.black.withOpacity(0.4),
+                                        backgroundColor: Colors.black.withValues(alpha: 0.4),
                                         child: IconButton(
                                           icon: const Icon(Icons.close, size: 10, color: Colors.white),
                                           padding: EdgeInsets.zero,
@@ -436,7 +436,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                                             left: 0,
                                             right: 0,
                                             child: Container(
-                                              color: theme.colorScheme.primary.withOpacity(0.85),
+                                              color: theme.colorScheme.primary.withValues(alpha: 0.85),
                                               padding: const EdgeInsets.symmetric(vertical: 2),
                                               child: const Text(
                                                 'KAPAK',
@@ -454,7 +454,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                                           right: 4,
                                           child: CircleAvatar(
                                             radius: 12,
-                                            backgroundColor: Colors.black.withOpacity(0.5),
+                                            backgroundColor: Colors.black.withValues(alpha: 0.5),
                                             child: IconButton(
                                               icon: const Icon(Icons.close, size: 10, color: Colors.white),
                                               padding: EdgeInsets.zero,
@@ -484,7 +484,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
                                 child: Container(
                                   width: 110,
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: CustomPaint(
@@ -532,7 +532,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Kategori',
                   border: OutlineInputBorder(),

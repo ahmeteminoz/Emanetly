@@ -42,14 +42,14 @@ class MeetingPointProposalCard extends StatelessWidget {
               ? Colors.green.shade300
               : proposal.status == MeetingPointStatus.rejected
                   ? Colors.red.shade300
-                  : theme.colorScheme.primary.withOpacity(0.3),
+                  : theme.colorScheme.primary.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
       color: proposal.status == MeetingPointStatus.accepted
-          ? Colors.green.shade50.withOpacity(0.5)
+          ? Colors.green.shade50.withValues(alpha: 0.5)
           : proposal.status == MeetingPointStatus.rejected
-              ? Colors.red.shade50.withOpacity(0.5)
+              ? Colors.red.shade50.withValues(alpha: 0.5)
               : theme.colorScheme.surfaceContainerLow,
       child: Padding(
         padding: const EdgeInsets.all(12),

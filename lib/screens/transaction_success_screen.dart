@@ -105,7 +105,7 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -143,7 +143,7 @@ class _TransactionSuccessScreenState extends State<TransactionSuccessScreen> {
                 color: theme.colorScheme.surfaceContainer,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),

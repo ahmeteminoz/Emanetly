@@ -79,7 +79,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     }
 
     // Fetch item from raw memory list (unfiltered by relation block so active transaction item is never hidden)
-    final item = appState.findItemInMemory(request!.itemId);
+    final item = appState.findItemInMemory(request.itemId);
 
     if (item == null) {
       return FutureBuilder<EmanetItem?>(
@@ -110,12 +110,12 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             createdAt: DateTime.now(),
             mockImageColorValue: 0xFF9E9E9E,
           );
-          return _buildBodyWithItem(context, appState, theme, request!, fallbackItem);
+          return _buildBodyWithItem(context, appState, theme, request, fallbackItem);
         },
       );
     }
 
-    return _buildBodyWithItem(context, appState, theme, request!, item);
+    return _buildBodyWithItem(context, appState, theme, request, item);
   }
 
   Widget _buildBodyWithItem(BuildContext context, AppState appState, ThemeData theme, BorrowRequestModel request, EmanetItem item) {
@@ -309,10 +309,10 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4))),
+              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -325,7 +325,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ItemDetailScreen(item: item!),
+                        builder: (context) => ItemDetailScreen(item: item),
                       ),
                     );
                   },
@@ -478,7 +478,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
                   border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
                 ),
                 child: Center(
@@ -593,7 +593,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -622,7 +622,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => HandoverScreen(item: item!),
+                            builder: (context) => HandoverScreen(item: item),
                           ),
                         );
                       },
@@ -648,7 +648,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: Row(
                   children: [
@@ -676,15 +676,15 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: appState.isUserBlocked(targetUserId)
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
+                          color: Colors.red.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -704,9 +704,9 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         ? Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.08),
+                              color: Colors.red.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.red.withOpacity(0.2)),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               children: [
@@ -796,7 +796,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   (r) => r.requestId == widget.requestId &&
                          r.authorName == (appState.currentUser?.name ?? ''),
                 );
-                final targetName = isOwner ? (request!.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
+                final targetName = isOwner ? (request.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
 
                 return SafeArea(
                   top: false,
@@ -804,7 +804,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
-                      border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                      border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                     ),
                     child: hasReviewed
                         ? Row(

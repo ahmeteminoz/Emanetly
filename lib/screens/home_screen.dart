@@ -176,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: theme.colorScheme.primaryContainer,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.2)),
+                side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
               ),
               child: ListTile(
                 leading: Icon(Icons.mark_chat_unread, color: theme.colorScheme.onPrimaryContainer),
@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Eşyalarınız için gelen soruları yanıtlayın.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                    color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                   ),
                 ),
                 trailing: Icon(Icons.arrow_forward_ios, size: 14, color: theme.colorScheme.onPrimaryContainer),
@@ -227,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
               hintText: 'Kampüste ne arıyorsunuz?',
               prefixIcon: const Icon(Icons.search),
               filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide.none,
@@ -276,9 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: const EdgeInsets.only(left: 4.0),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primaryContainer.withOpacity(0.12),
+                                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
+                                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
                               ),
                               child: Text(
                                 (() {
@@ -355,9 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 curve: Curves.easeInOut,
                 padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
                 ),
                 child: AnimatedCrossFade(
                   duration: const Duration(milliseconds: 200),
@@ -398,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 18,
                             color: _selectedViewMode == ViewMode.compactGrid
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                           onPressed: () {
                             if (_selectedViewMode == ViewMode.compactGrid) {
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 18,
                             color: _selectedViewMode == ViewMode.standardGrid
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                           onPressed: () {
                             if (_selectedViewMode == ViewMode.standardGrid) {
@@ -448,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 18,
                             color: _selectedViewMode == ViewMode.largeCards
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                           onPressed: () {
                             if (_selectedViewMode == ViewMode.largeCards) {

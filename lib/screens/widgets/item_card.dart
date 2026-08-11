@@ -43,7 +43,7 @@ class ItemCard extends StatelessWidget {
     final primaryColor = Color(item.mockImageColorValue);
     final gradient = LinearGradient(
       colors: [
-        primaryColor.withOpacity(0.85),
+        primaryColor.withValues(alpha: 0.85),
         primaryColor,
       ],
       begin: Alignment.topLeft,
@@ -139,7 +139,7 @@ class ItemCard extends StatelessWidget {
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ),
         child: InkWell(
           onTap: () => _navigateToDetails(context),
@@ -173,7 +173,7 @@ class ItemCard extends StatelessWidget {
                           color: statusColor,
                           borderRadius: BorderRadius.circular(6),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4),
                           ],
                         ),
                         child: Text(
@@ -247,7 +247,7 @@ class ItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: InkWell(
         onTap: () => _navigateToDetails(context),
@@ -294,7 +294,7 @@ class ItemCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -372,7 +372,7 @@ class ItemCard extends StatelessWidget {
     final isFavorited = appState.isFavorite(item.id);
     return ClipOval(
       child: Container(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -416,7 +416,7 @@ class ItemCard extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: BoxDecoration(gradient: gradient),
             child: Center(
-              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         );
@@ -429,7 +429,7 @@ class ItemCard extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: BoxDecoration(gradient: gradient),
             child: Center(
-              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         );
@@ -439,7 +439,7 @@ class ItemCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(gradient: gradient),
       child: Center(
-        child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+        child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
       ),
     );
   }

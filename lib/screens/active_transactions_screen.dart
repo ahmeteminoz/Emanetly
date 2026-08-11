@@ -84,7 +84,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -101,7 +101,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                           boxShadow: _selectedTab == 0
                               ? [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary.withOpacity(0.2),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   )
@@ -133,7 +133,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                           boxShadow: _selectedTab == 1
                               ? [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary.withOpacity(0.2),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   )
@@ -256,7 +256,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                                    side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                                   ),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
@@ -478,7 +478,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
@@ -521,9 +521,9 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: stageColor.withOpacity(0.1),
+                                              color: stageColor.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: stageColor.withOpacity(0.3)),
+                                              border: Border.all(color: stageColor.withValues(alpha: 0.3)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,

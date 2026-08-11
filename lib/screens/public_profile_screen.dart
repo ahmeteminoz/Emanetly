@@ -101,10 +101,10 @@ class PublicProfileScreen extends StatelessWidget {
                   // Warning/Info Card
                   Card(
                     elevation: 0,
-                    color: Colors.red.shade50.withOpacity(0.08),
+                    color: Colors.red.shade50.withValues(alpha: 0.08),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.red.withOpacity(0.2)),
+                      side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -245,7 +245,7 @@ class PublicProfileScreen extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -341,10 +341,10 @@ class PublicProfileScreen extends StatelessWidget {
           // 2. Large Rating Card
           Card(
             elevation: 0,
-            color: theme.colorScheme.primaryContainer.withOpacity(0.15),
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.15),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+              side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -354,7 +354,7 @@ class PublicProfileScreen extends StatelessWidget {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -417,7 +417,7 @@ class PublicProfileScreen extends StatelessWidget {
                 label: Text(badge, style: const TextStyle(fontSize: 11)),
                 backgroundColor: theme.colorScheme.surfaceContainer,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
               );
             }).toList(),
           ),
@@ -436,9 +436,9 @@ class PublicProfileScreen extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.08),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.25)),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -467,7 +467,7 @@ class PublicProfileScreen extends StatelessWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -512,7 +512,7 @@ class PublicProfileScreen extends StatelessWidget {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24.0),
@@ -556,7 +556,7 @@ class PublicProfileScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                  side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -703,7 +703,7 @@ class PublicProfileScreen extends StatelessWidget {
       color: theme.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -755,7 +755,7 @@ class _ReviewTagChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Text(
         label,

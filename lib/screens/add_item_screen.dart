@@ -254,7 +254,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               children: [
                 // Info Card
                 Card(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.4),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -286,7 +286,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                     child: Container(
                       height: 150,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: CustomPaint(
@@ -392,7 +392,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                       right: 4,
                                       child: CircleAvatar(
                                         radius: 12,
-                                        backgroundColor: Colors.black.withOpacity(0.4),
+                                        backgroundColor: Colors.black.withValues(alpha: 0.4),
                                         child: IconButton(
                                           icon: const Icon(Icons.close, size: 10, color: Colors.white),
                                           padding: EdgeInsets.zero,
@@ -451,7 +451,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                             left: 0,
                                             right: 0,
                                             child: Container(
-                                              color: theme.colorScheme.primary.withOpacity(0.85),
+                                              color: theme.colorScheme.primary.withValues(alpha: 0.85),
                                               padding: const EdgeInsets.symmetric(vertical: 2),
                                               child: const Text(
                                                 'KAPAK',
@@ -469,7 +469,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                           right: 4,
                                           child: CircleAvatar(
                                             radius: 12,
-                                            backgroundColor: Colors.black.withOpacity(0.5),
+                                            backgroundColor: Colors.black.withValues(alpha: 0.5),
                                             child: IconButton(
                                               icon: const Icon(Icons.close, size: 10, color: Colors.white),
                                               padding: EdgeInsets.zero,
@@ -499,7 +499,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                                 child: Container(
                                   width: 110,
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: CustomPaint(

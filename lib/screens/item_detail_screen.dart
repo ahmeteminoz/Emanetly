@@ -101,7 +101,7 @@ class ItemDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -117,7 +117,7 @@ class ItemDetailScreen extends StatelessWidget {
                             final images = currentItem.displayImages;
                             final gradient = LinearGradient(
                               colors: [
-                                Color(currentItem.mockImageColorValue).withOpacity(0.85),
+                                Color(currentItem.mockImageColorValue).withValues(alpha: 0.85),
                                 Color(currentItem.mockImageColorValue),
                               ],
                               begin: Alignment.topLeft,
@@ -130,7 +130,7 @@ class ItemDetailScreen extends StatelessWidget {
                                     child: Icon(
                                       categoryIcon,
                                       size: 80,
-                                      color: Colors.white.withOpacity(0.9),
+                                      color: Colors.white.withValues(alpha: 0.9),
                                     ),
                                   ),
                                 );
@@ -207,7 +207,7 @@ class ItemDetailScreen extends StatelessWidget {
                                               width: isActive ? 12 : 6,
                                               height: 6,
                                               decoration: BoxDecoration(
-                                                color: isActive ? Colors.white : Colors.white.withOpacity(0.5),
+                                                color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.5),
                                                 borderRadius: BorderRadius.circular(3),
                                               ),
                                             );
@@ -226,7 +226,7 @@ class ItemDetailScreen extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.4),
+                              color: Colors.black.withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -353,9 +353,9 @@ class ItemDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.08),
+        color: statusColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Row(
         children: [
@@ -433,7 +433,7 @@ class ItemDetailScreen extends StatelessWidget {
                   color: theme.colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(
@@ -505,7 +505,7 @@ class ItemDetailScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -582,7 +582,7 @@ class ItemDetailScreen extends StatelessWidget {
               color: theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -686,10 +686,10 @@ class ItemDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isArchived ? Colors.grey.shade100 : theme.colorScheme.primaryContainer.withOpacity(0.3),
+              color: isArchived ? Colors.grey.shade100 : theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isArchived ? Colors.grey.shade300 : theme.colorScheme.primary.withOpacity(0.2)
+                color: isArchived ? Colors.grey.shade300 : theme.colorScheme.primary.withValues(alpha: 0.2)
               ),
             ),
             child: Row(
@@ -891,7 +891,7 @@ class ItemDetailScreen extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -997,7 +997,7 @@ class ItemDetailScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
@@ -1013,46 +1013,7 @@ class ItemDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showDurationSelectionSheet(BuildContext context, Function(String duration) onSelected) {
-    final theme = Theme.of(context);
-    final options = ['1 Saat', '2 Saat', '6 Saat', '1 Gün', '3 Gün', '1 Hafta'];
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Ödünç Alma Süresi Seçin',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ...options.map((option) {
-                  return ListTile(
-                    leading: const Icon(Icons.timer_outlined),
-                    title: Text(option),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelected(option);
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
 
 

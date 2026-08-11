@@ -87,7 +87,7 @@ class BorrowRequestStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textColor.withOpacity(0.2), width: 1),
+        border: Border.all(color: textColor.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +109,7 @@ class BorrowRequestStatusCard extends StatelessWidget {
                 Text(
                   statusSubtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: textColor.withOpacity(0.8),
+                    color: textColor.withValues(alpha: 0.8),
                     height: 1.3,
                   ),
                 ),

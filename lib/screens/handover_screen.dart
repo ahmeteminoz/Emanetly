@@ -370,10 +370,10 @@ class _HandoverScreenState extends State<HandoverScreen> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -490,10 +490,10 @@ class _HandoverScreenState extends State<HandoverScreen> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.primaryContainer.withOpacity(0.06),
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.06),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+        side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
