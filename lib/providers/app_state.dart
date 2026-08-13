@@ -19,16 +19,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/analytics_service.dart';
 import '../services/crashlytics_service.dart';
-import '../services/block_service.dart';
+import 'notifiers/auth_notifier.dart';
+export 'notifiers/auth_notifier.dart' show ViewMode;
 
-enum ViewMode {
-  compactGrid,
-  standardGrid,
-  largeCards;
-}
+// ViewMode is now defined and exported from AuthNotifier
 
 class AppState extends ChangeNotifier {
-  final AuthService _authService;
+  // ─── Modüler Notifier'lar (Adım 1: AuthNotifier entegre edildi) ───────────
+  late final AuthNotifier _authNotifier;
+
+  // ─── Servisler ────────────────────────────────────────────────────────────
   final ItemService _itemService;
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
@@ -36,28 +36,19 @@ class AppState extends ChangeNotifier {
   final AnalyticsService _analyticsService;
   final CrashlyticsService _crashlyticsService;
 
+  // ─── Items State ──────────────────────────────────────────────────────────
   List<EmanetItem> _items = [];
   bool _isLoading = false;
   final List<String> _activityLogs = [];
-  
-  // Theme and customization settings
-  ThemeMode _themeMode = ThemeMode.system;
-  int _selectedPaletteIndex = 0;
-  ViewMode _gridViewMode = ViewMode.standardGrid;
-  final Set<String> _favoriteItemIds = {};
-  bool _favoritesInitialized = false;
-  final Set<String> _blockedUserIds = {};
 
-  // Pre-agreement negotiation collections
+  // ─── Pre-agreement negotiation collections ────────────────────────────────
   final List<BorrowRequestModel> _borrowRequests = [];
   final List<ChatMessageModel> _chatMessages = [];
   final List<MeetingPointProposalModel> _meetingPointProposals = [];
 
-  StreamSubscription<UserProfile?>? _authSubscription;
   StreamSubscription<List<EmanetItem>>? _itemsSubscription;
   StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
   StreamSubscription<List<ChatMessageModel>>? _chatSubscription;
-  StreamSubscription? _blockedUsersSubscription;
 
   AppState({
     required AuthService authService,
@@ -67,47 +58,34 @@ class AppState extends ChangeNotifier {
     required StorageService storageService,
     AnalyticsService? analyticsService,
     CrashlyticsService? crashlyticsService,
-  })  : _authService = authService,
-        _itemService = itemService,
+  })  : _itemService = itemService,
         _borrowRequestService = borrowRequestService,
         _chatMessageService = chatMessageService,
         _storageService = storageService,
         _analyticsService = analyticsService ?? AnalyticsService(),
         _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
-    
-    // Listen to Auth State changes
-    _authSubscription = _authService.onAuthStateChanged.listen((user) {
+
+    _authNotifier = AuthNotifier(
+      authService: authService,
+      analyticsService: _analyticsService,
+      crashlyticsService: _crashlyticsService,
+    );
+
+    // Auth değişimlerini dinle ve bu AppState'i de güncelle
+    _authNotifier.onAuthChanged = (UserProfile? user) {
       if (user != null) {
-        // Favorileri Firestore'dan gelen kullanıcı verisiyle senkronize et
-        // (Sadece ilk kez — sonraki güncellemeler optimistic local state'i bozmasın)
-        if (!_favoritesInitialized) {
-          _favoriteItemIds
-            ..clear()
-            ..addAll(user.favoriteItemIds);
-          _favoritesInitialized = true;
-        }
         _startRequestsSubscription(user.uid);
-        _startUserRelationsSubscription(user.uid);
-        _startBlockedUsersSubscription(user.uid);
         _setupNotifications(user.uid);
       } else {
         _cancelRequestsSubscription();
-        _userRelationsSubscription?.cancel();
-        _blockedUsersSubscription?.cancel();
-        _blockedRelationUserIds.clear();
-        _blockedUserIds.clear();
-        _favoriteItemIds.clear();
-        _favoritesInitialized = false;
       }
       notifyListeners();
-    });
+    };
 
     // Handle initial state if user is already logged in on startup
-    final initialUser = _authService.currentUser;
+    final initialUser = _authNotifier.currentUser;
     if (initialUser != null) {
       _startRequestsSubscription(initialUser.uid);
-      _startUserRelationsSubscription(initialUser.uid);
-      _startBlockedUsersSubscription(initialUser.uid);
       _setupNotifications(initialUser.uid);
     }
 
@@ -155,18 +133,20 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  UserProfile? get currentUser => _authService.currentUser;
+  // ─── Auth delegation (AuthNotifier) ──────────────────────────────────────
+  UserProfile? get currentUser => _authNotifier.currentUser;
+  AuthService get authService => _authNotifier.authService;
+  List<UserProfile> get availableMockUsers => _authNotifier.availableMockUsers;
+
+  ThemeMode get themeMode => _authNotifier.themeMode;
+  int get selectedPaletteIndex => _authNotifier.selectedPaletteIndex;
+  ViewMode get gridViewMode => _authNotifier.gridViewMode;
+  Set<String> get favoriteItemIds => _authNotifier.favoriteItemIds;
+  Set<String> get blockedRelationUserIds => _authNotifier.blockedRelationUserIds;
+
   bool get isLoading => _isLoading;
   List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
-  
-  ThemeMode get themeMode => _themeMode;
-  int get selectedPaletteIndex => _selectedPaletteIndex;
-  ViewMode get gridViewMode => _gridViewMode;
-  Set<String> get favoriteItemIds => _favoriteItemIds;
 
-  List<UserProfile> get availableMockUsers => _authService.availableMockUsers;
-
-  AuthService get authService => _authService;
   ItemService get itemService => _itemService;
 
   void _loadInitialData() async {
@@ -187,7 +167,7 @@ class AppState extends ChangeNotifier {
     try {
       _items = await _itemService.getItems();
       if (currentUser != null) {
-        await _authService.reloadUser();
+        await _authNotifier.authService.reloadUser();
       }
       _addLog('Veriler başarıyla yenilendi.');
     } catch (e) {
@@ -203,145 +183,36 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Theme, Palette, View Preferences changes
+  // ─── Theme delegation ─────────────────────────────────────────────────────
   void changeThemeMode(ThemeMode mode) {
-    _themeMode = mode;
+    _authNotifier.changeThemeMode(mode);
     _addLog('Tema modu değiştirildi: ${mode.name}');
-    notifyListeners();
   }
 
   void changePalette(int index) {
-    _selectedPaletteIndex = index;
+    _authNotifier.changePalette(index);
     _addLog('Renk paleti değiştirildi: İndeks $index');
-    notifyListeners();
   }
 
   void changeViewMode(ViewMode mode) {
-    _gridViewMode = mode;
+    _authNotifier.changeViewMode(mode);
     _addLog('Görünüm modu değiştirildi: ${mode.name}');
-    notifyListeners();
   }
 
-  BlockService? _blockService;
-  BlockService get blockService => _blockService ??= FirestoreBlockService();
+  // ─── Block delegation ─────────────────────────────────────────────────────
+  bool isUserBlocked(String uid) => _authNotifier.isUserBlocked(uid);
+  bool isRelationBlocked(String uid) => _authNotifier.isRelationBlocked(uid);
 
-  final Set<String> _blockedRelationUserIds = {};
-  StreamSubscription? _userRelationsSubscription;
-
-  Set<String> get blockedRelationUserIds => _blockedRelationUserIds;
-
-  // Blocked users logic
-  bool isUserBlocked(String uid) {
-    return _blockedUserIds.contains(uid);
-  }
-
-  bool isRelationBlocked(String uid) {
-    return _blockedUserIds.contains(uid) || _blockedRelationUserIds.contains(uid);
-  }
-
-  void _startUserRelationsSubscription(String userId) {
-    _userRelationsSubscription?.cancel();
-    if (Firebase.apps.isNotEmpty) {
-      _userRelationsSubscription = FirebaseFirestore.instance
-          .collection('userRelations')
-          .where('users', arrayContains: userId)
-          .where('interactionBlocked', isEqualTo: true)
-          .snapshots()
-          .listen((snapshot) {
-        final newSet = <String>{};
-        for (final doc in snapshot.docs) {
-          final users = List<String>.from(doc.data()['users'] ?? []);
-          for (final u in users) {
-            if (u != userId) newSet.add(u);
-          }
-        }
-        _blockedRelationUserIds.clear();
-        _blockedRelationUserIds.addAll(newSet);
-        notifyListeners();
-      }, onError: (e) {
-        debugPrint('Emanetly: userRelations stream error: $e');
-      });
-    }
-  }
-
-  void _startBlockedUsersSubscription(String userId) {
-    _blockedUsersSubscription?.cancel();
-    if (Firebase.apps.isNotEmpty) {
-      _blockedUsersSubscription = FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('blockedUsers')
-          .snapshots()
-          .listen((snapshot) {
-        final newSet = <String>{};
-        for (final doc in snapshot.docs) {
-          final blockedUserId = doc.data()['blockedUserId'];
-          if (blockedUserId != null && blockedUserId is String) {
-            newSet.add(blockedUserId);
-          }
-        }
-        _blockedUserIds.clear();
-        _blockedUserIds.addAll(newSet);
-        notifyListeners();
-      }, onError: (e) {
-        debugPrint('Emanetly: blockedUsers stream error: $e');
-      });
-    }
-  }
+  // (Block/userRelations subscriptions now managed by AuthNotifier)
 
   Future<void> blockUser(String targetUserId, {required String source}) async {
-    if (currentUser == null || targetUserId.isEmpty || currentUser!.uid == targetUserId) return;
-    
-    try {
-      if (Firebase.apps.isNotEmpty) {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('toggleBlockUser');
-        await callable.call({
-          'targetUserId': targetUserId,
-          'shouldBlock': true,
-          'source': source,
-        });
-      } else {
-        await blockService.blockUser(
-          currentUserId: currentUser!.uid,
-          blockedUserId: targetUserId,
-          source: source,
-        );
-      }
-      _blockedUserIds.add(targetUserId);
-      _blockedRelationUserIds.add(targetUserId);
-      _analyticsService.logUserBlocked(source: source);
-      _addLog('Kullanıcı engellendi: $targetUserId');
-      notifyListeners();
-    } catch (e, stack) {
-      _crashlyticsService.recordError(e, stack, reason: 'blockUser failed');
-      rethrow;
-    }
+    await _authNotifier.blockUser(targetUserId, source: source);
+    _addLog('Kullanıcı engellendi: $targetUserId');
   }
 
   Future<void> unblockUser(String targetUserId) async {
-    if (currentUser == null || targetUserId.isEmpty) return;
-
-    try {
-      if (Firebase.apps.isNotEmpty) {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('toggleBlockUser');
-        await callable.call({
-          'targetUserId': targetUserId,
-          'shouldBlock': false,
-        });
-      } else {
-        await blockService.unblockUser(
-          currentUserId: currentUser!.uid,
-          blockedUserId: targetUserId,
-        );
-      }
-      _blockedUserIds.remove(targetUserId);
-      _blockedRelationUserIds.remove(targetUserId);
-      _addLog('Kullanıcı engeli kaldırıldı: $targetUserId');
-      notifyListeners();
-    } catch (e, stack) {
-      _crashlyticsService.recordError(e, stack, reason: 'unblockUser failed');
-      rethrow;
-    }
+    await _authNotifier.unblockUser(targetUserId);
+    _addLog('Kullanıcı engeli kaldırıldı: $targetUserId');
   }
 
   Future<bool> confirmHandoverAction(String requestId, String action) async {
@@ -434,62 +305,23 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Favorites logic
-  bool isFavorite(String itemId) {
-    return _favoriteItemIds.contains(itemId);
+  // ─── Favorites delegation ─────────────────────────────────────────────────
+  bool isFavorite(String itemId) => _authNotifier.isFavorite(itemId);
+
+  void toggleFavorite(String itemId) {
+    final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
+    _authNotifier.toggleFavorite(itemId, itemCategory: itemCategory);
+    final isNowFav = _authNotifier.isFavorite(itemId);
+    _addLog(isNowFav ? 'Ürün favorilere eklendi: $itemId' : 'Ürün favorilerden çıkarıldı: $itemId');
   }
-
-  void toggleFavorite(String itemId) async {
-    if (currentUser == null) return;
-
-    final bool isAlreadyFav = isFavorite(itemId);
-
-    // 1. Optimistic local update — UI anında tepki verir
-    if (isAlreadyFav) {
-      _favoriteItemIds.remove(itemId);
-    } else {
-      _favoriteItemIds.add(itemId);
-    }
-    notifyListeners();
-
-    // 2. Firestore'a async yaz
-    try {
-      await _authService.toggleFavorite(currentUser!.uid, itemId, !isAlreadyFav);
-
-      final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
-      _analyticsService.logFavoriteToggled(
-        action: isAlreadyFav ? 'remove' : 'add',
-        category: itemCategory,
-      );
-      if (isAlreadyFav) {
-        _addLog('Ürün favorilerden çıkarıldı: $itemId');
-      } else {
-        _addLog('Ürün favorilere eklendi: $itemId');
-      }
-    } catch (e) {
-      // Hata durumunda geri al
-      if (isAlreadyFav) {
-        _favoriteItemIds.add(itemId);
-      } else {
-        _favoriteItemIds.remove(itemId);
-      }
-      _addLog('Favori güncelleme hatası, geri alındı: $e');
-      notifyListeners();
-    }
-  }
-
 
   Future<UserProfile?> getUserProfile(String uid) async {
-    return _authService.getUserProfile(uid);
+    return _authNotifier.getUserProfile(uid);
   }
 
-  // Swap users for prototype testing
   void switchUser(String uid) {
-    final service = _authService;
-    if (service is MockAuthService) {
-      service.switchUser(uid);
-      _addLog('Aktif kullanıcı değiştirildi: ${currentUser?.name}');
-    }
+    _authNotifier.switchUser(uid);
+    _addLog('Aktif kullanıcı değiştirildi: ${currentUser?.name}');
   }
 
   // Add a new item listing
@@ -774,12 +606,12 @@ class AppState extends ChangeNotifier {
   }
 
   void _updateFcmToken(String userId, String token) async {
-    final user = _authService.currentUser;
+    final user = _authNotifier.authService.currentUser;
     if (user != null) {
       if (!user.fcmTokens.contains(token)) {
         final updatedTokens = List<String>.from(user.fcmTokens)..add(token);
         final updatedUser = user.copyWith(fcmTokens: updatedTokens);
-        _authService.updateUserProfile(updatedUser);
+        _authNotifier.authService.updateUserProfile(updatedUser);
       }
       
       // Force database atomic union to prevent multi-device overwrites
@@ -863,21 +695,21 @@ class AppState extends ChangeNotifier {
 
       // Increment statistics for lender (current user) and borrower in Firestore
       try {
-        final lenderProfile = await _authService.getUserProfile(item.lenderId);
+        final lenderProfile = await _authNotifier.authService.getUserProfile(item.lenderId);
         if (lenderProfile != null) {
           final updatedLender = lenderProfile.copyWith(
             successfulLends: lenderProfile.successfulLends + 1,
           );
-          await _authService.updateUserProfile(updatedLender);
+          await _authNotifier.authService.updateUserProfile(updatedLender);
         }
 
         if (item.borrowerId != null) {
-          final borrowerProfile = await _authService.getUserProfile(item.borrowerId!);
+          final borrowerProfile = await _authNotifier.authService.getUserProfile(item.borrowerId!);
           if (borrowerProfile != null) {
             final updatedBorrower = borrowerProfile.copyWith(
               successfulBorrows: borrowerProfile.successfulBorrows + 1,
             );
-            await _authService.updateUserProfile(updatedBorrower);
+            await _authNotifier.authService.updateUserProfile(updatedBorrower);
           }
         }
       } catch (e) {
@@ -1125,7 +957,7 @@ class AppState extends ChangeNotifier {
       try {
         borrowerProfile = availableMockUsers.firstWhere((u) => u.uid == request.requesterId);
       } catch (_) {
-        final realProfile = await _authService.getUserProfile(request.requesterId);
+        final realProfile = await _authNotifier.authService.getUserProfile(request.requesterId);
         borrowerProfile = realProfile ?? currentUser!;
       }
       
@@ -1212,7 +1044,7 @@ class AppState extends ChangeNotifier {
   Future<UserProfile?> signIn(String email, String password) async {
     _setLoading(true);
     try {
-      final user = await _authService.signIn(email, password);
+      final user = await _authNotifier.authService.signIn(email, password);
       _addLog('Giriş yapıldı: ${user?.name}');
       return user;
     } catch (e) {
@@ -1226,7 +1058,7 @@ class AppState extends ChangeNotifier {
   Future<UserProfile?> signUp(String email, String password, String name) async {
     _setLoading(true);
     try {
-      final user = await _authService.signUp(email, password, name);
+      final user = await _authNotifier.authService.signUp(email, password, name);
       _addLog('Yeni üye kaydedildi: ${user?.name}');
       return user;
     } catch (e) {
@@ -1240,7 +1072,7 @@ class AppState extends ChangeNotifier {
   Future<void> signOut() async {
     _setLoading(true);
     try {
-      await _authService.signOut();
+      await _authNotifier.authService.signOut();
       _addLog('Oturum kapatıldı.');
     } catch (e) {
       _addLog('Çıkış hatası: $e');
@@ -1253,7 +1085,7 @@ class AppState extends ChangeNotifier {
     _setLoading(true);
     try {
       // 1. Re-authenticate locally
-      await _authService.reauthenticateWithPassword(password);
+      await _authNotifier.authService.reauthenticateWithPassword(password);
       _addLog('Hesap silme öncesi yeniden kimlik doğrulandı.');
 
       // 2. Call cloud function to clean up and delete user auth account
@@ -1263,7 +1095,7 @@ class AppState extends ChangeNotifier {
       }
 
       // 3. Clear local session / logout cleanly
-      await _authService.signOut();
+      await _authNotifier.authService.signOut();
       _addLog('Hesap başarıyla silindi ve oturum kapatıldı.');
     } catch (e, stack) {
       _crashlyticsService.recordError(e, stack, reason: 'deleteUserAccount failed');
@@ -1276,7 +1108,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> sendEmailVerification() async {
     try {
-      await _authService.sendEmailVerification();
+      await _authNotifier.authService.sendEmailVerification();
       _addLog('E-posta doğrulama bağlantısı gönderildi.');
     } catch (e) {
       _addLog('Doğrulama maili gönderme hatası: $e');
@@ -1284,11 +1116,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  bool get isEmailVerified => _authService.isEmailVerified;
+  bool get isEmailVerified => _authNotifier.authService.isEmailVerified;
 
   Future<void> reloadUser() async {
     try {
-      await _authService.reloadUser();
+      await _authNotifier.authService.reloadUser();
       notifyListeners();
     } catch (e) {
       _addLog('Kullanıcı güncelleme hatası: $e');
@@ -1335,7 +1167,7 @@ class AppState extends ChangeNotifier {
             usernameSource: 'custom',
             onboardingComplete: true,
           );
-          await _authService.updateUserProfile(updated);
+          await _authNotifier.authService.updateUserProfile(updated);
         }
       }
       
@@ -1353,7 +1185,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await _authService.sendPasswordResetEmail(email);
+      await _authNotifier.authService.sendPasswordResetEmail(email);
       _addLog('Şifre sıfırlama e-postası gönderildi: $email');
     } catch (e) {
       _addLog('Şifre sıfırlama hatası: $e');
@@ -1517,7 +1349,7 @@ class AppState extends ChangeNotifier {
     final updatedProfile = user.copyWith(avatarUrl: downloadUrl);
     
     // Update profile in Firestore/AuthService
-    await _authService.updateUserProfile(updatedProfile);
+    await _authNotifier.authService.updateUserProfile(updatedProfile);
     
     // If update is successful and there was an old photo, delete it from Storage
     if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty) {
@@ -1542,7 +1374,7 @@ class AppState extends ChangeNotifier {
         bio: bio.trim(),
         department: department.trim(),
       );
-      await _authService.updateUserProfile(updated);
+      await _authNotifier.authService.updateUserProfile(updated);
       _addLog('Profil başarıyla güncellendi.');
       notifyListeners();
     } catch (e, stack) {
@@ -1556,12 +1388,10 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
-    _authSubscription?.cancel();
+    _authNotifier.dispose();
     _itemsSubscription?.cancel();
     _requestsSubscription?.cancel();
     _chatSubscription?.cancel();
-    _blockedUsersSubscription?.cancel();
-    _userRelationsSubscription?.cancel();
     super.dispose();
   }
 }
