@@ -21,23 +21,20 @@ import '../services/analytics_service.dart';
 import '../services/crashlytics_service.dart';
 import 'notifiers/auth_notifier.dart';
 export 'notifiers/auth_notifier.dart' show ViewMode;
-
-// ViewMode is now defined and exported from AuthNotifier
+import 'notifiers/item_notifier.dart';
 
 class AppState extends ChangeNotifier {
-  // ─── Modüler Notifier'lar (Adım 1: AuthNotifier entegre edildi) ───────────
+  // ─── Modüler Notifier'lar ──────────────────────────────────────────────────────────
   late final AuthNotifier _authNotifier;
+  late final ItemNotifier _itemNotifier;
 
   // ─── Servisler ────────────────────────────────────────────────────────────
-  final ItemService _itemService;
   final BorrowRequestService _borrowRequestService;
   final ChatMessageService _chatMessageService;
-  final StorageService _storageService;
   final AnalyticsService _analyticsService;
   final CrashlyticsService _crashlyticsService;
 
-  // ─── Items State ──────────────────────────────────────────────────────────
-  List<EmanetItem> _items = [];
+  // ─── Activity Logs ──────────────────────────────────────────────────────────
   bool _isLoading = false;
   final List<String> _activityLogs = [];
 
@@ -46,7 +43,6 @@ class AppState extends ChangeNotifier {
   final List<ChatMessageModel> _chatMessages = [];
   final List<MeetingPointProposalModel> _meetingPointProposals = [];
 
-  StreamSubscription<List<EmanetItem>>? _itemsSubscription;
   StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
   StreamSubscription<List<ChatMessageModel>>? _chatSubscription;
 
@@ -58,15 +54,20 @@ class AppState extends ChangeNotifier {
     required StorageService storageService,
     AnalyticsService? analyticsService,
     CrashlyticsService? crashlyticsService,
-  })  : _itemService = itemService,
-        _borrowRequestService = borrowRequestService,
+  })  : _borrowRequestService = borrowRequestService,
         _chatMessageService = chatMessageService,
-        _storageService = storageService,
         _analyticsService = analyticsService ?? AnalyticsService(),
         _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
 
     _authNotifier = AuthNotifier(
       authService: authService,
+      analyticsService: _analyticsService,
+      crashlyticsService: _crashlyticsService,
+    );
+
+    _itemNotifier = ItemNotifier(
+      itemService: itemService,
+      storageService: storageService,
       analyticsService: _analyticsService,
       crashlyticsService: _crashlyticsService,
     );
@@ -81,6 +82,8 @@ class AppState extends ChangeNotifier {
       }
       notifyListeners();
     };
+    _authNotifier.addListener(notifyListeners);
+    _itemNotifier.addListener(notifyListeners);
 
     // Handle initial state if user is already logged in on startup
     final initialUser = _authNotifier.currentUser;
@@ -88,12 +91,6 @@ class AppState extends ChangeNotifier {
       _startRequestsSubscription(initialUser.uid);
       _setupNotifications(initialUser.uid);
     }
-
-    // Listen to Items changes
-    _itemsSubscription = _itemService.onItemsChanged.listen((newItems) {
-      _items = newItems;
-      notifyListeners();
-    });
 
     // Active Chat Room Subscription setup (Per-request subscription for optimal Firestore usage)
     // Global subscription removed; instead, active chat room is subscribed on demand via setActiveChatRoom().
@@ -107,31 +104,29 @@ class AppState extends ChangeNotifier {
   AnalyticsService get analytics => _analyticsService;
   CrashlyticsService get crashlytics => _crashlyticsService;
 
+  // ─── Items delegation (ItemNotifier) ─────────────────────────────────────
   List<EmanetItem> get items {
-    final list = _items.where((item) => item.status != EmanetStatus.archived && !isRelationBlocked(item.lenderId)).toList();
-    return List.unmodifiable(list);
+    return List.unmodifiable(
+      _itemNotifier.rawItems.where(
+        (item) => item.status != EmanetStatus.archived && !isRelationBlocked(item.lenderId),
+      ),
+    );
   }
 
-  List<EmanetItem> get allItems => List.unmodifiable(_items);
+  List<EmanetItem> get allItems => _itemNotifier.rawItems;
 
-  EmanetItem? findItemInMemory(String itemId) {
-    try {
-      return _items.firstWhere((i) => i.id == itemId);
-    } catch (_) {
-      return null;
-    }
-  }
+  EmanetItem? findItemInMemory(String itemId) => _itemNotifier.findItemInMemory(itemId);
 
-  Future<EmanetItem?> getItemById(String itemId) async {
-    final cached = findItemInMemory(itemId);
-    if (cached != null) return cached;
-    try {
-      return await _itemService.getItemById(itemId);
-    } catch (e) {
-      debugPrint('Emanetly: getItemById error: $e');
-      return null;
-    }
-  }
+  Future<EmanetItem?> getItemById(String itemId) => _itemNotifier.getItemById(itemId);
+
+
+
+  // Convenience: raw list for internal AppState logic that needs direct item access
+  List<EmanetItem> get _items => _itemNotifier.rawItems.toList();
+
+  // Private accessors for internal business methods that still use the services directly
+  ItemService get _itemService => _itemNotifier.itemService;
+  StorageService get _storageService => _itemNotifier.storageService;
 
   // ─── Auth delegation (AuthNotifier) ──────────────────────────────────────
   UserProfile? get currentUser => _authNotifier.currentUser;
@@ -147,13 +142,12 @@ class AppState extends ChangeNotifier {
   bool get isLoading => _isLoading;
   List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
 
-  ItemService get itemService => _itemService;
+  ItemService get itemService => _itemNotifier.itemService;
 
   void _loadInitialData() async {
     _isLoading = true;
     notifyListeners();
     try {
-      _items = await _itemService.getItems();
       _addLog('Uygulama başarıyla başlatıldı.');
     } catch (e) {
       _addLog('Veri yüklenirken hata oluştu: $e');
@@ -165,7 +159,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshData() async {
     try {
-      _items = await _itemService.getItems();
+      await _itemNotifier.refreshItems();
       if (currentUser != null) {
         await _authNotifier.authService.reloadUser();
       }
@@ -1333,7 +1327,6 @@ class AppState extends ChangeNotifier {
     _borrowRequests.clear();
   }
 
-  StorageService get storageService => _storageService;
 
   Future<void> updateUserProfilePhoto(File imageFile, {void Function(double progress)? onProgress}) async {
     final user = currentUser;
@@ -1389,7 +1382,7 @@ class AppState extends ChangeNotifier {
   @override
   void dispose() {
     _authNotifier.dispose();
-    _itemsSubscription?.cancel();
+    _itemNotifier.dispose();
     _requestsSubscription?.cancel();
     _chatSubscription?.cancel();
     super.dispose();
