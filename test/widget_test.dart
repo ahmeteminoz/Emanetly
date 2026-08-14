@@ -36,7 +36,8 @@ void main() {
     expect(find.text('Emanetly'), findsOneWidget);
 
     // Verify some mock items from MockItemService are loaded and visible
-    await tester.pumpAndSettle(); // let futures settle
+    await tester.pump(const Duration(milliseconds: 300)); // MockItemService has 200ms delay
+    await tester.pumpAndSettle();
     expect(find.text('USB-C Hızlı Şarj Cihazı (65W)'), findsOneWidget);
     expect(find.text('Büyük Boy Siyah Şemsiye'), findsOneWidget);
   });

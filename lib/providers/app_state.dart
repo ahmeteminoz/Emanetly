@@ -22,29 +22,23 @@ import '../services/crashlytics_service.dart';
 import 'notifiers/auth_notifier.dart';
 export 'notifiers/auth_notifier.dart' show ViewMode;
 import 'notifiers/item_notifier.dart';
+import 'notifiers/request_notifier.dart';
 
 class AppState extends ChangeNotifier {
-  // ─── Modüler Notifier'lar ──────────────────────────────────────────────────────────
+  // ─── Modüler Notifier'lar ─────────────────────────────────────────────────
   late final AuthNotifier _authNotifier;
   late final ItemNotifier _itemNotifier;
+  late final RequestNotifier _requestNotifier;
 
-  // ─── Servisler ────────────────────────────────────────────────────────────
-  final BorrowRequestService _borrowRequestService;
-  final ChatMessageService _chatMessageService;
+  // ─── Servisler (AppState düzeyinde kalan) ─────────────────────────────────
   final AnalyticsService _analyticsService;
   final CrashlyticsService _crashlyticsService;
 
-  // ─── Activity Logs ──────────────────────────────────────────────────────────
+  // ─── Activity Logs ────────────────────────────────────────────────────────
   bool _isLoading = false;
   final List<String> _activityLogs = [];
 
-  // ─── Pre-agreement negotiation collections ────────────────────────────────
-  final List<BorrowRequestModel> _borrowRequests = [];
-  final List<ChatMessageModel> _chatMessages = [];
-  final List<MeetingPointProposalModel> _meetingPointProposals = [];
-
-  StreamSubscription<List<BorrowRequestModel>>? _requestsSubscription;
-  StreamSubscription<List<ChatMessageModel>>? _chatSubscription;
+  String? _currentFcmToken;
 
   AppState({
     required AuthService authService,
@@ -54,9 +48,7 @@ class AppState extends ChangeNotifier {
     required StorageService storageService,
     AnalyticsService? analyticsService,
     CrashlyticsService? crashlyticsService,
-  })  : _borrowRequestService = borrowRequestService,
-        _chatMessageService = chatMessageService,
-        _analyticsService = analyticsService ?? AnalyticsService(),
+  })  : _analyticsService = analyticsService ?? AnalyticsService(),
         _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
 
     _authNotifier = AuthNotifier(
@@ -72,63 +64,69 @@ class AppState extends ChangeNotifier {
       crashlyticsService: _crashlyticsService,
     );
 
-    // Auth değişimlerini dinle ve bu AppState'i de güncelle
+    _requestNotifier = RequestNotifier(
+      borrowRequestService: borrowRequestService,
+      chatMessageService: chatMessageService,
+      currentUser: () => _authNotifier.currentUser,
+      isUserBlocked: (uid) => _authNotifier.isUserBlocked(uid),
+      analyticsService: _analyticsService,
+    );
+    _requestNotifier.onLog = _addLog;
+
+    // Auth değişimlerini dinle
     _authNotifier.onAuthChanged = (UserProfile? user) {
       if (user != null) {
-        _startRequestsSubscription(user.uid);
+        _requestNotifier.startRequestsSubscription(user.uid);
         _setupNotifications(user.uid);
       } else {
-        _cancelRequestsSubscription();
+        _requestNotifier.cancelRequestsSubscription();
       }
       notifyListeners();
     };
     _authNotifier.addListener(notifyListeners);
     _itemNotifier.addListener(notifyListeners);
+    _requestNotifier.addListener(notifyListeners);
 
-    // Handle initial state if user is already logged in on startup
+    // Uygulama açıkken zaten giriş yapılmışsa
     final initialUser = _authNotifier.currentUser;
     if (initialUser != null) {
-      _startRequestsSubscription(initialUser.uid);
+      _requestNotifier.startRequestsSubscription(initialUser.uid);
       _setupNotifications(initialUser.uid);
     }
 
-    // Active Chat Room Subscription setup (Per-request subscription for optimal Firestore usage)
-    // Global subscription removed; instead, active chat room is subscribed on demand via setActiveChatRoom().
-
-    // Initialize list
     _loadInitialData();
-    _initPreAgreementMocks();
   }
 
-  // Getters
+  // ─── Getters ──────────────────────────────────────────────────────────────
   AnalyticsService get analytics => _analyticsService;
   CrashlyticsService get crashlytics => _crashlyticsService;
 
-  // ─── Items delegation (ItemNotifier) ─────────────────────────────────────
+  // ─── Items delegation (ItemNotifier) ──────────────────────────────────────
   List<EmanetItem> get items {
     return List.unmodifiable(
       _itemNotifier.rawItems.where(
-        (item) => item.status != EmanetStatus.archived && !isRelationBlocked(item.lenderId),
+        (item) =>
+            item.status != EmanetStatus.archived &&
+            !isRelationBlocked(item.lenderId),
       ),
     );
   }
 
   List<EmanetItem> get allItems => _itemNotifier.rawItems;
 
-  EmanetItem? findItemInMemory(String itemId) => _itemNotifier.findItemInMemory(itemId);
+  EmanetItem? findItemInMemory(String itemId) =>
+      _itemNotifier.findItemInMemory(itemId);
 
-  Future<EmanetItem?> getItemById(String itemId) => _itemNotifier.getItemById(itemId);
+  Future<EmanetItem?> getItemById(String itemId) =>
+      _itemNotifier.getItemById(itemId);
 
-
-
-  // Convenience: raw list for internal AppState logic that needs direct item access
+  // Private accessor for internal business methods
   List<EmanetItem> get _items => _itemNotifier.rawItems.toList();
-
-  // Private accessors for internal business methods that still use the services directly
   ItemService get _itemService => _itemNotifier.itemService;
   StorageService get _storageService => _itemNotifier.storageService;
+  ItemService get itemService => _itemNotifier.itemService;
 
-  // ─── Auth delegation (AuthNotifier) ──────────────────────────────────────
+  // ─── Auth delegation (AuthNotifier) ───────────────────────────────────────
   UserProfile? get currentUser => _authNotifier.currentUser;
   AuthService get authService => _authNotifier.authService;
   List<UserProfile> get availableMockUsers => _authNotifier.availableMockUsers;
@@ -137,13 +135,57 @@ class AppState extends ChangeNotifier {
   int get selectedPaletteIndex => _authNotifier.selectedPaletteIndex;
   ViewMode get gridViewMode => _authNotifier.gridViewMode;
   Set<String> get favoriteItemIds => _authNotifier.favoriteItemIds;
-  Set<String> get blockedRelationUserIds => _authNotifier.blockedRelationUserIds;
+  Set<String> get blockedRelationUserIds =>
+      _authNotifier.blockedRelationUserIds;
 
   bool get isLoading => _isLoading;
-  List<String> get activityLogs => List.unmodifiable(_activityLogs.reversed);
+  List<String> get activityLogs =>
+      List.unmodifiable(_activityLogs.reversed);
 
-  ItemService get itemService => _itemNotifier.itemService;
+  // ─── Request delegation (RequestNotifier) ────────────────────────────────
+  List<BorrowRequestModel> get borrowRequests =>
+      _requestNotifier.borrowRequests;
 
+  void setActiveChatRoom(String? requestId) =>
+      _requestNotifier.setActiveChatRoom(requestId);
+
+  List<ChatMessageModel> getChatMessagesForRequest(String requestId) =>
+      _requestNotifier.getChatMessagesForRequest(requestId);
+
+  int getUnreadCountForRequest(String requestId) =>
+      _requestNotifier.getUnreadCountForRequest(requestId);
+
+  int get totalUnreadCount => _requestNotifier.totalUnreadCount;
+
+  MeetingPointProposalModel? getProposal(String proposalId) =>
+      _requestNotifier.getProposal(proposalId);
+
+  BorrowRequestModel? getRequestForActiveItem(String itemId) =>
+      _requestNotifier.getRequestForActiveItem(itemId);
+
+  Future<void> sendChatMessage(String requestId, String text,
+          {String? customPayload}) =>
+      _requestNotifier.sendChatMessage(requestId, text,
+          customPayload: customPayload);
+
+  Future<void> markMessagesAsRead(String requestId) =>
+      _requestNotifier.markMessagesAsRead(requestId);
+
+  Future<void> proposeMeetingPoint(
+          String requestId, String title, String addressText, String timeText) =>
+      _requestNotifier.proposeMeetingPoint(
+          requestId, title, addressText, timeText);
+
+  Future<void> acceptMeetingPoint(String proposalId) =>
+      _requestNotifier.acceptMeetingPoint(proposalId);
+
+  Future<void> rejectMeetingPoint(String proposalId) =>
+      _requestNotifier.rejectMeetingPoint(proposalId);
+
+  void rejectBorrowRequest(String requestId) =>
+      _requestNotifier.rejectBorrowRequest(requestId);
+
+  // ─── Utility ──────────────────────────────────────────────────────────────
   void _loadInitialData() async {
     _isLoading = true;
     notifyListeners();
@@ -177,7 +219,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─── Theme delegation ─────────────────────────────────────────────────────
+  // ─── Theme delegation ──────────────────────────────────────────────────────
   void changeThemeMode(ThemeMode mode) {
     _authNotifier.changeThemeMode(mode);
     _addLog('Tema modu değiştirildi: ${mode.name}');
@@ -193,11 +235,9 @@ class AppState extends ChangeNotifier {
     _addLog('Görünüm modu değiştirildi: ${mode.name}');
   }
 
-  // ─── Block delegation ─────────────────────────────────────────────────────
+  // ─── Block delegation ──────────────────────────────────────────────────────
   bool isUserBlocked(String uid) => _authNotifier.isUserBlocked(uid);
   bool isRelationBlocked(String uid) => _authNotifier.isRelationBlocked(uid);
-
-  // (Block/userRelations subscriptions now managed by AuthNotifier)
 
   Future<void> blockUser(String targetUserId, {required String source}) async {
     await _authNotifier.blockUser(targetUserId, source: source);
@@ -209,30 +249,34 @@ class AppState extends ChangeNotifier {
     _addLog('Kullanıcı engeli kaldırıldı: $targetUserId');
   }
 
+  // ─── confirmHandoverAction (koordinatör — hem request hem item günceller) ──
   Future<bool> confirmHandoverAction(String requestId, String action) async {
     if (currentUser == null) return false;
     _setLoading(true);
     try {
       if (Firebase.apps.isNotEmpty) {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('confirmHandoverAction');
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+            .httpsCallable('confirmHandoverAction');
         final res = await callable.call({
           'requestId': requestId,
           'action': action,
         });
-        
+
         final data = res.data as Map;
         final bool success = data['success'] ?? false;
         _addLog('Emanet Teslim/İade aksiyonu gönderildi: $action, Sonuç: $success');
         return success;
       } else {
-        // Local simulation for widget/unit tests when Firebase is not running
-        final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
+        // Local simulation for widget/unit tests
+        final borrowRequests = _requestNotifier.mutableBorrowRequests;
+        final reqIndex = borrowRequests.indexWhere((r) => r.id == requestId);
         if (reqIndex == -1) return false;
-        final req = _borrowRequests[reqIndex];
-        
-        final itemIndex = _items.indexWhere((i) => i.id == req.itemId);
+        final req = borrowRequests[reqIndex];
+
+        final items = _items;
+        final itemIndex = items.indexWhere((i) => i.id == req.itemId);
         if (itemIndex == -1) return false;
-        final item = _items[itemIndex];
+        final item = items[itemIndex];
 
         DateTime? handoverLenderConfirmedAt = req.handoverLenderConfirmedAt;
         DateTime? handoverBorrowerConfirmedAt = req.handoverBorrowerConfirmedAt;
@@ -254,37 +298,36 @@ class AppState extends ChangeNotifier {
         DeliveryStatus? newDeliveryStatus = item.deliveryStatus;
         String? borrowerId = item.borrowerId;
 
-        // Transition to borrowed
-        if (handoverLenderConfirmedAt != null && handoverBorrowerConfirmedAt != null) {
+        if (handoverLenderConfirmedAt != null &&
+            handoverBorrowerConfirmedAt != null) {
           newStatus = BorrowRequestStatus.borrowed;
           newItemStatus = EmanetStatus.borrowed;
           borrowerId = req.requesterId;
           newDeliveryStatus = DeliveryStatus.delivered;
         }
 
-        // Transition to completed
-        if (returnBorrowerConfirmedAt != null && returnLenderConfirmedAt != null) {
+        if (returnBorrowerConfirmedAt != null &&
+            returnLenderConfirmedAt != null) {
           newStatus = BorrowRequestStatus.completed;
           newItemStatus = EmanetStatus.archived;
           borrowerId = null;
           newDeliveryStatus = null;
         }
 
-        final updatedReq = req.copyWith(
+        borrowRequests[reqIndex] = req.copyWith(
           status: newStatus,
           handoverLenderConfirmedAt: handoverLenderConfirmedAt,
           handoverBorrowerConfirmedAt: handoverBorrowerConfirmedAt,
           returnBorrowerConfirmedAt: returnBorrowerConfirmedAt,
           returnLenderConfirmedAt: returnLenderConfirmedAt,
         );
-        _borrowRequests[reqIndex] = updatedReq;
 
         final updatedItem = item.copyWith(
           status: newItemStatus,
           borrowerId: borrowerId,
           deliveryStatus: newDeliveryStatus,
         );
-        _items[itemIndex] = updatedItem;
+        await _itemService.updateItem(updatedItem);
 
         _addLog('Yerel simulasyon tamamlandı: $action');
         notifyListeners();
@@ -292,21 +335,25 @@ class AppState extends ChangeNotifier {
       }
     } catch (e, stack) {
       _addLog('confirmHandoverAction hatası: $e');
-      _crashlyticsService.recordError(e, stack, reason: 'confirmHandoverAction failed');
+      _crashlyticsService.recordError(e, stack,
+          reason: 'confirmHandoverAction failed');
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // ─── Favorites delegation ─────────────────────────────────────────────────
+  // ─── Favorites delegation ──────────────────────────────────────────────────
   bool isFavorite(String itemId) => _authNotifier.isFavorite(itemId);
 
   void toggleFavorite(String itemId) {
-    final itemCategory = _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
+    final itemCategory =
+        _items.where((i) => i.id == itemId).firstOrNull?.category ?? 'genel';
     _authNotifier.toggleFavorite(itemId, itemCategory: itemCategory);
     final isNowFav = _authNotifier.isFavorite(itemId);
-    _addLog(isNowFav ? 'Ürün favorilere eklendi: $itemId' : 'Ürün favorilerden çıkarıldı: $itemId');
+    _addLog(isNowFav
+        ? 'Ürün favorilere eklendi: $itemId'
+        : 'Ürün favorilerden çıkarıldı: $itemId');
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {
@@ -318,7 +365,7 @@ class AppState extends ChangeNotifier {
     _addLog('Aktif kullanıcı değiştirildi: ${currentUser?.name}');
   }
 
-  // Add a new item listing
+  // ─── Item Actions ──────────────────────────────────────────────────────────
   Future<bool> addNewItem({
     required String title,
     required String description,
@@ -335,7 +382,6 @@ class AppState extends ChangeNotifier {
     final uploadedPaths = <String>[];
     bool draftCreated = false;
 
-    // Safe lenderName resolution fallback logic
     String resolvedLenderName = 'Bilinmeyen Kullanıcı';
     final nameTrimmed = currentUser!.name.trim();
     final usernameTrimmed = (currentUser!.username ?? '').trim();
@@ -347,13 +393,10 @@ class AppState extends ChangeNotifier {
       resolvedLenderName = usernameTrimmed;
     } else if (emailTrimmed.isNotEmpty) {
       final emailPart = emailTrimmed.split('@').first.trim();
-      if (emailPart.isNotEmpty) {
-        resolvedLenderName = emailPart;
-      }
+      if (emailPart.isNotEmpty) resolvedLenderName = emailPart;
     }
 
     try {
-      // Step 1: Create minimal draft document in Firestore so isOwnerOfItem rule succeeds in Storage
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance.collection('items').doc(itemId).set({
           'lenderId': currentUser!.uid,
@@ -362,10 +405,10 @@ class AppState extends ChangeNotifier {
           'createdAt': FieldValue.serverTimestamp(),
         });
         draftCreated = true;
-        debugPrint('Emanetly Upload Step 1: Draft item created in Firestore for $itemId with lenderName: $resolvedLenderName');
+        debugPrint(
+            'Emanetly Upload Step 1: Draft item created in Firestore for $itemId with lenderName: $resolvedLenderName');
       }
 
-      // Step 2: Upload images to Storage
       final sourcePaths = List<String>.from(images);
       if (sourcePaths.isEmpty && imageUrl != null && imageUrl.isNotEmpty) {
         sourcePaths.add(imageUrl);
@@ -380,7 +423,8 @@ class AppState extends ChangeNotifier {
             uploadedUrls.add(path);
           } else {
             final file = File(path);
-            debugPrint('Emanetly Upload Step 3: Local file exists = ${file.existsSync()}, size = ${file.existsSync() ? file.lengthSync() : 0} bytes');
+            debugPrint(
+                'Emanetly Upload Step 3: Local file exists = ${file.existsSync()}, size = ${file.existsSync() ? file.lengthSync() : 0} bytes');
             final downloadUrl = await _storageService.uploadItemImage(
               itemId,
               file,
@@ -395,9 +439,16 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      // Step 3: Transition draft item to available status with full item schema
-      final colorOptions = [0xFF3B82F6, 0xFFEF4444, 0xFFF59E0B, 0xFF10B981, 0xFF8B5CF6, 0xFFEC4899];
-      final finalColor = mockColorValue ?? colorOptions[DateTime.now().millisecond % colorOptions.length];
+      final colorOptions = [
+        0xFF3B82F6,
+        0xFFEF4444,
+        0xFFF59E0B,
+        0xFF10B981,
+        0xFF8B5CF6,
+        0xFFEC4899,
+      ];
+      final finalColor = mockColorValue ??
+          colorOptions[DateTime.now().millisecond % colorOptions.length];
 
       final newItem = EmanetItem(
         id: itemId,
@@ -414,29 +465,36 @@ class AppState extends ChangeNotifier {
         comments: [],
         mockImageColorValue: finalColor,
       );
-      debugPrint('Emanetly Upload Step 7: Transitioning item status to available...');
+      debugPrint(
+          'Emanetly Upload Step 7: Transitioning item status to available...');
       await _itemService.addItem(newItem);
-      _analyticsService.logListingCreated(category: category, durationBucket: 'standard');
+      _analyticsService.logListingCreated(
+          category: category, durationBucket: 'standard');
       _addLog('$resolvedLenderName, yeni bir ilan yayınladı: "$title"');
       return true;
     } catch (e, stackTrace) {
       debugPrint('Emanetly Upload ERROR: $e');
-      _crashlyticsService.recordError(e, stackTrace, reason: 'Eşya eklenirken hata');
+      _crashlyticsService.recordError(e, stackTrace,
+          reason: 'Eşya eklenirken hata');
       _addLog('Eşya eklenirken hata: $e');
 
-      // Best-effort cleanup of Storage images and draft Firestore document
       if (draftCreated && Firebase.apps.isNotEmpty) {
         try {
           for (final p in uploadedPaths) {
             await _storageService.deleteImage(p);
           }
         } catch (cleanupErr) {
-          debugPrint('Emanetly Cleanup Non-fatal: Storage cleanup failed: $cleanupErr');
+          debugPrint(
+              'Emanetly Cleanup Non-fatal: Storage cleanup failed: $cleanupErr');
         }
         try {
-          await FirebaseFirestore.instance.collection('items').doc(itemId).delete();
+          await FirebaseFirestore.instance
+              .collection('items')
+              .doc(itemId)
+              .delete();
         } catch (cleanupErr) {
-          debugPrint('Emanetly Cleanup Non-fatal: Draft doc cleanup failed: $cleanupErr');
+          debugPrint(
+              'Emanetly Cleanup Non-fatal: Draft doc cleanup failed: $cleanupErr');
         }
       }
       rethrow;
@@ -445,7 +503,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Request to borrow an item (Creates pre-agreement discussion chat flow or inquiry)
+  // ─── requestBorrow (koordinatör — item + request + chat) ──────────────────
   Future<BorrowRequestModel?> requestBorrow(
     String itemId, {
     bool isOfficialRequest = true,
@@ -454,12 +512,12 @@ class AppState extends ChangeNotifier {
     _setLoading(true);
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
-      
+
       final requestId = 'req_${DateTime.now().millisecondsSinceEpoch}';
-      final status = isOfficialRequest 
-          ? BorrowRequestStatus.pendingDiscussion 
+      final status = isOfficialRequest
+          ? BorrowRequestStatus.pendingDiscussion
           : BorrowRequestStatus.onlyInquiry;
-      
+
       final newRequest = BorrowRequestModel(
         id: requestId,
         itemId: itemId,
@@ -470,19 +528,18 @@ class AppState extends ChangeNotifier {
         createdAt: DateTime.now(),
       );
 
-      await _borrowRequestService.addBorrowRequest(newRequest);
+      await _requestNotifier.borrowRequestService.addBorrowRequest(newRequest);
       _analyticsService.logBorrowRequestCreated(
         category: item.category,
         durationBucket: 'unspecified',
       );
 
-      // System message
-      await _chatMessageService.sendChatMessage(ChatMessageModel(
+      await _requestNotifier.chatMessageService.sendChatMessage(ChatMessageModel(
         id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
         requestId: requestId,
         senderId: 'system',
         senderName: 'Sistem',
-        text: isOfficialRequest 
+        text: isOfficialRequest
             ? 'Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.'
             : 'Ön görüşme odası oluşturuldu.',
         type: ChatMessageType.system,
@@ -499,32 +556,10 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Upgrade inquiry to official borrow request
   Future<void> upgradeToOfficialRequest(String requestId) async {
     _setLoading(true);
     try {
-      final index = _borrowRequests.indexWhere((r) => r.id == requestId);
-      if (index != -1) {
-        // Use updateBorrowRequestStatus (→ .update()) instead of addBorrowRequest (→ .set())
-        // to avoid re-triggering onRequestCreated Cloud Function.
-        await _borrowRequestService.updateBorrowRequestStatus(
-          requestId, BorrowRequestStatus.pendingDiscussion,
-        );
-        
-        // Add a system message in the chat
-        await _chatMessageService.sendChatMessage(ChatMessageModel(
-          id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-          requestId: requestId,
-          senderId: 'system',
-          senderName: 'Sistem',
-          text: 'Ödünç talebi gönderildi. İlan sahibinin yanıtı bekleniyor.',
-          type: ChatMessageType.system,
-          createdAt: DateTime.now(),
-        ));
-        
-        _addLog('Ödünç talebi resmiyete döküldü.');
-        notifyListeners();
-      }
+      await _requestNotifier.upgradeToOfficialRequest(requestId);
     } catch (e) {
       _addLog('Talep resmiyete dökülürken hata: $e');
     } finally {
@@ -532,7 +567,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Approve borrow request
   Future<void> approveBorrow(String itemId) async {
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
@@ -543,7 +577,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Reject borrow request
   Future<void> rejectBorrow(String itemId) async {
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
@@ -554,7 +587,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Set Meeting Point & Additional Note
   Future<void> setMeetingPoint(String itemId, String meetingPoint) async {
     _setLoading(true);
     try {
@@ -567,15 +599,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateMeetingDetails(String itemId, String location, String note) async {
+  Future<void> updateMeetingDetails(
+      String itemId, String location, String note) async {
     _setLoading(true);
     try {
-      final combined = note.isNotEmpty ? '$location | Not: $note' : location;
+      final combined =
+          note.isNotEmpty ? '$location | Not: $note' : location;
       await _itemService.setMeetingPoint(itemId, combined);
-      
+
       final activeReq = getRequestForActiveItem(itemId);
       if (activeReq != null) {
-        await _borrowRequestService.updateMeetingDetails(activeReq.id, location, note);
+        await _requestNotifier.borrowRequestService
+            .updateMeetingDetails(activeReq.id, location, note);
       }
       _addLog('Buluşma detayları kaydedildi: $location ($note)');
     } catch (e) {
@@ -585,8 +620,64 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  String? _currentFcmToken;
+  // ─── acceptBorrowRequest (koordinatör — hem item hem request günceller) ────
+  void acceptBorrowRequest(String requestId) async {
+    final borrowRequests = _requestNotifier.mutableBorrowRequests;
+    final reqIndex = borrowRequests.indexWhere((r) => r.id == requestId);
+    if (reqIndex == -1) return;
+    final request = borrowRequests[reqIndex];
 
+    await _requestNotifier.borrowRequestService
+        .updateBorrowRequestStatus(requestId, BorrowRequestStatus.accepted);
+    _analyticsService.logBorrowRequestStatusChanged(requestStatus: 'accepted');
+
+    final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
+    if (itemIndex != -1) {
+      final item = _items[itemIndex];
+
+      UserProfile borrowerProfile;
+      try {
+        borrowerProfile = availableMockUsers
+            .firstWhere((u) => u.uid == request.requesterId);
+      } catch (_) {
+        final realProfile = await _authNotifier.authService
+            .getUserProfile(request.requesterId);
+        borrowerProfile = realProfile ?? currentUser!;
+      }
+
+      final meetingPointName = _requestNotifier.mutableMeetingPointProposals
+          .where((p) =>
+              p.requestId == requestId &&
+              p.status == MeetingPointStatus.accepted)
+          .map((p) => p.title)
+          .firstWhere((_) => true, orElse: () => item.location);
+
+      final updatedItem = item.copyWith(
+        status: EmanetStatus.pendingApproval,
+        deliveryStatus: DeliveryStatus.accepted,
+        borrowerId: borrowerProfile.uid,
+        borrowerName: borrowerProfile.name,
+        meetingPoint: meetingPointName,
+      );
+
+      await _itemService.updateItem(updatedItem);
+    }
+
+    final message = ChatMessageModel(
+      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
+      requestId: requestId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      text: 'Talep kabul edildi. Buluşma detaylarını konuşabilirsiniz.',
+      type: ChatMessageType.requestStatusUpdate,
+      createdAt: DateTime.now(),
+    );
+    await _requestNotifier.chatMessageService.sendChatMessage(message);
+
+    _addLog('Ödünç talebi kabul edildi. Rota takibi açılabilir.');
+  }
+
+  // ─── Notifications ─────────────────────────────────────────────────────────
   void _setupNotifications(String userId) {
     NotificationService.instance.initialize(
       onTokenReceived: (token) {
@@ -607,10 +698,12 @@ class AppState extends ChangeNotifier {
         final updatedUser = user.copyWith(fcmTokens: updatedTokens);
         _authNotifier.authService.updateUserProfile(updatedUser);
       }
-      
-      // Force database atomic union to prevent multi-device overwrites
+
       try {
-        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .update({
           'fcmTokens': FieldValue.arrayUnion([token])
         });
         _addLog('FCM Token veritabanıyla senkronize edildi.');
@@ -618,7 +711,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Start Routing
+  // ─── Routing & Delivery ────────────────────────────────────────────────────
   Future<void> startRouting(String itemId) async {
     _setLoading(true);
     try {
@@ -631,7 +724,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Complete Delivery (Marks as borrowed and sets progress status)
   Future<void> completeDelivery(String itemId) async {
     _setLoading(true);
     try {
@@ -644,14 +736,14 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Request return of the item
   Future<bool> requestReturn(String itemId) async {
     if (currentUser == null) return false;
     _setLoading(true);
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
       await _itemService.requestReturn(itemId);
-      _addLog('${currentUser!.name}, "${item.title}" eşyasını iade etmek için talep oluşturdu.');
+      _addLog(
+          '${currentUser!.name}, "${item.title}" eşyasını iade etmek için talep oluşturdu.');
       return true;
     } catch (e) {
       _addLog('İade talebi hatası: $e');
@@ -661,35 +753,36 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Approve return of the item
   Future<void> approveReturn(String itemId) async {
     try {
       final item = _items.firstWhere((i) => i.id == itemId);
       if (item.status != EmanetStatus.pendingReturn) {
-        _addLog('İade onaylama iptal edildi: Ürün iade bekleme durumunda değil (Mevcut: ${item.status.name})');
+        _addLog(
+            'İade onaylama iptal edildi: Ürün iade bekleme durumunda değil (Mevcut: ${item.status.name})');
         return;
       }
       await _itemService.approveReturn(itemId);
       _addLog('"${item.title}" iadesi onaylandı ve eşya teslim alındı.');
 
-      // Mark the corresponding accepted borrow request as completed in Firestore
       try {
-        final reqIndex = _borrowRequests.indexWhere(
-          (r) => r.itemId == itemId &&
-                 (r.status == BorrowRequestStatus.accepted ||
-                  r.status == BorrowRequestStatus.borrowed)
-        );
+        final borrowRequests = _requestNotifier.mutableBorrowRequests;
+        final reqIndex = borrowRequests.indexWhere((r) =>
+            r.itemId == itemId &&
+            (r.status == BorrowRequestStatus.accepted ||
+                r.status == BorrowRequestStatus.borrowed));
         if (reqIndex != -1) {
-          final request = _borrowRequests[reqIndex];
-          await _borrowRequestService.updateBorrowRequestStatus(request.id, BorrowRequestStatus.completed);
+          final request = borrowRequests[reqIndex];
+          await _requestNotifier.borrowRequestService
+              .updateBorrowRequestStatus(
+                  request.id, BorrowRequestStatus.completed);
         }
       } catch (e) {
         _addLog('Talep tamamlandı olarak güncellenirken hata: $e');
       }
 
-      // Increment statistics for lender (current user) and borrower in Firestore
       try {
-        final lenderProfile = await _authNotifier.authService.getUserProfile(item.lenderId);
+        final lenderProfile =
+            await _authNotifier.authService.getUserProfile(item.lenderId);
         if (lenderProfile != null) {
           final updatedLender = lenderProfile.copyWith(
             successfulLends: lenderProfile.successfulLends + 1,
@@ -698,12 +791,14 @@ class AppState extends ChangeNotifier {
         }
 
         if (item.borrowerId != null) {
-          final borrowerProfile = await _authNotifier.authService.getUserProfile(item.borrowerId!);
+          final borrowerProfile = await _authNotifier.authService
+              .getUserProfile(item.borrowerId!);
           if (borrowerProfile != null) {
             final updatedBorrower = borrowerProfile.copyWith(
               successfulBorrows: borrowerProfile.successfulBorrows + 1,
             );
-            await _authNotifier.authService.updateUserProfile(updatedBorrower);
+            await _authNotifier.authService
+                .updateUserProfile(updatedBorrower);
           }
         }
       } catch (e) {
@@ -714,306 +809,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Pre-Agreement Chat and Proposal Getters
-  List<BorrowRequestModel> get borrowRequests => _borrowRequests;
-  
-  String? _activeChatRequestId;
-
-  void setActiveChatRoom(String? requestId) {
-    if (_activeChatRequestId == requestId) return;
-    _activeChatRequestId = requestId;
-    _chatSubscription?.cancel();
-    _chatSubscription = null;
-
-    if (requestId != null && requestId.isNotEmpty) {
-      _chatSubscription = _chatMessageService.listenToChatMessages(requestId).listen((newMessages) {
-        // Replace or merge messages for active request
-        _chatMessages.removeWhere((msg) => msg.requestId == requestId);
-        _chatMessages.addAll(newMessages);
-        notifyListeners();
-      });
-    }
-  }
-
-  List<ChatMessageModel> getChatMessagesForRequest(String requestId) {
-    final list = _chatMessages.where((msg) =>
-      msg.requestId == requestId &&
-      (msg.senderId == currentUser?.uid || msg.senderId == 'system' || !isUserBlocked(msg.senderId))
-    ).toList();
-    list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    return list;
-  }
-
-  int getUnreadCountForRequest(String requestId) {
-    if (currentUser == null) return 0;
-    return _chatMessages.where((msg) =>
-      msg.requestId == requestId &&
-      msg.senderId != currentUser!.uid &&
-      !isUserBlocked(msg.senderId) &&
-      !msg.isRead
-    ).length;
-  }
-
-  int get totalUnreadCount {
-    if (currentUser == null) return 0;
-    final myRequestIds = _borrowRequests.map((r) => r.id).toSet();
-    return _chatMessages.where((msg) =>
-      myRequestIds.contains(msg.requestId) &&
-      msg.senderId != currentUser!.uid &&
-      !isUserBlocked(msg.senderId) &&
-      !msg.isRead
-    ).length;
-  }
-  
-  MeetingPointProposalModel? getProposal(String proposalId) {
-    try {
-      return _meetingPointProposals.firstWhere((p) => p.id == proposalId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  BorrowRequestModel? getRequestForActiveItem(String itemId) {
-    try {
-      return _borrowRequests.firstWhere(
-        (req) => req.itemId == itemId &&
-                 req.status != BorrowRequestStatus.rejected &&
-                 req.status != BorrowRequestStatus.cancelled &&
-                 req.status != BorrowRequestStatus.expired &&
-                 req.status != BorrowRequestStatus.completed
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // Pre-Agreement Actions
-  Future<void> sendChatMessage(String requestId, String text, {String? customPayload}) async {
-    if (currentUser == null) return;
-
-    String validSenderName = currentUser!.name.trim();
-    if (validSenderName.isEmpty && currentUser!.email.isNotEmpty) {
-      validSenderName = currentUser!.email.split('@').first;
-    }
-    if (validSenderName.isEmpty) {
-      validSenderName = 'Öğrenci';
-    }
-
-    final message = ChatMessageModel(
-      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: requestId,
-      senderId: currentUser!.uid,
-      senderName: validSenderName,
-      text: text,
-      type: ChatMessageType.text,
-      createdAt: DateTime.now().toUtc(),
-      customPayload: customPayload,
-    );
-    await _chatMessageService.sendChatMessage(message);
-    _analyticsService.logChatMessageSent(messageType: 'text');
-    _addLog('Mesaj gönderildi: "$text"');
-  }
-
-  Future<void> markMessagesAsRead(String requestId) async {
-    if (currentUser == null) return;
-    
-    // Yerel mesajları anında okundu yaparak arayüzün anlık tepki vermesini sağlıyoruz
-    var localUpdated = false;
-    for (var i = 0; i < _chatMessages.length; i++) {
-      final msg = _chatMessages[i];
-      if (msg.requestId == requestId && msg.senderId != currentUser!.uid && !msg.isRead) {
-        _chatMessages[i] = ChatMessageModel(
-          id: msg.id,
-          requestId: msg.requestId,
-          senderId: msg.senderId,
-          senderName: msg.senderName,
-          text: msg.text,
-          type: msg.type,
-          createdAt: msg.createdAt,
-          customPayload: msg.customPayload,
-          isRead: true,
-        );
-        localUpdated = true;
-      }
-    }
-    if (localUpdated) {
-      notifyListeners();
-    }
-    
-    await _chatMessageService.markMessagesAsRead(requestId, currentUser!.uid);
-  }
-
-  Future<void> proposeMeetingPoint(String requestId, String title, String addressText, String timeText) async {
-    if (currentUser == null) return;
-    
-    final proposalId = 'prop_${DateTime.now().millisecondsSinceEpoch}';
-    final requestIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
-    if (requestIndex == -1) return;
-    final request = _borrowRequests[requestIndex];
-
-    final isOwner = currentUser!.uid == request.ownerId;
-
-    final proposal = MeetingPointProposalModel(
-      id: proposalId,
-      requestId: requestId,
-      proposedByUserId: currentUser!.uid,
-      title: title,
-      addressText: addressText,
-      proposedTimeText: timeText,
-      status: MeetingPointStatus.pending,
-      acceptedByOwner: isOwner,
-      acceptedByRequester: !isOwner,
-    );
-
-    _meetingPointProposals.add(proposal);
-    _borrowRequests[requestIndex] = request.copyWith(proposedMeetingPointId: proposalId);
-
-    // Add proposal card as a system message in conversation
-    final message = ChatMessageModel(
-      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: requestId,
-      senderId: 'system',
-      senderName: 'Sistem',
-      text: 'Buluşma noktası önerildi: $title ($timeText)',
-      type: ChatMessageType.meetingPointProposal,
-      createdAt: DateTime.now(),
-      customPayload: proposalId,
-    );
-    await _chatMessageService.sendChatMessage(message);
-
-    _addLog('Yeni buluşma noktası önerildi: $title');
-  }
-
-  Future<void> acceptMeetingPoint(String proposalId) async {
-    final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
-    if (propIndex == -1) return;
-    final proposal = _meetingPointProposals[propIndex];
-
-    _meetingPointProposals[propIndex] = proposal.copyWith(
-      acceptedByOwner: true,
-      acceptedByRequester: true,
-      status: MeetingPointStatus.accepted,
-    );
-
-    // Add system message
-    final message = ChatMessageModel(
-      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: proposal.requestId,
-      senderId: 'system',
-      senderName: 'Sistem',
-      text: 'Buluşma noktası onaylandı: ${proposal.title}',
-      type: ChatMessageType.system,
-      createdAt: DateTime.now(),
-    );
-    await _chatMessageService.sendChatMessage(message);
-
-    _addLog('Buluşma noktası onaylandı: ${proposal.title}');
-  }
-
-  Future<void> rejectMeetingPoint(String proposalId) async {
-    final propIndex = _meetingPointProposals.indexWhere((p) => p.id == proposalId);
-    if (propIndex == -1) return;
-    final proposal = _meetingPointProposals[propIndex];
-
-    _meetingPointProposals[propIndex] = proposal.copyWith(
-      status: MeetingPointStatus.rejected,
-    );
-
-    // Add system message
-    final message = ChatMessageModel(
-      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: proposal.requestId,
-      senderId: 'system',
-      senderName: 'Sistem',
-      text: 'Buluşma noktası reddedildi: ${proposal.title}',
-      type: ChatMessageType.system,
-      createdAt: DateTime.now(),
-    );
-    await _chatMessageService.sendChatMessage(message);
-
-    _addLog('Buluşma noktası reddedildi: ${proposal.title}');
-  }
-
-  void acceptBorrowRequest(String requestId) async {
-    final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
-    if (reqIndex == -1) return;
-    final request = _borrowRequests[reqIndex];
-
-    await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.accepted);
-    _analyticsService.logBorrowRequestStatusChanged(requestStatus: 'accepted');
-
-    // Update item status in ItemService
-    final itemIndex = _items.indexWhere((i) => i.id == request.itemId);
-    if (itemIndex != -1) {
-      final item = _items[itemIndex];
-      
-      UserProfile borrowerProfile;
-      try {
-        borrowerProfile = availableMockUsers.firstWhere((u) => u.uid == request.requesterId);
-      } catch (_) {
-        final realProfile = await _authNotifier.authService.getUserProfile(request.requesterId);
-        borrowerProfile = realProfile ?? currentUser!;
-      }
-      
-      final meetingPointName = _meetingPointProposals
-          .where((p) => p.requestId == requestId && p.status == MeetingPointStatus.accepted)
-          .map((p) => p.title)
-          .firstWhere((_) => true, orElse: () => item.location);
-
-      final updatedItem = item.copyWith(
-        status: EmanetStatus.pendingApproval,
-        deliveryStatus: DeliveryStatus.accepted,
-        borrowerId: borrowerProfile.uid,
-        borrowerName: borrowerProfile.name,
-        meetingPoint: meetingPointName,
-      );
-
-      // Save item changes via service
-      await _itemService.updateItem(updatedItem);
-    }
-
-    // Add system message
-    final message = ChatMessageModel(
-      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: requestId,
-      senderId: 'system',
-      senderName: 'Sistem',
-      text: 'Talep kabul edildi. Buluşma detaylarını konuşabilirsiniz.',
-      type: ChatMessageType.requestStatusUpdate,
-      createdAt: DateTime.now(),
-    );
-    await _chatMessageService.sendChatMessage(message);
-
-    _addLog('Ödünç talebi kabul edildi. Rota takibi açılabilir.');
-  }
-
-  void rejectBorrowRequest(String requestId) async {
-    final reqIndex = _borrowRequests.indexWhere((r) => r.id == requestId);
-    if (reqIndex == -1) return;
-
-    await _borrowRequestService.updateBorrowRequestStatus(requestId, BorrowRequestStatus.rejected);
-
-    // Add system message
-    final message = ChatMessageModel(
-      id: 'msg_sys_${DateTime.now().millisecondsSinceEpoch}',
-      requestId: requestId,
-      senderId: 'system',
-      senderName: 'Sistem',
-      text: 'Talep reddedildi. Görüşme sonlandırıldı.',
-      type: ChatMessageType.requestStatusUpdate,
-      createdAt: DateTime.now(),
-    );
-    await _chatMessageService.sendChatMessage(message);
-
-    _addLog('Ödünç talebi reddedildi.');
-  }
-
-  Future<void> addUserReview(String targetUserId, String comment, double ratingRating, String requestId) async {
+  // ─── Reviews ───────────────────────────────────────────────────────────────
+  Future<void> addUserReview(
+    String targetUserId,
+    String comment,
+    double ratingRating,
+    String requestId,
+  ) async {
     if (currentUser == null) return;
 
     try {
-      // Cloud Function üzerinden yaz — sunucu tarafında doğrulama yapar
-      // (transaction completed mı, taraf mı, daha önce yazdı mı kontrolleri)
       final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
           .httpsCallable('addReview');
 
@@ -1033,8 +838,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-
-  // Wrapper Authentication Methods for the entire application
+  // ─── Auth Methods ──────────────────────────────────────────────────────────
   Future<UserProfile?> signIn(String email, String password) async {
     _setLoading(true);
     try {
@@ -1049,10 +853,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<UserProfile?> signUp(String email, String password, String name) async {
+  Future<UserProfile?> signUp(
+      String email, String password, String name) async {
     _setLoading(true);
     try {
-      final user = await _authNotifier.authService.signUp(email, password, name);
+      final user =
+          await _authNotifier.authService.signUp(email, password, name);
       _addLog('Yeni üye kaydedildi: ${user?.name}');
       return user;
     } catch (e) {
@@ -1078,21 +884,21 @@ class AppState extends ChangeNotifier {
   Future<void> deleteUserAccount(String password) async {
     _setLoading(true);
     try {
-      // 1. Re-authenticate locally
       await _authNotifier.authService.reauthenticateWithPassword(password);
       _addLog('Hesap silme öncesi yeniden kimlik doğrulandı.');
 
-      // 2. Call cloud function to clean up and delete user auth account
       if (Firebase.apps.isNotEmpty) {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable('requestAccountDeletion');
+        final callable =
+            FirebaseFunctions.instanceFor(region: 'europe-west1')
+                .httpsCallable('requestAccountDeletion');
         await callable.call();
       }
 
-      // 3. Clear local session / logout cleanly
       await _authNotifier.authService.signOut();
       _addLog('Hesap başarıyla silindi ve oturum kapatıldı.');
     } catch (e, stack) {
-      _crashlyticsService.recordError(e, stack, reason: 'deleteUserAccount failed');
+      _crashlyticsService.recordError(e, stack,
+          reason: 'deleteUserAccount failed');
       _addLog('Hesap silme hatası: $e');
       rethrow;
     } finally {
@@ -1125,14 +931,14 @@ class AppState extends ChangeNotifier {
     _setLoading(true);
     try {
       if (Firebase.apps.isNotEmpty) {
-        // Force refresh ID token first so the Functions emulator/prod receives latest email_verified claim
         await reloadUser();
-        
+
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
-          throw FirebaseAuthException(code: 'unauthenticated', message: 'Oturum bulunamadı.');
+          throw FirebaseAuthException(
+              code: 'unauthenticated', message: 'Oturum bulunamadı.');
         }
-        
+
         final tokenResult = await user.getIdTokenResult(true);
         debugPrint(
           'Username setup auth status: uid=${user.uid}, '
@@ -1142,17 +948,15 @@ class AppState extends ChangeNotifier {
 
         final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
             .httpsCallable('setUsername');
-        final result = await callable.call(<String, dynamic>{
+        final result = await callable.call({
           'username': newUsername,
         });
-        
-        // Log results
+
         final data = result.data as Map<dynamic, dynamic>;
         if (data['success'] == true) {
           _addLog('Kullanıcı adı başarıyla güncellendi: $newUsername');
         }
       } else {
-        // Mock fallback for unit tests and local mock builds
         final user = currentUser;
         if (user != null) {
           final updated = user.copyWith(
@@ -1164,8 +968,7 @@ class AppState extends ChangeNotifier {
           await _authNotifier.authService.updateUserProfile(updated);
         }
       }
-      
-      // Reload profile from database to get fresh UserProfile with new fields
+
       await reloadUser();
       notifyListeners();
     } catch (e, stack) {
@@ -1187,11 +990,13 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateItem(EmanetItem item, {void Function(double progress)? onProgress}) async {
+  // ─── Item Update & Delete ──────────────────────────────────────────────────
+  Future<void> updateItem(EmanetItem item,
+      {void Function(double progress)? onProgress}) async {
     _setLoading(true);
     try {
       EmanetItem finalItem = item;
-      
+
       EmanetItem? oldItem;
       try {
         oldItem = _items.firstWhere((i) => i.id == item.id);
@@ -1200,7 +1005,9 @@ class AppState extends ChangeNotifier {
       }
 
       final sourcePaths = List<String>.from(item.images);
-      if (sourcePaths.isEmpty && item.imageUrl != null && item.imageUrl!.isNotEmpty) {
+      if (sourcePaths.isEmpty &&
+          item.imageUrl != null &&
+          item.imageUrl!.isNotEmpty) {
         sourcePaths.add(item.imageUrl!);
       }
 
@@ -1224,10 +1031,12 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      // Garbage Collection: Delete old remote images that are no longer in the updated list
       final oldUrls = oldItem?.images ?? [];
       final oldImageUrl = oldItem?.imageUrl;
-      final allOldUrls = {...oldUrls, if (oldImageUrl != null && oldImageUrl.isNotEmpty) oldImageUrl};
+      final allOldUrls = {
+        ...oldUrls,
+        if (oldImageUrl != null && oldImageUrl.isNotEmpty) oldImageUrl,
+      };
 
       for (final oldUrl in allOldUrls) {
         if (!uploadedUrls.contains(oldUrl)) {
@@ -1255,20 +1064,22 @@ class AppState extends ChangeNotifier {
       final index = _items.indexWhere((i) => i.id == itemId);
       if (index != -1) {
         final item = _items[index];
-        if (item.status != EmanetStatus.available && item.status != EmanetStatus.archived) {
+        if (item.status != EmanetStatus.available &&
+            item.status != EmanetStatus.archived) {
           _addLog('İlan silme engellendi: Aktif işlemdeki ilanlar silinemez.');
           return;
         }
-        // Tüm resimleri Storage'dan temizle (çoklu resim desteği)
         final allImageUrls = <String>{
           ...item.images.where((u) => u.startsWith('http')),
-          if (item.imageUrl != null && item.imageUrl!.isNotEmpty) item.imageUrl!,
+          if (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+            item.imageUrl!,
         };
         for (final url in allImageUrls) {
           try {
             await _storageService.deleteImage(url);
           } catch (e) {
-            debugPrint('Emanetly: Storage image cleanup non-fatal: $e');
+            debugPrint(
+                'Emanetly: Storage image cleanup non-fatal: $e');
           }
         }
       }
@@ -1288,7 +1099,8 @@ class AppState extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         final updatedItem = item.copyWith(
-          status: shouldArchive ? EmanetStatus.archived : EmanetStatus.available,
+          status:
+              shouldArchive ? EmanetStatus.archived : EmanetStatus.available,
         );
         await _itemService.updateItem(updatedItem);
         _addLog('İlan arşiv durumu güncellendi: $shouldArchive');
@@ -1300,55 +1112,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Pre-Agreement Mocks Initializer
-  void _initPreAgreementMocks() {
-    // Starting with empty mock data for clean prototype testing as requested.
-  }
-
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  void _startRequestsSubscription(String userId) {
-    _requestsSubscription?.cancel();
-    _requestsSubscription = _borrowRequestService.listenToBorrowRequests(userId).listen((newRequests) {
-      _borrowRequests.clear();
-      _borrowRequests.addAll(newRequests);
-      notifyListeners();
-    }, onError: (e) {
-      _addLog('Talep verisi dinleme hatası: $e');
-    });
-  }
-
-  void _cancelRequestsSubscription() {
-    _requestsSubscription?.cancel();
-    _requestsSubscription = null;
-    _borrowRequests.clear();
-  }
-
-
-  Future<void> updateUserProfilePhoto(File imageFile, {void Function(double progress)? onProgress}) async {
+  // ─── Profile ───────────────────────────────────────────────────────────────
+  Future<void> updateUserProfilePhoto(File imageFile,
+      {void Function(double progress)? onProgress}) async {
     final user = currentUser;
     if (user == null) return;
-    
-    // Upload profile image to storage
-    final downloadUrl = await _storageService.uploadProfileImage(user.uid, imageFile, onProgress: onProgress);
-    
-    // Keep reference to old photo
+
+    final downloadUrl = await _storageService.uploadProfileImage(user.uid,
+        imageFile, onProgress: onProgress);
+
     final oldAvatarUrl = user.avatarUrl;
-    
-    // Create updated profile
+
     final updatedProfile = user.copyWith(avatarUrl: downloadUrl);
-    
-    // Update profile in Firestore/AuthService
+
     await _authNotifier.authService.updateUserProfile(updatedProfile);
-    
-    // If update is successful and there was an old photo, delete it from Storage
+
     if (oldAvatarUrl != null && oldAvatarUrl.isNotEmpty) {
       await _storageService.deleteImage(oldAvatarUrl);
     }
-    
+
     notifyListeners();
   }
 
@@ -1359,7 +1141,7 @@ class AppState extends ChangeNotifier {
   }) async {
     final user = currentUser;
     if (user == null) return;
-    
+
     _setLoading(true);
     try {
       final updated = user.copyWith(
@@ -1371,7 +1153,8 @@ class AppState extends ChangeNotifier {
       _addLog('Profil başarıyla güncellendi.');
       notifyListeners();
     } catch (e, stack) {
-      _crashlyticsService.recordError(e, stack, reason: 'updateProfile failed');
+      _crashlyticsService.recordError(e, stack,
+          reason: 'updateProfile failed');
       _addLog('Profil güncelleme hatası: $e');
       rethrow;
     } finally {
@@ -1379,12 +1162,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ─── Pre-Agreement Mocks ───────────────────────────────────────────────────
+  // (Starting with empty mock data for clean prototype testing)
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _authNotifier.dispose();
     _itemNotifier.dispose();
-    _requestsSubscription?.cancel();
-    _chatSubscription?.cancel();
+    _requestNotifier.dispose();
     super.dispose();
   }
 }
