@@ -33,11 +33,12 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
   void initState() {
     super.initState();
     NotificationService.instance.activeChatRequestId = widget.requestId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        AppStateProvider.of(context).setActiveChatRoom(widget.requestId);
-      }
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    AppStateProvider.of(context).setActiveChatRoom(widget.requestId);
   }
 
   @override

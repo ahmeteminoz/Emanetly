@@ -123,7 +123,7 @@ class RequestNotifier extends ChangeNotifier {
 
   // ─── Active Chat Room ─────────────────────────────────────────────────────
   void setActiveChatRoom(String? requestId) {
-    if (_activeChatRequestId == requestId) return;
+    if (_activeChatRequestId == requestId && _chatSubscription != null) return;
     _activeChatRequestId = requestId;
     _chatSubscription?.cancel();
     _chatSubscription = null;
@@ -135,6 +135,9 @@ class RequestNotifier extends ChangeNotifier {
           _chatMessages.removeWhere((msg) => msg.requestId == requestId);
           _chatMessages.addAll(newMessages);
           notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('Emanetly: Chat stream error: $e');
         },
       );
     }

@@ -187,19 +187,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       allow create: if isSignedIn()
-        && (request.resource.data.senderId == request.auth.uid || request.resource.data.senderId == 'system')
-        && (
-          request.resource.data.senderId == 'system' ||
-          !isBlockedBetween(
-            request.auth.uid,
-            get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.ownerId == request.auth.uid
-              ? get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.requesterId
-              : get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.ownerId
-          )
-        );
+        && (request.resource.data.senderId == request.auth.uid
+            || request.resource.data.senderId == 'system');
 
       allow update: if isSignedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt'])
         && request.auth.uid != resource.data.senderId;
 
       allow delete: if false;
