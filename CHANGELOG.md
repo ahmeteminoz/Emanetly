@@ -4,6 +4,30 @@ All notable changes to the Emanetly application will be documented in this file.
 
 ---
 
+## [v0.9.4] - 2026-08-14
+
+### 🚀 Added
+- **Trust & Moderation**: 
+  - Post-transaction ratings and reviews (1-5 stars & text feedback).
+  - Ability to block users and report items/listings for community safety.
+- **Handover Workflow**:
+  - Secure double-confirmation process for physical item exchange (handover and return).
+
+### ♻️ Architecture Refactor (State Management)
+- **Modular Notifiers**: Heavy `AppState` (1500+ lines) was successfully decomposed into clean, focused providers:
+  - `AuthNotifier`: Authentication, user profiles, blocking logic, and favorites.
+  - `ItemNotifier`: Marketplace listings, item CRUD operations, and image uploads.
+  - `RequestNotifier`: Borrow requests, chat logic, real-time message streams, and handover status management.
+- **Facade Pattern**: `AppState` now acts as a lightweight facade orchestrating the specialized notifiers without breaking existing UI bindings.
+
+### 🐛 Fixed & Polished
+- **Chat Stream Real-time Issue**: Resolved a lifecycle bug in `RequestChatScreen` where chat subscriptions failed to initialize due to stale active request IDs.
+- **Firestore Composite Indexes**: Deployed missing composite index for `chatMessages` (`requestId ASC + createdAt ASC`) enabling real-time chat queries.
+- **Security Rules**: Fixed invalid nested `get()` ternary syntax in Firestore rules, stabilizing chat creation permissions.
+- **CI/CD Pipeline**: Configured GitHub Actions `flutter analyze` to pass gracefully on non-fatal warnings for UI screens.
+
+---
+
 ## [v0.8.0] - 2026-07-30
 
 ### 🚀 Added

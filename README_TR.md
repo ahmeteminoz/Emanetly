@@ -6,46 +6,48 @@
 
 ---
 
-## 📌 Proje Genel Durumu (v0.8.0)
+## 📌 Proje Genel Durumu (v0.9.4 - Mağaza Hazırlığı & Beta Cila Aşaması)
 
-Emanetly, canlı Firebase servisleri (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) ile güçlendirilmiş, gerçek cihazlarda doğrulanmış olgun bir mobil uygulamadır.
+Emanetly, canlı Firebase servisleri (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) ile güçlendirilmiş, gerçek cihazlarda doğrulanmış olgun bir mobil uygulamadır. Yaklaşan kapalı beta sürümü için ölçeklenebilirliği ve sürdürülebilirliği sağlamak adına yakın zamanda büyük bir mimari refaktör (yeniden yapılandırma) sürecinden geçmiştir.
 
 ### ✅ %100 Canlı ve Entegre Sistemler (Production-Ready)
-*   **Firebase Authentication**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik, şifre sıfırlama, oturum yönetimi (`FirebaseAuthService`).
-*   **Cloud Firestore Database**: İlanlar, kullanıcı profilleri, favoriler, borç alma talepleri ve canlı sohbet mesajları veritabanında kalıcı olarak saklanır ve anlık dinlenir (`FirestoreItemService`, `FirestoreBorrowRequestService`, `FirestoreChatMessageService`).
-*   **Firebase Storage**: İlan fotoğrafları ve profil fotoğraflarının bulutta saklanması, 1-5 çoklu görsel yükleme, kırpma ve tam ekran zoom desteği (`v0.6.1 - v0.6.3`).
-*   **Cloud Functions Gen 2 (`europe-west1`)**: Mesaj gönderimlerinde ve talep durum değişikliklerinde Eventarc tabanlı anlık FCM Push Bildirimi gönderimi (`onMessageCreated`, `onRequestStatusChanged`).
-*   **v0.8.0 Bildirim Merkezi (Notification Center)**: 
-    * Sağ üst AppBar canlı okunmamış rozet akışı (`Badge`).
-    * Uygulama içi bildirim günlükleri (`users/{userId}/notifications`).
-    * **Dual-Layer Idempotency** ve `create-if-absent` koruması (retry durumunda `readAt` sıfırlanmama güvencesi).
-    * Sola kaydırarak kaldırma (`dismissedAt` soft delete), Tümünü Okundu İşaretle ve Tümünü Kaldır (onay diyalogları ve 450'şerli batch chunking).
-    * Material 3 Üç Nokta Menü (`⋮`), `LinearProgressIndicator` ve mükerrer tıklama koruması.
-*   **Güvenlik Kuralları (Firestore Security Rules)**: İstemciden oluşturma/silme kapalı; yalnızca `readAt` ve `dismissedAt` alanlarının `null -> request.time` güncellenmesine izin verilir.
+*   **Firebase Authentication**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik, şifre sıfırlama ve oturum yönetimi.
+*   **Cloud Firestore Database**: İlanlar, kullanıcı profilleri, favoriler, borç alma talepleri ve canlı sohbet mesajları veritabanında kalıcı olarak saklanır ve anlık dinlenir. Birleşik indeksler (composite indexes) ve sıkı güvenlik kuralları (security rules) ile optimize edilmiştir.
+*   **Firebase Storage**: İlan fotoğrafları ve profil fotoğraflarının bulutta saklanması, 1-5 çoklu görsel yükleme, kırpma ve tam ekran zoom desteği.
+*   **Cloud Functions Gen 2 (`europe-west1`)**: Mesaj gönderimlerinde ve talep durum değişikliklerinde Eventarc tabanlı anlık FCM Push Bildirimi gönderimi.
+*   **Bildirim Merkezi (Notification Center)**: 
+    * Sağ üst AppBar canlı okunmamış rozet akışı.
+    * Uygulama içi bildirim günlükleri ve Dual-Layer Idempotency (retry durumunda zaman damgalarının korunması) koruması.
+    * Sola kaydırarak kaldırma, Tümünü Okundu İşaretle ve Tümünü Kaldır (onay diyalogları ile).
+*   **Durum Yönetimi Mimarisi (State Management)**: Hafif bir `AppState` cephesi (facade) tarafından yönetilen, özel alanlara ayrılmış (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`) temiz ve ölçeklenebilir Provider mimarisi.
+*   **Teslimat ve İade Akışı (Handover Workflow)**: Kullanıcılar arasında eşya aktarımı ve iadesi için güvenli, çift onaylı işlem süreci.
+*   **Güven & Moderasyon (Mağaza Hazır)**:
+    * İşlem sonrası yıldız (1-5) verme ve yorum yapma sistemi.
+    * Güvenli bir topluluk ortamı sağlamak için kullanıcı engelleme ve uygunsuz ilan/davranış şikayet etme mekanizmaları.
 
 ---
 
-### 🚧 İleride Tamamlanacak Geliştirme Çeklisti (Roadmap Backlog)
+### 🚧 İleride Tamamlanacak Geliştirme Çeklisti (Kapalı Beta & v1.0 Yol Haritası)
 
-Gelecekteki sürümlerde tamamlanması planlanan eksik adımlar şunlardır:
+Proje şu anda kapalı beta testlerine hazırlık amacıyla `feature/beta-polish` aşamasındadır.
 
-*   [ ] **1. QR Kod Teslimat Doğrulaması (`FirestoreQrService`)**:
-    * Kamera ve tarayıcı arayüzü (`mobile_scanner` + `QrScannerScreen`) %100 tamamlanmıştır.
-    * Servis katmanı `main.dart` içinde `MockQrService` yerine Firestore `borrowRequests` dokümanına 5 dakika geçerli `handoverToken` yazacak `FirestoreQrService` sınıfına bağlanacak.
-*   [ ] **2. İşlem Sonrası Puan Verme / Yorum Yapma Ekranı (Review Creation UI)**:
-    * `UserProfile` modelinde ve profilde `reviews` (yorumlar ve yıldızlar) görünme altyapısı mevcuttur.
-    * İşlem tamamlandıktan sonra kullanıcıya yıldız verdirip yorum yazdıran Modal Sheet UI'ı eklenecek.
-*   [ ] **3. Kullanıcı Moderasyonu (Şikayet Et & Engelle)**:
-    * İlan detayında ve sohbet ekranında *"Kullanıcıyı Engelle"* ve *"İlanı Şikayet Et"* buton/diyalogları (Play Store yayını için zorunlu).
-*   [ ] **4. Firebase Analytics & Crashlytics**:
-    * Canlıdaki çökmeleri ve kullanıcı etkileşimlerini izleme altyapısı.
+*   [ ] **1. Kapalı Beta Lansmanı & Analitik**:
+    * İlk test kullanıcılarına (5-10 kişi) dağıtım.
+    * Firebase Analytics ve Crashlytics veri toplama süreçlerinin doğrulanması.
+    * Kullanıcı davranışlarının analizi (örn. Talep Et vs. Soru Sor kullanım oranları).
+*   [ ] **2. Push Bildirim Deep-Link İyileştirmeleri**:
+    * Uygulama arka planda veya tamamen kapalı (terminated) durumdayken push bildirimlerine tıklandığında gerçekleşen yönlendirmelerin güvenilirliğini artırmak.
+*   [ ] **3. Sistem Mesajları İçin Backend Taşıması**:
+    * Sistem sohbet mesajlarının (`senderId: 'system'`) oluşturulma işlemini istemci (client) tarafından güvenli Cloud Functions (sunucu) tarafına taşımak.
+*   [ ] **4. "Aranıyor/İhtiyaç Var" Modülü (v1.0 Adayı)**:
+    * Kullanıcıların platformda bulamadıkları ancak acil ihtiyaç duydukları eşyalar için "Aranıyor" ilanı açabilmelerini sağlamak.
 
 ---
 
 ## 🛠️ Teknoloji Altyapısı
 
 *   **Çerçeve (Framework)**: [Flutter](https://flutter.dev) (Dart)
-*   **Durum Yönetimi (State)**: Reaktif ve hafif yeniden derleme için `AppState` ChangeNotifier Provider mimarisi.
+*   **Durum Yönetimi (State)**: Reaktif `ChangeNotifier` Provider mimarisi (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`).
 *   **Backend**: Firebase Auth, Cloud Firestore, Firebase Storage, Firebase Cloud Messaging (FCM), Cloud Functions Gen 2 (Node.js 20).
 *   **Arayüz (UI)**: Material 3 tema yapılandırmaları, özel çizimler (`CustomPainter`) ve akıcı mikro-animasyonlar.
 

@@ -6,46 +6,48 @@ A modern, community-driven campus marketplace and peer-to-peer item sharing mobi
 
 ---
 
-## 📌 Project Current Status (v0.8.0)
+## 📌 Project Current Status (v0.9.4 - Store Readiness & Beta Polish)
 
-Emanetly is a mature mobile application powered by live Firebase services (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) and verified on real connected devices.
+Emanetly is a mature mobile application powered by live Firebase services (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) and verified on real connected devices. It has recently undergone a major architectural refactor to ensure scalability and maintainability for its upcoming beta release.
 
 ### ✅ 100% Live & Integrated Systems (Production-Ready)
-*   **Firebase Authentication**: Restricted to verified campus `.edu.tr` emails, password reset, and auth session management (`FirebaseAuthService`).
-*   **Cloud Firestore Database**: Persistent real-time database syncing items, user profiles, favorites, borrow requests, and live chat streams (`FirestoreItemService`, `FirestoreBorrowRequestService`, `FirestoreChatMessageService`).
-*   **Firebase Storage**: Cloud hosting for item images and profile pictures, multi-image upload (1-5 images), cropping, and full-screen zoom (`v0.6.1 - v0.6.3`).
-*   **Cloud Functions Gen 2 (`europe-west1`)**: Eventarc-triggered background push notifications for chat creation and request status changes (`onMessageCreated`, `onRequestStatusChanged`).
-*   **v0.8.0 Notification Center**: 
-    * Top-right AppBar live unread badge stream (`Badge`).
-    * In-app notification event logs (`users/{userId}/notifications`).
-    * **Dual-Layer Idempotency** and `create-if-absent` semantics (preserves `readAt` timestamps on function retries).
-    * Swipe-to-dismiss (`dismissedAt` soft delete), Mark All as Read, and Clear All (with safety confirmation dialogs & 450-item batch chunking).
-    * Material 3 3-dot popup menu (`⋮`), `LinearProgressIndicator` loading bar, and double-tap protection.
-*   **Security Rules (Firestore Rules)**: Client creation/deletion disabled; strictly allows `readAt` and `dismissedAt` updates from `null -> request.time`.
+*   **Firebase Authentication**: Restricted to verified campus `.edu.tr` emails, password reset, and auth session management.
+*   **Cloud Firestore Database**: Persistent real-time database syncing items, user profiles, favorites, borrow requests, and live chat streams. Optimized with composite indexes and robust security rules.
+*   **Firebase Storage**: Cloud hosting for item images and profile pictures, multi-image upload (1-5 images), cropping, and full-screen zoom.
+*   **Cloud Functions Gen 2 (`europe-west1`)**: Eventarc-triggered background push notifications for chat creation and request status changes.
+*   **Notification Center**: 
+    * Top-right AppBar live unread badge stream.
+    * In-app notification event logs with dual-layer idempotency (preserves timestamps on function retries).
+    * Swipe-to-dismiss, Mark All as Read, and Clear All (with safety confirmation dialogs).
+*   **State Management Architecture**: Clean, scalable Provider architecture divided into specialized notifiers (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`) orchestrated by a lightweight `AppState` facade.
+*   **Handover & Return Workflow**: Secure double-confirmation process for transferring and returning items between users.
+*   **Trust & Moderation (Store-Ready)**:
+    * Post-transaction rating and review system (1-5 stars and comments).
+    * User blocking and item reporting mechanisms to ensure a safe community environment.
 
 ---
 
-### 🚧 Future Development Checklist (Roadmap Backlog)
+### 🚧 Future Development Checklist (Closed Beta & v1.0 Roadmap)
 
-The following items represent the planned roadmap backlog for future releases:
+The project is currently in the `feature/beta-polish` phase preparing for closed beta testing.
 
-*   [ ] **1. QR Code Handover Verification (`FirestoreQrService`)**:
-    * Camera scanner UI (`mobile_scanner` + `QrScannerScreen`) is 100% complete and working.
-    * Connect service layer from `MockQrService` to `FirestoreQrService` to write 5-minute valid `handoverToken` hashes to `borrowRequests` Firestore collection.
-*   [ ] **2. Post-Transaction Review & Rating Modal (Review Creation UI)**:
-    * `UserProfile` model and profile screen review cards exist.
-    * Add a Modal Bottom Sheet UI allowing users to rate (1-5 stars) and write comments after completing a transaction.
-*   [ ] **3. User Moderation (Report & Block)**:
-    * Action dialogs for *"Block User"* and *"Report Listing"* (Required for Play Store / App Store release).
-*   [ ] **4. Firebase Analytics & Crashlytics**:
-    * Infrastructure for tracking real-time crashes and user conversion funnels.
+*   [ ] **1. Closed Beta Launch & Analytics**:
+    * Distribute to initial test users (5-10 users).
+    * Verify Firebase Analytics and Crashlytics data collection.
+    * Analyze user behavior (e.g., Request vs. Ask Question usage).
+*   [ ] **2. Push Notification Deep-Link Polish**:
+    * Improve deep-link navigation reliability when clicking push notifications from terminated or background app states.
+*   [ ] **3. Backend Migration for System Messages**:
+    * Move the generation of system chat messages (`senderId: 'system'`) from the client side to secure Cloud Functions.
+*   [ ] **4. "Wanted/Needed Items" Module (v1.0 Candidate)**:
+    * Allow users to post requests for items they need but cannot find on the platform.
 
 ---
 
 ## 🛠️ Technical Architecture
 
 *   **Framework**: [Flutter](https://flutter.dev) (Dart)
-*   **State Management**: Reactive and lightweight `AppState` ChangeNotifier Provider architecture.
+*   **State Management**: Reactive `ChangeNotifier` Provider architecture (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`).
 *   **Backend**: Firebase Auth, Cloud Firestore, Firebase Storage, Firebase Cloud Messaging (FCM), Cloud Functions Gen 2 (Node.js 20).
 *   **UI System**: Material 3 theme configurations, custom path drawing (`CustomPainter`), and fluid micro-animations.
 
