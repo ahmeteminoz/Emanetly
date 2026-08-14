@@ -134,7 +134,7 @@ class AuthNotifier extends ChangeNotifier {
     if (viewModeStr != null) {
       _gridViewMode = ViewMode.values.firstWhere(
         (e) => e.toString() == viewModeStr,
-        orElse: () => ViewMode.list,
+        orElse: () => ViewMode.standardGrid,
       );
     }
     notifyListeners();
