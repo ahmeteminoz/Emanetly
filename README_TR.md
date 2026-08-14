@@ -1,77 +1,153 @@
-# Emanetly
+<div align="center">
+  <img src="assets/logo.png" alt="Emanetly Logosu" width="120" />
 
-[Click here for English README](README.md)
+  <h1>Emanetly</h1>
+  <p><strong>Kampüs içi eşya ödünç alma ve paylaşım platformu</strong></p>
 
-Üniversite kampüslerinde öğrencilerin ve çalışanların günlük ihtiyaç duydukları eşyaları (şarj aletleri, hesap makineleri, kitaplar, aletler vb.) kampüs ekosistemi içinde güvenli ve verimli bir şekilde ödünç alıp verebilmelerini sağlayan, Flutter ile geliştirilmiş modern, topluluk odaklı bir mobil pazar yeri ve paylaşım uygulamasıdır.
+  <p>
+    <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
+    <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" />
+    <img src="https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
+    <img src="https://img.shields.io/badge/version-v0.9.4-blue?style=for-the-badge" alt="v0.9.4" />
+  </p>
 
----
+  <p>
+    <em>Read this in <a href="README.md">English</a>.</em>
+  </p>
+</div>
 
-## 📌 Proje Genel Durumu (v0.9.4 - Mağaza Hazırlığı & Beta Cila Aşaması)
+<hr />
 
-Emanetly, canlı Firebase servisleri (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) ile güçlendirilmiş, gerçek cihazlarda doğrulanmış olgun bir mobil uygulamadır. Yaklaşan kapalı beta sürümü için ölçeklenebilirliği ve sürdürülebilirliği sağlamak adına yakın zamanda büyük bir mimari refaktör (yeniden yapılandırma) sürecinden geçmiştir.
+## Emanetly Nedir?
 
-### ✅ %100 Canlı ve Entegre Sistemler (Production-Ready)
-*   **Firebase Authentication**: Kampüs e-postası (`.edu.tr`) doğrulamalı üyelik, şifre sıfırlama ve oturum yönetimi.
-*   **Cloud Firestore Database**: İlanlar, kullanıcı profilleri, favoriler, borç alma talepleri ve canlı sohbet mesajları veritabanında kalıcı olarak saklanır ve anlık dinlenir. Birleşik indeksler (composite indexes) ve sıkı güvenlik kuralları (security rules) ile optimize edilmiştir.
-*   **Firebase Storage**: İlan fotoğrafları ve profil fotoğraflarının bulutta saklanması, 1-5 çoklu görsel yükleme, kırpma ve tam ekran zoom desteği.
-*   **Cloud Functions Gen 2 (`europe-west1`)**: Mesaj gönderimlerinde ve talep durum değişikliklerinde Eventarc tabanlı anlık FCM Push Bildirimi gönderimi.
-*   **Bildirim Merkezi (Notification Center)**: 
-    * Sağ üst AppBar canlı okunmamış rozet akışı.
-    * Uygulama içi bildirim günlükleri ve Dual-Layer Idempotency (retry durumunda zaman damgalarının korunması) koruması.
-    * Sola kaydırarak kaldırma, Tümünü Okundu İşaretle ve Tümünü Kaldır (onay diyalogları ile).
-*   **Durum Yönetimi Mimarisi (State Management)**: Hafif bir `AppState` cephesi (facade) tarafından yönetilen, özel alanlara ayrılmış (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`) temiz ve ölçeklenebilir Provider mimarisi.
-*   **Teslimat ve İade Akışı (Handover Workflow)**: Kullanıcılar arasında eşya aktarımı ve iadesi için güvenli, çift onaylı işlem süreci.
-*   **Güven & Moderasyon (Mağaza Hazır)**:
-    * İşlem sonrası yıldız (1-5) verme ve yorum yapma sistemi.
-    * Güvenli bir topluluk ortamı sağlamak için kullanıcı engelleme ve uygunsuz ilan/davranış şikayet etme mekanizmaları.
+Emanetly, üniversite kampüsleri için özel olarak tasarlanmış, öğrenciler arası bir ödünç alma platformudur. Öğrenciler sahip oldukları eşyaları listeleyebilir, kampüslerinde bulunan eşyaları keşfedebilir, ödünç alma talepleri gönderebilir, gerçek zamanlı sohbet üzerinden iletişim kurabilir ve uygulamanın içinden tüm ödünç alma ve iade sürecini yönetebilirler.
 
----
+<div align="center">
+  <h3>KEŞFET → TALEP ET → ÖDÜNÇ AL → İADE ET</h3>
+</div>
 
-### 🚧 İleride Tamamlanacak Geliştirme Çeklisti (Kapalı Beta & v1.0 Yol Haritası)
+<hr />
 
-Proje şu anda kapalı beta testlerine hazırlık amacıyla `feature/beta-polish` aşamasındadır.
+## Ekran Görüntüleri
 
-*   [ ] **1. Kapalı Beta Lansmanı & Analitik**:
-    * İlk test kullanıcılarına (5-10 kişi) dağıtım.
-    * Firebase Analytics ve Crashlytics veri toplama süreçlerinin doğrulanması.
-    * Kullanıcı davranışlarının analizi (örn. Talep Et vs. Soru Sor kullanım oranları).
-*   [ ] **2. Push Bildirim Deep-Link İyileştirmeleri**:
-    * Uygulama arka planda veya tamamen kapalı (terminated) durumdayken push bildirimlerine tıklandığında gerçekleşen yönlendirmelerin güvenilirliğini artırmak.
-*   [ ] **3. Sistem Mesajları İçin Backend Taşıması**:
-    * Sistem sohbet mesajlarının (`senderId: 'system'`) oluşturulma işlemini istemci (client) tarafından güvenli Cloud Functions (sunucu) tarafına taşımak.
-*   [ ] **4. "Aranıyor/İhtiyaç Var" Modülü (v1.0 Adayı)**:
-    * Kullanıcıların platformda bulamadıkları ancak acil ihtiyaç duydukları eşyalar için "Aranıyor" ilanı açabilmelerini sağlamak.
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Ana Sayfa</b></td>
+      <td align="center"><b>Detay</b></td>
+      <td align="center"><b>Sohbet</b></td>
+      <td align="center"><b>Bildirimler</b></td>
+      <td align="center"><b>Profil</b></td>
+    </tr>
+    <tr>
+      <td><img src="assets/screenshots/home.png" width="200" /></td>
+      <td><img src="assets/screenshots/detail.png" width="200" /></td>
+      <td><img src="assets/screenshots/chat.png" width="200" /></td>
+      <td><img src="assets/screenshots/notifications.png" width="200" /></td>
+      <td><img src="assets/screenshots/profile.png" width="200" /></td>
+    </tr>
+  </table>
+</div>
 
----
+<hr />
 
-## 🛠️ Teknoloji Altyapısı
+## Özellikler
 
-*   **Çerçeve (Framework)**: [Flutter](https://flutter.dev) (Dart)
-*   **Durum Yönetimi (State)**: Reaktif `ChangeNotifier` Provider mimarisi (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`).
-*   **Backend**: Firebase Auth, Cloud Firestore, Firebase Storage, Firebase Cloud Messaging (FCM), Cloud Functions Gen 2 (Node.js 20).
-*   **Arayüz (UI)**: Material 3 tema yapılandırmaları, özel çizimler (`CustomPainter`) ve akıcı mikro-animasyonlar.
+- **Kampüs bazlı eşya keşfi:** Sadece kendi kampüsünüzdeki öğrencilerin yüklediği eşyaları görün.
+- **Talep döngüsü:** Eşya talebinde bulunun, onaylayın ve teslim alın.
+- **Gerçek zamanlı sohbet:** Teslimat detaylarını konuşmak için işleme özel sohbet odaları.
+- **Anlık ve uygulama içi bildirimler:** Taleplerinizdeki değişiklikleri anında öğrenin.
+- **Kullanıcı değerlendirme sistemi:** İşlem sonrasında karşı tarafı puanlayıp güven oluşturun.
+- **Favoriler:** İlgilendiğiniz ilanları daha sonra bakmak üzere kaydedin.
+- **Engelleme/Raporlama & Moderasyon:** Kullanıcı koruma araçlarıyla güvenli bir ortam.
+- **Çoklu fotoğraf desteği:** İlanlarınıza birden fazla fotoğraf ekleyerek eşyayı daha iyi tanıtın.
 
----
+<hr />
 
-## 🚀 Kurulum ve Çalıştırma
+## Mimari
 
-### Adımlar
-1.  **Depoyu Klonlayın**:
-    ```bash
-    git clone https://github.com/ahmeteminoz/Emanetly.git
-    cd Emanetly
-    ```
-2.  **Bağımlılıkları Yükleyin**:
-    ```bash
-    flutter pub get
-    ```
-3.  **Projeyi Çalıştırın**:
-    ```bash
-    flutter run
-    ```
+Emanetly; Kullanıcı Arayüzü (UI), Durum (State) ve Veri (Data) katmanlarını birbirinden ayıran, ölçeklenebilir ve bakımı kolay bir mimari kullanır.
 
----
+```mermaid
+graph TD
+    UI[Flutter UI] --> State
+    
+    subgraph State [AppState / Facade]
+        AN[AuthNotifier]
+        IN[ItemNotifier]
+        RN[RequestNotifier]
+    end
+    
+    State --> FBAuth[Firebase Auth]
+    State --> FS[Firestore]
+    
+    FS --> Storage[Cloud Storage]
+    FS --> CF[Cloud Functions]
+    
+    CF --> FCM[FCM Bildirimler]
+```
 
-## 📜 Lisans
+<hr />
 
-Bu proje MIT Lisansı ile lisanslanmıştır - detaylar için LICENSE dosyasına bakabilirsiniz.
+## Arka Uç (Backend) & Güvenlik
+
+Emanetly, veri bütünlüğünü ve güvenliğini sağlamak için sunucusuz (serverless) güçlü bir arka uç mimarisine güvenir.
+
+- **Firebase Authentication:** Güvenli giriş ve oturum yönetimi.
+- **Firestore Security Rules:** Sıkı veri erişim kuralları (sadece yetkisi olanlar okuyup/yazabilir).
+- **Katılımcıya özel sohbet:** İki kişi arasındaki sohbete sadece eşya sahibi ve talep eden kişi erişebilir.
+- **Cloud Functions Gen 2:** İşlem döngüleri ve yaşam döngüsü olayları için sunucu taraflı iş kuralları.
+- **FCM token yönetimi:** Otomatik temizleme ve hedeflenmiş push bildirim gönderimi.
+- **Idempotent bildirim işleme:** Aynı bildirimin tekrar tekrar atılmasını engeller.
+- **Kullanıcı engelleme/raporlama:** Sunucu tarafından denetlenen gizlilik ve kısıtlama kuralları.
+- **Sunucu taraflı değerlendirme:** İstatistiklerin manipüle edilmesini önlemek için "Puan/Yorum" hesaplamaları tamamen backend tarafında yapılır.
+
+<hr />
+
+## Teknoloji Yığını
+
+| Mobil | Backend | Veritabanı | Depolama | Bildirimler | Mimari |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Flutter · Dart | Firebase · Node.js | Cloud Firestore | Cloud Storage | Cloud Messaging | Provider + Notifiers |
+
+<hr />
+
+## Proje Yapısı
+
+```text
+lib/
+├── screens/        # Uygulama Arayüzü (UI)
+├── services/       # Firebase ve servis katmanı
+├── providers/
+│   └── notifiers/  # Auth, Item ve Request durum yöneticileri
+├── models/         # Modeller
+└── widgets/        # Tekrar kullanılabilir UI bileşenleri
+
+functions/
+└── src/            # Cloud Functions (TypeScript)
+
+test/               # Flutter testleri
+```
+
+<hr />
+
+## Test ve Kalite
+
+- `flutter analyze`
+- `flutter test`
+- Firebase Emulator Suite
+- Firestore/Storage Güvenlik Kuralı Testleri
+- Gerçek Android cihazda testler
+
+<hr />
+
+## Yol Haritası (Roadmap)
+
+- [x] Temel ödünç alma/verme akışı
+- [x] Gerçek zamanlı sohbet
+- [x] Değerlendirme sistemi
+- [ ] Push bildirimleri
+- [ ] Kapalı beta
+- [ ] Geliştirilmiş bildirim yönlendirmeleri (Deep linking)
+- [ ] iOS uyumluluk ve testleri
+- [ ] Kampüs sayısını genişletme

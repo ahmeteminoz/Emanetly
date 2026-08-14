@@ -1,77 +1,153 @@
-# Emanetly
+<div align="center">
+  <img src="assets/logo.png" alt="Emanetly Logo" width="120" />
 
-[Türkçe README için tıklayın](README_TR.md)
+  <h1>Emanetly</h1>
+  <p><strong>Campus peer-to-peer borrowing platform</strong></p>
 
-A modern, community-driven campus marketplace and peer-to-peer item sharing mobile application built with Flutter. Emanetly enables university students and staff to lend and borrow everyday items (chargers, calculators, books, tools, etc.) safely and efficiently within their campus ecosystem.
+  <p>
+    <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
+    <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase" />
+    <img src="https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
+    <img src="https://img.shields.io/badge/version-v0.9.4-blue?style=for-the-badge" alt="v0.9.4" />
+  </p>
 
----
+  <p>
+    <em>Read this in <a href="README_TR.md">Türkçe</a>.</em>
+  </p>
+</div>
 
-## 📌 Project Current Status (v0.9.4 - Store Readiness & Beta Polish)
+<hr />
 
-Emanetly is a mature mobile application powered by live Firebase services (Auth, Firestore, Storage, Cloud Functions Gen 2, FCM) and verified on real connected devices. It has recently undergone a major architectural refactor to ensure scalability and maintainability for its upcoming beta release.
+## About Emanetly
 
-### ✅ 100% Live & Integrated Systems (Production-Ready)
-*   **Firebase Authentication**: Restricted to verified campus `.edu.tr` emails, password reset, and auth session management.
-*   **Cloud Firestore Database**: Persistent real-time database syncing items, user profiles, favorites, borrow requests, and live chat streams. Optimized with composite indexes and robust security rules.
-*   **Firebase Storage**: Cloud hosting for item images and profile pictures, multi-image upload (1-5 images), cropping, and full-screen zoom.
-*   **Cloud Functions Gen 2 (`europe-west1`)**: Eventarc-triggered background push notifications for chat creation and request status changes.
-*   **Notification Center**: 
-    * Top-right AppBar live unread badge stream.
-    * In-app notification event logs with dual-layer idempotency (preserves timestamps on function retries).
-    * Swipe-to-dismiss, Mark All as Read, and Clear All (with safety confirmation dialogs).
-*   **State Management Architecture**: Clean, scalable Provider architecture divided into specialized notifiers (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`) orchestrated by a lightweight `AppState` facade.
-*   **Handover & Return Workflow**: Secure double-confirmation process for transferring and returning items between users.
-*   **Trust & Moderation (Store-Ready)**:
-    * Post-transaction rating and review system (1-5 stars and comments).
-    * User blocking and item reporting mechanisms to ensure a safe community environment.
+Emanetly is a peer-to-peer borrowing platform designed specifically for university campuses. Students can list items they own, discover items available around their campus, send borrowing requests, communicate through real-time chat, and manage the lending and return process within the application.
 
----
+<div align="center">
+  <h3>DISCOVER → REQUEST → BORROW → RETURN</h3>
+</div>
 
-### 🚧 Future Development Checklist (Closed Beta & v1.0 Roadmap)
+<hr />
 
-The project is currently in the `feature/beta-polish` phase preparing for closed beta testing.
+## Screenshots
 
-*   [ ] **1. Closed Beta Launch & Analytics**:
-    * Distribute to initial test users (5-10 users).
-    * Verify Firebase Analytics and Crashlytics data collection.
-    * Analyze user behavior (e.g., Request vs. Ask Question usage).
-*   [ ] **2. Push Notification Deep-Link Polish**:
-    * Improve deep-link navigation reliability when clicking push notifications from terminated or background app states.
-*   [ ] **3. Backend Migration for System Messages**:
-    * Move the generation of system chat messages (`senderId: 'system'`) from the client side to secure Cloud Functions.
-*   [ ] **4. "Wanted/Needed Items" Module (v1.0 Candidate)**:
-    * Allow users to post requests for items they need but cannot find on the platform.
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Home</b></td>
+      <td align="center"><b>Detail</b></td>
+      <td align="center"><b>Chat</b></td>
+      <td align="center"><b>Notifications</b></td>
+      <td align="center"><b>Profile</b></td>
+    </tr>
+    <tr>
+      <td><img src="assets/screenshots/home.png" width="200" /></td>
+      <td><img src="assets/screenshots/detail.png" width="200" /></td>
+      <td><img src="assets/screenshots/chat.png" width="200" /></td>
+      <td><img src="assets/screenshots/notifications.png" width="200" /></td>
+      <td><img src="assets/screenshots/profile.png" width="200" /></td>
+    </tr>
+  </table>
+</div>
 
----
+<hr />
 
-## 🛠️ Technical Architecture
+## Features
 
-*   **Framework**: [Flutter](https://flutter.dev) (Dart)
-*   **State Management**: Reactive `ChangeNotifier` Provider architecture (`AuthNotifier`, `ItemNotifier`, `RequestNotifier`).
-*   **Backend**: Firebase Auth, Cloud Firestore, Firebase Storage, Firebase Cloud Messaging (FCM), Cloud Functions Gen 2 (Node.js 20).
-*   **UI System**: Material 3 theme configurations, custom path drawing (`CustomPainter`), and fluid micro-animations.
+- **Campus-based item discovery:** Find items listed by students on your campus.
+- **Borrow request lifecycle:** Seamlessly request, approve, and return items.
+- **Real-time messaging:** Integrated participant-only chat for smooth coordination.
+- **Push + in-app notifications:** Never miss an update on your requests.
+- **User ratings & reviews:** Build trust with post-transaction peer reviews.
+- **Favorites:** Save items you're interested in for later.
+- **Blocking/reporting & moderation:** Secure environment with user protection tools.
+- **Multi-image listings:** Showcase items effectively with multiple photos.
 
----
+<hr />
 
-## 🚀 Installation & Setup
+## Architecture
 
-### Steps
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/ahmeteminoz/Emanetly.git
-    cd Emanetly
-    ```
-2.  **Get Dependencies**:
-    ```bash
-    flutter pub get
-    ```
-3.  **Run the App**:
-    ```bash
-    flutter run
-    ```
+Emanetly follows a scalable and maintainable architecture separating the UI, State, and Data layers.
 
----
+```mermaid
+graph TD
+    UI[Flutter UI] --> State
+    
+    subgraph State [AppState / Facade]
+        AN[AuthNotifier]
+        IN[ItemNotifier]
+        RN[RequestNotifier]
+    end
+    
+    State --> FBAuth[Firebase Auth]
+    State --> FS[Firestore]
+    
+    FS --> Storage[Cloud Storage]
+    FS --> CF[Cloud Functions]
+    
+    CF --> FCM[FCM Notifications]
+```
 
-## 📜 License
+<hr />
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Backend & Security
+
+Emanetly relies on a robust serverless backend ensuring data integrity and security.
+
+- **Firebase Authentication:** Secure login and session management.
+- **Firestore Security Rules:** Strict data access validation.
+- **Participant-only chat access:** Only lenders and borrowers can view their chats.
+- **Cloud Functions Gen 2:** Server-side logic for transactions and lifecycle events.
+- **FCM token management:** Automated cleanup and targeted push notifications.
+- **Idempotent notification processing:** Prevents duplicate notifications.
+- **User blocking/reporting:** Server-enforced visibility restrictions.
+- **Server-side review handling:** Reviews and trust scores are calculated securely on the backend to prevent tampering.
+
+<hr />
+
+## Tech Stack
+
+| Mobile | Backend | Database | Storage | Notifications | Architecture |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Flutter · Dart | Firebase · Node.js | Cloud Firestore | Cloud Storage | Cloud Messaging | Provider + Notifiers |
+
+<hr />
+
+## Project Structure
+
+```text
+lib/
+├── screens/        # Application UI
+├── services/       # Firebase and domain services
+├── providers/
+│   └── notifiers/  # Auth, Item and Request state managers
+├── models/         # Domain models
+└── widgets/        # Reusable UI components
+
+functions/
+└── src/            # Cloud Functions (TypeScript)
+
+test/               # Flutter tests
+```
+
+<hr />
+
+## Testing & Quality
+
+- `flutter analyze`
+- `flutter test`
+- Firebase Emulator Suite
+- Firestore/Storage Rules tests
+- Real-device Android QA
+
+<hr />
+
+## Roadmap
+
+- [x] Core borrowing flow
+- [x] Real-time chat
+- [x] Reviews
+- [ ] Push notifications
+- [ ] Closed beta
+- [ ] Improved notification deep linking
+- [ ] iOS validation
+- [ ] Campus expansion
