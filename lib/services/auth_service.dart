@@ -697,7 +697,14 @@ class FirebaseAuthService implements AuthService {
     final profileWithBadges = updatedProfile.recalculateBadges();
     final docRef = FirebaseFirestore.instance.collection('users').doc(profileWithBadges.uid);
     try {
-      await docRef.set(profileWithBadges.toMap(), SetOptions(merge: true));
+      // ONLY update user-editable fields to prevent overwriting stats/reviews added by Cloud Functions!
+      final safeUpdateMap = {
+        'name': profileWithBadges.name,
+        'bio': profileWithBadges.bio,
+        'department': profileWithBadges.department,
+        'avatarUrl': profileWithBadges.avatarUrl,
+      };
+      await docRef.set(safeUpdateMap, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Emanetly: Error updating user profile in Firestore: $e');
       rethrow;

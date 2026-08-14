@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -54,6 +55,7 @@ class AuthNotifier extends ChangeNotifier {
   })  : _authService = authService,
         _analyticsService = analyticsService ?? AnalyticsService(),
         _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
+    loadPreferences();
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
       if (user != null) {
         if (!_favoritesInitialized) {
@@ -91,18 +93,50 @@ class AuthNotifier extends ChangeNotifier {
 
   // ─── Theme ───────────────────────────────────────────────────────────────
 
-  void changeThemeMode(ThemeMode mode) {
+  void changeThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('themeMode', mode.toString());
   }
 
-  void changePalette(int index) {
+  void changePalette(int index) async {
     _selectedPaletteIndex = index;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selectedPaletteIndex', index);
   }
 
-  void changeViewMode(ViewMode mode) {
+  void changeViewMode(ViewMode mode) async {
     _gridViewMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gridViewMode', mode.toString());
+  }
+
+  Future<void> loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Load theme
+    final themeStr = prefs.getString('themeMode');
+    if (themeStr != null) {
+      _themeMode = ThemeMode.values.firstWhere(
+        (e) => e.toString() == themeStr,
+        orElse: () => ThemeMode.system,
+      );
+    }
+    
+    // Load palette
+    _selectedPaletteIndex = prefs.getInt('selectedPaletteIndex') ?? 0;
+    
+    // Load view mode
+    final viewModeStr = prefs.getString('gridViewMode');
+    if (viewModeStr != null) {
+      _gridViewMode = ViewMode.values.firstWhere(
+        (e) => e.toString() == viewModeStr,
+        orElse: () => ViewMode.list,
+      );
+    }
     notifyListeners();
   }
 

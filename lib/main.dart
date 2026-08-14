@@ -73,6 +73,9 @@ void main() async {
     crashlyticsService: crashlyticsService,
   );
 
+  // Await preferences to ensure theme and other settings are loaded before the first frame
+  await appState.loadPreferences();
+
   runApp(
     AppStateProvider(
       notifier: appState,

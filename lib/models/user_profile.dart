@@ -25,11 +25,11 @@ class UserReview {
 
   factory UserReview.fromMap(Map<String, dynamic> map) {
     return UserReview(
-      authorName: map['authorName'] ?? '',
-      rating: map['rating'] ?? '',
-      comment: map['comment'] ?? '',
-      dateText: map['dateText'] ?? '',
-      requestId: map['requestId'],
+      authorName: map['authorName']?.toString() ?? '',
+      rating: map['rating']?.toString() ?? '',
+      comment: map['comment']?.toString() ?? '',
+      dateText: map['dateText']?.toString() ?? '',
+      requestId: map['requestId']?.toString(),
     );
   }
 }
@@ -211,29 +211,29 @@ class UserProfile {
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     return UserProfile(
-      uid: map['uid'] ?? '',
-      name: map['name'] ?? '',
-      username: map['username'],
-      usernameNormalized: map['usernameNormalized'],
-      usernameSource: map['usernameSource'] ?? 'unset',
-      onboardingComplete: map['onboardingComplete'] ?? false,
-      studentId: map['studentId'] ?? '',
-      email: map['email'] ?? '',
-      department: map['department'] ?? '',
-      avatarUrl: map['avatarUrl'] ?? map['photoUrl'],
-      bio: map['bio'] ?? '',
-      trustScore: map['trustScore'] ?? 100,
-      averageRating: (map['averageRating'] ?? 5.0).toDouble(),
-      reviewCount: map['reviewCount'] ?? 0,
-      successfulBorrows: map['successfulBorrows'] ?? 0,
-      successfulLends: map['successfulLends'] ?? 0,
-      onTimeReturnRate: (map['onTimeReturnRate'] ?? 100.0).toDouble(),
-      avgResponseTime: map['avgResponseTime'] ?? '',
-      lateReturnsCount: map['lateReturnsCount'] ?? 0,
-      verificationBadges: List<String>.from(map['verificationBadges'] ?? []),
-      userBadges: List<String>.from(map['userBadges'] ?? []),
+      uid: map['uid']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      username: map['username']?.toString(),
+      usernameNormalized: map['usernameNormalized']?.toString(),
+      usernameSource: map['usernameSource']?.toString() ?? 'unset',
+      onboardingComplete: map['onboardingComplete'] == true,
+      studentId: map['studentId']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      department: map['department']?.toString() ?? '',
+      avatarUrl: map['avatarUrl']?.toString() ?? map['photoUrl']?.toString(),
+      bio: map['bio']?.toString() ?? '',
+      trustScore: int.tryParse(map['trustScore']?.toString() ?? '100') ?? 100,
+      averageRating: double.tryParse(map['averageRating']?.toString() ?? '5.0') ?? 5.0,
+      reviewCount: int.tryParse(map['reviewCount']?.toString() ?? '0') ?? 0,
+      successfulBorrows: int.tryParse(map['successfulBorrows']?.toString() ?? '0') ?? 0,
+      successfulLends: int.tryParse(map['successfulLends']?.toString() ?? '0') ?? 0,
+      onTimeReturnRate: double.tryParse(map['onTimeReturnRate']?.toString() ?? '100.0') ?? 100.0,
+      avgResponseTime: map['avgResponseTime']?.toString() ?? '',
+      lateReturnsCount: int.tryParse(map['lateReturnsCount']?.toString() ?? '0') ?? 0,
+      verificationBadges: (map['verificationBadges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      userBadges: (map['userBadges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       reviews: (map['reviews'] as List<dynamic>?)
-              ?.map((x) => UserReview.fromMap(x as Map<String, dynamic>))
+              ?.map((x) => UserReview.fromMap(Map<String, dynamic>.from(x as Map)))
               .toList() ??
           [],
       favoriteItemIds: List<String>.from(map['favoriteItemIds'] ?? []),

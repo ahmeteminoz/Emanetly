@@ -219,6 +219,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadPreferences() => _authNotifier.loadPreferences();
+
   // ─── Theme delegation ──────────────────────────────────────────────────────
   void changeThemeMode(ThemeMode mode) {
     _authNotifier.changeThemeMode(mode);
@@ -780,30 +782,6 @@ class AppState extends ChangeNotifier {
         _addLog('Talep tamamlandı olarak güncellenirken hata: $e');
       }
 
-      try {
-        final lenderProfile =
-            await _authNotifier.authService.getUserProfile(item.lenderId);
-        if (lenderProfile != null) {
-          final updatedLender = lenderProfile.copyWith(
-            successfulLends: lenderProfile.successfulLends + 1,
-          );
-          await _authNotifier.authService.updateUserProfile(updatedLender);
-        }
-
-        if (item.borrowerId != null) {
-          final borrowerProfile = await _authNotifier.authService
-              .getUserProfile(item.borrowerId!);
-          if (borrowerProfile != null) {
-            final updatedBorrower = borrowerProfile.copyWith(
-              successfulBorrows: borrowerProfile.successfulBorrows + 1,
-            );
-            await _authNotifier.authService
-                .updateUserProfile(updatedBorrower);
-          }
-        }
-      } catch (e) {
-        _addLog('Kullanıcı istatistikleri güncellenirken hata: $e');
-      }
     } catch (e) {
       _addLog('İade onaylama hatası: $e');
     }

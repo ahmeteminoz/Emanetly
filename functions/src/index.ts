@@ -457,3 +457,40 @@ export const onRequestCreated = onDocumentCreated(
   }
 );
 
+import { onRequest } from "firebase-functions/v2/https";
+
+export const restoreStats = onRequest(async (req: any, res: any) => {
+  try {
+    const db = admin.firestore();
+    const usersSnap = await db.collection("users").get();
+    let restoredCount = 0;
+    
+    for (const userDoc of usersSnap.docs) {
+      const uid = userDoc.id;
+      
+      const lendsSnap = await db.collection("borrowRequests")
+        .where("ownerId", "==", uid)
+        .where("status", "==", "completed")
+        .get();
+        
+      const borrowsSnap = await db.collection("borrowRequests")
+        .where("requesterId", "==", uid)
+        .where("status", "==", "completed")
+        .get();
+        
+      await userDoc.ref.update({
+        successfulLends: lendsSnap.size,
+        successfulBorrows: borrowsSnap.size,
+        onboardingComplete: true
+      });
+      
+      restoredCount++;
+      logger.info(`Restored stats for ${uid}: Lends=${lendsSnap.size}, Borrows=${borrowsSnap.size}`);
+    }
+    
+    res.status(200).send(`Successfully restored stats for ${restoredCount} users.`);
+  } catch (error) {
+    logger.error("Error restoring stats:", error);
+    res.status(500).send("Error restoring stats: " + String(error));
+  }
+});

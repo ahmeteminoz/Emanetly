@@ -43,7 +43,15 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && isOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'uid', 'name', 'username', 'usernameNormalized', 'usernameSource', 
+          'onboardingComplete', 'studentId', 'email', 'department', 
+          'avatarUrl', 'photoUrl', 'bio', 'trustScore', 'averageRating', 
+          'reviewCount', 'successfulBorrows', 'successfulLends', 
+          'onTimeReturnRate', 'avgResponseTime', 'lateReturnsCount', 
+          'verificationBadges', 'userBadges', 'reviews', 'favoriteItemIds', 
+          'fcmTokens', 'notificationPreferences'
+        ])
         && (
           !('notificationPreferences' in request.resource.data) || (
             request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
