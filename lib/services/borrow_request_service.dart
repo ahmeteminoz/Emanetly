@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/borrow_request.dart';
 
 abstract class BorrowRequestService {
@@ -83,7 +84,7 @@ class FirestoreBorrowRequestService implements BorrowRequestService {
           .doc(request.id)
           .set(request.toMap());
     } catch (e) {
-      print('Emanetly: Firestore addBorrowRequest error: $e');
+      debugPrint('Emanetly: Firestore addBorrowRequest error: $e');
       rethrow;
     }
   }
@@ -96,7 +97,7 @@ class FirestoreBorrowRequestService implements BorrowRequestService {
           .doc(requestId)
           .update({'status': status.name});
     } catch (e) {
-      print('Emanetly: Firestore updateBorrowRequestStatus error: $e');
+      debugPrint('Emanetly: Firestore updateBorrowRequestStatus error: $e');
       rethrow;
     }
   }
@@ -113,7 +114,7 @@ class FirestoreBorrowRequestService implements BorrowRequestService {
             'meetingUpdatedAt': DateTime.now().toIso8601String(),
           });
     } catch (e) {
-      print('Emanetly: Firestore updateMeetingDetails error: $e');
+      debugPrint('Emanetly: Firestore updateMeetingDetails error: $e');
       rethrow;
     }
   }

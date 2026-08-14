@@ -17,6 +17,12 @@ service cloud.firestore {
 
 
 
+    function isVerifiedUser() {
+      return isSignedIn()
+        && ('email_verified' in request.auth.token)
+        && request.auth.token.email_verified == true;
+    }
+
     function isBlockedBetween(userA, userB) {
       return exists(/databases/$(database)/documents/users/$(userA)/blockedUsers/$(userB)) ||
              exists(/databases/$(database)/documents/users/$(userB)/blockedUsers/$(userA));
@@ -29,16 +35,27 @@ service cloud.firestore {
       allow create: if isOwner(userId)
         && request.resource.data.uid == userId
         && (!('trustScore' in request.resource.data) || request.resource.data.trustScore == 100)
-        && (!('reviewCount' in request.resource.data) || request.resource.data.reviewCount == 0);
+        && (!('reviewCount' in request.resource.data) || request.resource.data.reviewCount == 0)
+        && request.resource.data.onboardingComplete == false
+        && request.resource.data.usernameSource == "unset"
+        && (!('username' in request.resource.data) || request.resource.data.username == null)
+        && (!('usernameNormalized' in request.resource.data) || request.resource.data.usernameNormalized == null);
 
-      allow update: if isOwner(userId)
-        && request.resource.data.uid == resource.data.uid
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
-        && (!('trustScore' in resource.data) || request.resource.data.trustScore == resource.data.trustScore)
-        && (!('reviewCount' in resource.data) || request.resource.data.reviewCount == resource.data.reviewCount)
-        && (!('successfulBorrows' in resource.data) || request.resource.data.successfulBorrows == resource.data.successfulBorrows)
-        && (!('successfulLends' in resource.data) || request.resource.data.successfulLends == resource.data.successfulLends)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoUrl', 'avatarUrl', 'bio', 'phone']);
+      allow update: if isSignedIn()
+        && isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'department', 'avatarUrl', 'notificationPreferences', 'fcmTokens'])
+        && (
+          !('notificationPreferences' in request.resource.data) || (
+            request.resource.data.notificationPreferences.keys().hasAll(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.keys().hasOnly(['newMessages', 'newBorrowRequests']) &&
+            request.resource.data.notificationPreferences.newMessages is bool &&
+            request.resource.data.notificationPreferences.newBorrowRequests is bool
+          )
+        )
+        && (
+          !('fcmTokens' in request.resource.data) || request.resource.data.fcmTokens is list
+        );
+      // Reviews, averageRating, reviewCount: Sadece Cloud Function (Admin SDK) yazar — client yazamaz
 
       allow delete: if false;
 
@@ -75,13 +92,18 @@ service cloud.firestore {
       allow create, update, delete: if false; // Only Admin SDK (Callable Cloud Function) writes
     }
 
+    // Usernames Collection (v0.9.3 - Enforces uniqueness, only Admin SDK writes)
+    match /usernames/{username} {
+      allow read, write: if false;
+    }
+
     // 2. Items Collection
     match /items/{itemId} {
       // Draft items can ONLY be read by the lender; published items are public
       allow read: if resource.data.status != 'draft' || (isSignedIn() && resource.data.lenderId == request.auth.uid);
 
       // Create supports minimal draft schema or full published schema
-      allow create: if isSignedIn()
+      allow create: if isVerifiedUser()
         && request.resource.data.lenderId == request.auth.uid
         && (
           // Minimal Draft Schema
@@ -99,7 +121,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && request.resource.data.lenderId == resource.data.lenderId
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!('createdAt' in resource.data) || resource.data.status == 'draft' || request.resource.data.createdAt == resource.data.createdAt)
         // Client cannot transition status to borrowed or archived directly
         && !(request.resource.data.status in ['borrowed', 'archived'])
         // Client cannot set deliveryStatus to delivered directly
@@ -128,7 +150,7 @@ service cloud.firestore {
     match /borrowRequests/{requestId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.requesterId);
 
-      allow create: if isSignedIn()
+      allow create: if isVerifiedUser()
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.status in ['onlyInquiry', 'pendingDiscussion', 'accepted', 'rejected', 'cancelled', 'expired', 'completed']
         && !isBlockedBetween(request.auth.uid, get(/databases/$(database)/documents/items/$(request.resource.data.itemId)).data.lenderId);
@@ -145,8 +167,13 @@ service cloud.firestore {
           'returnBorrowerConfirmedAt', 'returnLenderConfirmedAt'
         ])
         && (
-          // Requester can only cancel
-          (request.auth.uid == resource.data.requesterId && request.resource.data.status == 'cancelled')
+          // Requester can only cancel, or upgrade onlyInquiry -> pendingDiscussion
+          (
+            request.auth.uid == resource.data.requesterId && (
+              request.resource.data.status == 'cancelled' ||
+              (resource.data.status == 'onlyInquiry' && request.resource.data.status == 'pendingDiscussion')
+            )
+          )
           ||
           // Owner can accept, reject, or set pendingDiscussion (but NOT complete or borrow directly)
           (request.auth.uid == resource.data.ownerId && request.resource.data.status in ['accepted', 'rejected', 'pendingDiscussion'])
@@ -160,15 +187,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       allow create: if isSignedIn()
-        && request.resource.data.senderId == request.auth.uid
-        && !isBlockedBetween(
-          request.auth.uid,
-          get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.ownerId == request.auth.uid
-            ? get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.requesterId
-            : get(/databases/$(database)/documents/borrowRequests/$(request.resource.data.requestId)).data.ownerId
-        );
+        && (request.resource.data.senderId == request.auth.uid
+            || request.resource.data.senderId == 'system');
 
-      allow update: if isSignedIn(); // Allows markMessagesAsRead batch updates for isRead
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt'])
+        && request.auth.uid != resource.data.senderId;
 
       allow delete: if false;
     }

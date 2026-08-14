@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'favorites_screen.dart';
@@ -5,8 +6,9 @@ import 'active_transactions_screen.dart';
 import 'profile_screen.dart';
 import 'add_item_screen.dart';
 import '../models/item.dart';
-import '../models/borrow_request.dart';
 import '../providers/app_state_provider.dart';
+import '../services/notification_service.dart';
+import 'request_chat_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -16,6 +18,37 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
+  StreamSubscription<NotificationClickEvent>? _notifClickSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Bildirim click stream'ini dinle — background, foreground, terminated hepsi buraya gelir
+    _notifClickSub =
+        NotificationService.instance.onNotificationClick.listen((event) {
+      if (!mounted) return;
+      debugPrint('Emanetly MainLayout: notification click → ${event.requestId}');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RequestChatScreen(requestId: event.requestId),
+        ),
+      );
+    });
+
+    // Terminated state'ten gelen bekleyen click'i işle (stream artık dinlendiği için emit eder)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.checkPendingClick();
+    });
+  }
+
+  @override
+  void dispose() {
+    _notifClickSub?.cancel();
+    super.dispose();
+  }
+
+
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
@@ -36,19 +69,6 @@ class _MainLayoutState extends State<MainLayout> {
       (i) => i.status == EmanetStatus.pendingApproval || i.status == EmanetStatus.pendingReturn
     ).length;
 
-    // Count active discussions (chats) where the current user is a participant
-    final discussionRequestsCount = appState.borrowRequests.where((req) {
-      final isParticipant = req.ownerId == appState.currentUser?.uid || req.requesterId == appState.currentUser?.uid;
-      return isParticipant && req.status == BorrowRequestStatus.pendingDiscussion;
-    }).length;
-
-    // Count active deliveries for tracking badge
-    final activeTrackingCount = appState.items.where((item) {
-      final isParticipant = item.borrowerId == appState.currentUser?.uid || item.lenderId == appState.currentUser?.uid;
-      final inProgress = item.status != EmanetStatus.available;
-      return isParticipant && inProgress;
-    }).length;
-
     final totalUnreadMessages = appState.totalUnreadCount;
 
     return Scaffold(
@@ -61,7 +81,7 @@ class _MainLayoutState extends State<MainLayout> {
             ),
             if (appState.isLoading)
               Container(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 child: const Center(
                   child: Card(
                     child: Padding(

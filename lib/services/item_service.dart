@@ -356,8 +356,8 @@ class FirestoreItemService implements ItemService {
         .snapshots()
         .listen((snapshot) {
       if (snapshot.docs.isEmpty) {
-        // Database is empty, let's pre-populate with default mock items so the feed is not blank
-        _populateDefaultItems();
+        // Database is empty, auto-population disabled for production.
+        print('Emanetly: Firestore database items collection is empty.');
       } else {
         final List<EmanetItem> firestoreItems = snapshot.docs.map((doc) {
           final data = doc.data();
@@ -376,69 +376,6 @@ class FirestoreItemService implements ItemService {
     });
   }
 
-  void _populateDefaultItems() async {
-    final List<EmanetItem> defaultItems = [
-      EmanetItem(
-        id: 'item_1',
-        title: 'USB-C Hızlı Şarj Cihazı (65W)',
-        description: 'MacBook ve Android telefonları hızlı şarj eder. Kütüphane 2. katta elden teslim edebilirim.',
-        category: 'Elektronik',
-        lenderId: 'user_2', // Ayşe Yılmaz
-        lenderName: 'Ayşe Yılmaz',
-        location: 'Merkez Kütüphane 2. Kat',
-        status: EmanetStatus.available,
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-        mockImageColorValue: 0xFF3B82F6, // Bright Blue
-        pickupLocationTitle: 'Kütüphane önü',
-        pickupAddressText: 'Merkez Kütüphane ana giriş kapısı önü',
-        pickupLatitude: 41.0082,
-        pickupLongitude: 28.9784,
-        locationVisibility: true,
-      ),
-      EmanetItem(
-        id: 'item_2',
-        title: 'Büyük Boy Siyah Şemsiye',
-        description: 'Sağlam rüzgara dayanıklı şemsiye. Yağmurlu günlerde ders bitimine kadar ödünç verebilirim.',
-        category: 'Günlük Eşya & Yaşam',
-        lenderId: 'user_3', // Can Demir
-        lenderName: 'Can Demir',
-        location: 'Fizik Bölümü Kantini',
-        status: EmanetStatus.available,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-        mockImageColorValue: 0xFFEF4444, // Vibrant Red
-        pickupLocationTitle: 'Fizik Kantini çevresi',
-        pickupAddressText: 'Fizik Bölümü giriş kat kantin masaları',
-        pickupLatitude: 41.0095,
-        pickupLongitude: 28.9770,
-        locationVisibility: true,
-      ),
-      EmanetItem(
-        id: 'item_3',
-        title: 'Casio fx-991EX Bilimsel Hesap Makinesi',
-        description: 'Matematik ve mühendislik sınavlarında kullanılabilir. Sınavınız bitince teslim alırım.',
-        category: 'Elektronik',
-        lenderId: 'user_1', // Ahmet Öz
-        lenderName: 'Ahmet Öz',
-        location: 'Mühendislik Fakültesi B Blok',
-        status: EmanetStatus.available,
-        createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-        mockImageColorValue: 0xFF10B981, // Vibrant Green
-        pickupLocationTitle: 'Mühendislik B Blok Girişi',
-        pickupAddressText: 'Mühendislik Fakültesi B Blok ana giriş merdivenleri',
-        pickupLatitude: 41.0070,
-        pickupLongitude: 28.9790,
-        locationVisibility: true,
-      ),
-    ];
-
-    for (final item in defaultItems) {
-      try {
-        await _firestore.collection('items').doc(item.id).set(item.toMap());
-      } catch (e) {
-        print('Emanetly: Error populating default item ${item.id}: $e');
-      }
-    }
-  }
 
   void _mergeWithLocalCache(List<EmanetItem> firestoreItems) {
     // In Stage 3, item transactions (status, borrower, meetingPoint, deliveryStatus) 

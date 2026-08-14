@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state_provider.dart';
+import 'settings/delete_account_dialog.dart';
+import 'settings/legal_document_screen.dart';
+import 'settings/edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -9,14 +13,78 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Privacy states
-  bool _approxLocation = true;
-  bool _exactLocationPostRequest = true;
-
   // Notification states
+  bool _isLoaded = false;
   bool _notifyRequests = true;
   bool _notifyMessages = true;
-  bool _notifyReminders = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isLoaded) {
+      _loadNotificationPreferences();
+      _isLoaded = true;
+    }
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    final appState = AppStateProvider.of(context);
+    final user = appState.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          final data = doc.data();
+          final prefs = data?['notificationPreferences'] as Map<String, dynamic>?;
+          if (prefs != null) {
+            setState(() {
+              _notifyRequests = prefs['newBorrowRequests'] ?? true;
+              _notifyMessages = prefs['newMessages'] ?? true;
+            });
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _updatePreference(String key, bool value) async {
+    final appState = AppStateProvider.of(context);
+    final user = appState.currentUser;
+    if (user == null) return;
+
+    final oldRequests = _notifyRequests;
+    final oldMessages = _notifyMessages;
+
+    setState(() {
+      if (key == 'newBorrowRequests') {
+        _notifyRequests = value;
+      } else if (key == 'newMessages') {
+        _notifyMessages = value;
+      }
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'notificationPreferences': {
+          'newBorrowRequests': _notifyRequests,
+          'newMessages': _notifyMessages,
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _notifyRequests = oldRequests;
+        _notifyMessages = oldMessages;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ayarlar güncellenirken bir hata oluştu.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
@@ -71,46 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
 
-          // Section 2: Privacy Settings
-          _buildSectionHeader(context, 'Gizlilik Ayarları', Icons.security_outlined),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-            ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('Yaklaşık konum göster'),
-                  subtitle: const Text('Diğer öğrenciler eşyalarınızın yaklaşık bölgesini görebilir.', style: TextStyle(fontSize: 12)),
-                  value: _approxLocation,
-                  onChanged: (val) {
-                    setState(() {
-                      _approxLocation = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Tam konumu sadece talep sonrası göster'),
-                  subtitle: const Text('Buluşma noktası tam adresi sadece talep kabul edilirse paylaşılır.', style: TextStyle(fontSize: 12)),
-                  value: _exactLocationPostRequest,
-                  onChanged: (val) {
-                    setState(() {
-                      _exactLocationPostRequest = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
 
           // Section 3: Notification Settings
           _buildSectionHeader(context, 'Bildirimler', Icons.notifications_none_rounded),
@@ -119,41 +148,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
-                SwitchListTile(
-                  title: const Text('Yeni talep bildirimleri'),
+                 SwitchListTile(
+                  title: const Text('Yeni soru ve talep bildirimleri'),
                   value: _notifyRequests,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyRequests = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
+                  onChanged: (val) => _updatePreference('newBorrowRequests', val),
+                  activeThumbColor: theme.colorScheme.primary,
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('Yeni mesaj bildirimleri'),
                   value: _notifyMessages,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyMessages = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
+                  onChanged: (val) => _updatePreference('newMessages', val),
+                  activeThumbColor: theme.colorScheme.primary,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Section: Legal Documents
+          _buildSectionHeader(context, 'Yasal Bilgiler', Icons.gavel_rounded),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(Icons.description_outlined, color: theme.colorScheme.primary),
+                  title: const Text('Kullanım Şartları'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showTOS(context),
                 ),
                 const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text('Teslim / iade hatırlatmaları'),
-                  value: _notifyReminders,
-                  onChanged: (val) {
-                    setState(() {
-                      _notifyReminders = val;
-                    });
-                  },
-                  activeColor: theme.colorScheme.primary,
+                ListTile(
+                  leading: Icon(Icons.privacy_tip_outlined, color: theme.colorScheme.primary),
+                  title: const Text('Gizlilik Politikası'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showPrivacyPolicy(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(Icons.assignment_outlined, color: theme.colorScheme.primary),
+                  title: const Text('KVKK Aydınlatma Metni'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => LegalDocumentScreen.showKVKK(context),
                 ),
               ],
             ),
@@ -167,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
@@ -176,10 +222,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Profil bilgilerini düzenle'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Profil düzenleme özelliği sonraki sürümde eklenecek.'),
-                        duration: Duration(seconds: 2),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen(),
                       ),
                     );
                   },
@@ -193,6 +239,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     appState.signOut();
                     // Go back to the root of navigation (which will drop into AuthGate login)
                     Navigator.popUntil(context, (route) => route.isFirst);
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+                  title: const Text('Hesabımı sil', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const DeleteAccountDialog(),
+                    );
                   },
                 ),
               ],

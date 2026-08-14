@@ -331,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       
                       // Username
                       Text(
-                        currentUser.username,
+                        currentUser.username ?? '',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -345,9 +345,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Icon(Icons.school_outlined, size: 16, color: theme.colorScheme.outline),
                           const SizedBox(width: 4),
-                          Text(
-                            '${currentUser.department} • İstanbul',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                          Expanded(
+                            child: Text(
+                              '${currentUser.department} • Bandırma Onyedi Eylül Üni.',
+                              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -434,34 +439,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // 1. Large Trust Score Card
         Card(
           elevation: 0,
-          color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+            side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Circular Trust Score representation
+                // Star icon instead of circular score
                 Container(
-                  width: 76,
-                  height: 76,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
                   ),
-                  child: Center(
-                    child: Text(
-                      '${user.trustScore}',
-                      style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold),
+                  child: const Center(
+                    child: Icon(
+                      Icons.star_rounded,
+                      color: Colors.amber,
+                      size: 32,
                     ),
                   ),
                 ),
@@ -473,7 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Row(
                         children: [
                           const Text(
-                            'Güven Skoru',
+                            'Değerlendirme Ortalaması',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 6),
@@ -486,7 +485,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         spacing: 4,
                         runSpacing: 2,
                         children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                           Text(
                             user.reviewCount == 0
                                 ? 'Henüz değerlendirilmedi'
@@ -524,59 +522,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: Text(badge, style: const TextStyle(fontSize: 11)),
               backgroundColor: theme.colorScheme.surfaceContainer,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
             );
           }).toList(),
         ),
         const SizedBox(height: 20),
 
-        // 3. 2x2 Statistics Grid
+        // 3. Statistics Grid
         Text(
           'İşlem İstatistikleri',
           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
         ),
         const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.7,
-          children: [
-            _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
-            _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
-            _buildStatCard(theme, 'Zamanında İade', '%${user.onTimeReturnRate.toInt()}', Icons.timer_outlined),
-            _buildStatCard(theme, 'Yanıt Süresi', user.avgResponseTime, Icons.flash_on_outlined),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Late returns warning label if any
-        if (user.lateReturnsCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
-                const SizedBox(width: 4),
-                Text(
-                  'Geç İade Sayısı: ${user.lateReturnsCount}',
-                  style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+        if (user.successfulBorrows == 0 && user.successfulLends == 0 && user.reviewCount == 0)
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Center(
+                child: Text(
+                  'Henüz tamamlanmış işlem yok',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
                 ),
-              ],
+              ),
             ),
           )
         else
-          Row(
-            children: [
-              const Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-              const SizedBox(width: 4),
-              Text(
-                'Gecikmiş İade: Yok',
-                style: TextStyle(color: Colors.green[800], fontSize: 11, fontWeight: FontWeight.bold),
-              ),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.2,
+             children: [
+              if (user.successfulBorrows > 0)
+                _buildStatCard(theme, 'Ödünç Alma', '${user.successfulBorrows} İşlem', Icons.shopping_bag_outlined),
+              if (user.successfulLends > 0)
+                _buildStatCard(theme, 'Ödünç Verme', '${user.successfulLends} İşlem', Icons.share_outlined),
             ],
           ),
+        const SizedBox(height: 8),
         const SizedBox(height: 24),
 
         // 4. Achievement User Badges
@@ -592,9 +582,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.08),
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -630,7 +620,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -725,7 +715,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       color: theme.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -791,19 +781,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
         if (items.isNotEmpty) ...[
           Text(
-            'Aktif İlanlarım (${items.length})',
+            'İlanlarım (${items.length})',
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.outline),
           ),
           const SizedBox(height: 8),
           ...items.map((item) {
             final isBorrowed = item.status == EmanetStatus.borrowed;
             final isPending = item.status == EmanetStatus.pendingApproval || item.status == EmanetStatus.pendingReturn;
+            final isArchived = item.status == EmanetStatus.archived;
             return Card(
               elevation: 0,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -811,7 +802,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Color(item.mockImageColorValue).withOpacity(0.1),
+                    color: Color(item.mockImageColorValue).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.inventory_2_outlined, color: Color(item.mockImageColorValue)),
@@ -825,7 +816,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? Colors.blue.shade50 
                         : isPending 
                             ? Colors.orange.shade50 
-                            : Colors.green.shade50,
+                            : isArchived
+                                ? Colors.grey.shade100
+                                : Colors.green.shade50,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -833,7 +826,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? 'Ödünçte' 
                         : isPending 
                             ? 'İşlemde' 
-                            : 'Müsait',
+                            : isArchived
+                                ? 'Arşivlendi'
+                                : 'Müsait',
                     style: TextStyle(
                       fontSize: 10, 
                       fontWeight: FontWeight.bold, 
@@ -841,7 +836,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? Colors.blue.shade800 
                           : isPending 
                               ? Colors.orange.shade800 
-                              : Colors.green.shade800
+                              : isArchived
+                                  ? Colors.grey.shade700
+                                  : Colors.green.shade800
                     ),
                   ),
                 ),
@@ -881,7 +878,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -889,7 +886,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Color(colorVal).withOpacity(0.1),
+                    color: Color(colorVal).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.history_rounded, color: Color(colorVal)),
@@ -901,15 +898,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : 'Ödünç Alındı (Tamamlandı)',
                   style: const TextStyle(fontSize: 12),
                 ),
-                trailing: const Icon(Icons.account_circle_outlined),
-                onTap: () async {
-                  final otherUserId = isLender ? request.requesterId : request.ownerId;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PublicProfileScreen(userId: otherUserId),
-                    ),
-                  );
+                trailing: IconButton(
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Kullanıcı Profili',
+                  onPressed: () {
+                    final otherUserId = isLender ? request.requesterId : request.ownerId;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PublicProfileScreen(userId: otherUserId),
+                      ),
+                    );
+                  },
+                ),
+                onTap: () {
+                  if (relatedItem != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ItemDetailScreen(item: relatedItem!),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Eşya bilgisi bulunamadı (silinmiş veya anonimleştirilmiş olabilir).'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
               ),
             );

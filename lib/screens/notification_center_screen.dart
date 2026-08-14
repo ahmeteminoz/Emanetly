@@ -61,7 +61,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         }
       }
     } catch (e) {
-      print('Emanetly: NotificationCenter _markAllAsRead error: $e');
+      debugPrint('Emanetly: NotificationCenter _markAllAsRead error: $e');
     } finally {
       if (mounted) {
         setState(() {

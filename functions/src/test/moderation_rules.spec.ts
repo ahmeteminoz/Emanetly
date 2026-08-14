@@ -241,8 +241,8 @@ describe("Firestore Security Rules - Moderation (v0.9.0)", () => {
   });
 
   it("10. Draft Item Privacy: Draft items are ONLY readable by the lender", async () => {
-    const aliceDb = testEnv.authenticatedContext("user_alice").firestore();
-    const bobDb = testEnv.authenticatedContext("user_bob").firestore();
+    const aliceDb = testEnv.authenticatedContext("user_alice", { email_verified: true }).firestore();
+    const bobDb = testEnv.authenticatedContext("user_bob", { email_verified: true }).firestore();
 
     const draftRefAlice = aliceDb.collection("items").doc("draft_item_1");
     const publicRefAlice = aliceDb.collection("items").doc("public_item_1");
@@ -278,8 +278,8 @@ describe("Firestore Security Rules - Moderation (v0.9.0)", () => {
   });
 
   it("11. ChatMessage Block Enforcement: Blocked user CANNOT create a chat message", async () => {
-    const aliceDb = testEnv.authenticatedContext("user_alice").firestore();
-    const bobDb = testEnv.authenticatedContext("user_bob").firestore();
+    const aliceDb = testEnv.authenticatedContext("user_alice", { email_verified: true }).firestore();
+    const bobDb = testEnv.authenticatedContext("user_bob", { email_verified: true }).firestore();
 
     // Alice creates item_1
     await assertSucceeds(

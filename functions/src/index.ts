@@ -4,8 +4,11 @@ import * as logger from "firebase-functions/logger";
 import { runIdempotent, sendPushNotification, createInAppNotification, markSuppressed } from "./notifications";
 import { checkMutualBlock, createReport, toggleBlockUser } from "./moderation";
 import { confirmHandoverAction } from "./handover";
+import { requestAccountDeletion } from "./account_deletion";
+import { setUsername } from "./username_callable";
+import { onCall } from "firebase-functions/v2/https";
 
-export { createReport, toggleBlockUser, confirmHandoverAction };
+export { createReport, toggleBlockUser, confirmHandoverAction, requestAccountDeletion, setUsername };
 
 // Ensure Admin SDK is initialized
 if (admin.apps.length === 0) {
@@ -30,6 +33,88 @@ export const callableRuntimeOptions = {
 };
 
 /**
+ * Güvenli değerlendirme yazma — sunucu tarafında doğrulama yapar.
+ * Client direkt users/{id}/reviews yazmak yerine bunu çağırır.
+ */
+export const addReview = onCall(
+  { ...callableRuntimeOptions },
+  async (request) => {
+    const auth = request.auth;
+    if (!auth) throw new Error("Unauthenticated");
+
+    const { targetUserId, comment, rating, requestId } = request.data as {
+      targetUserId: string;
+      comment: string;
+      rating: number;
+      requestId: string;
+    };
+
+    if (!targetUserId || !requestId || typeof rating !== "number") {
+      throw new Error("Missing required fields");
+    }
+    if (rating < 1 || rating > 5) throw new Error("Rating must be between 1-5");
+    if (auth.uid === targetUserId) throw new Error("Cannot review yourself");
+
+    const db = admin.firestore();
+
+    // 1. Request var mı ve completed mı?
+    const reqDoc = await db.collection("borrowRequests").doc(requestId).get();
+    if (!reqDoc.exists) throw new Error("Request not found");
+    const reqData = reqDoc.data()!;
+    if (reqData.status !== "completed") throw new Error("Request is not completed yet");
+
+    // 2. Çağıran kişi bu transaction'ın tarafı mı?
+    const isParticipant =
+      reqData.ownerId === auth.uid || reqData.requesterId === auth.uid;
+    if (!isParticipant) throw new Error("Not a participant of this request");
+
+    // 3. Hedef kullanıcı bu transaction'ın diğer tarafı mı?
+    const isValidTarget =
+      reqData.ownerId === targetUserId || reqData.requesterId === targetUserId;
+    if (!isValidTarget) throw new Error("Target is not a participant of this request");
+
+    // 4. Bu requestId için daha önce değerlendirme yapıldı mı?
+    const targetRef = db.collection("users").doc(targetUserId);
+    const targetDoc = await targetRef.get();
+    if (!targetDoc.exists) throw new Error("Target user not found");
+    const targetData = targetDoc.data()!;
+    const existingReviews: Array<{ requestId: string, rating: string }> = targetData.reviews ?? [];
+    const alreadyReviewed = existingReviews.some(
+      (r) => r.requestId === requestId
+    );
+    if (alreadyReviewed) throw new Error("Already reviewed this request");
+
+    // 5. Review yaz ve ortalamayı güncelle
+    const authorDoc = await db.collection("users").doc(auth.uid).get();
+    const authorName = authorDoc.data()?.name ?? "Kullanıcı";
+
+    const newReview = {
+      authorId: auth.uid,
+      authorName,
+      rating: rating.toFixed(1),
+      comment: comment || "Sorunsuz ve güvenilir işlem.",
+      dateText: new Date().toLocaleDateString("tr-TR"),
+      requestId,
+    };
+
+    const updatedReviews = [...existingReviews, newReview];
+    const avgRating =
+      updatedReviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) /
+      updatedReviews.length;
+
+    await targetRef.update({
+      reviews: updatedReviews,
+      averageRating: parseFloat(avgRating.toFixed(2)),
+      reviewCount: updatedReviews.length,
+    });
+
+    logger.info(`Emanetly addReview: ${auth.uid} reviewed ${targetUserId} for request ${requestId}`);
+    return { success: true };
+  }
+);
+
+
+/**
  * Triggered when a new chat message is created.
  */
 export const onMessageCreated = onDocumentCreated(
@@ -52,6 +137,12 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
+      // Skip initial inquiry messages to prevent duplicate notifications
+      if (message.customPayload === "initial_inquiry" || message.customPayload === "initial_request") {
+        logger.info("Emanetly FCM: Initial request/inquiry message, skipping notification to prevent duplicates.");
+        return;
+      }
+
       const requestId = message.requestId;
       const senderId = message.senderId;
       const senderName = message.senderName || "Bir kullanıcı";
@@ -66,6 +157,18 @@ export const onMessageCreated = onDocumentCreated(
       const requestDoc = await db.collection("borrowRequests").doc(requestId).get();
       if (!requestDoc.exists) {
         logger.warn(`Emanetly FCM: Borrow request ${requestId} not found. Skipping.`);
+        return;
+      }
+
+      // Check if this is the initial user message in the request conversation to prevent double notification
+      const querySnap = await db.collection("chatMessages")
+        .where("requestId", "==", requestId)
+        .get();
+
+      const userMessages = querySnap.docs.filter((doc) => doc.data().type !== "system");
+      if (userMessages.length <= 1) {
+        logger.info(`Emanetly FCM: First user message in conversation for request ${requestId}, skipping notification to prevent duplicate.`);
+        await markSuppressed(eventId, "first_user_message");
         return;
       }
 
@@ -93,6 +196,12 @@ export const onMessageCreated = onDocumentCreated(
         return;
       }
 
+      // Check notification preferences for newMessages
+      const recipientDoc = await db.collection("users").doc(recipientId).get();
+      const recipientData = recipientDoc.data();
+      const preferences = recipientData?.notificationPreferences || {};
+      const newMessagesEnabled = preferences.newMessages !== false;
+
       // 4. Create In-App Notification (Decoupled & Create-If-Absent)
       const textPreview = message.text
         ? (message.text.length > 100 ? message.text.substring(0, 100) + "..." : message.text)
@@ -108,15 +217,20 @@ export const onMessageCreated = onDocumentCreated(
         senderId: senderId,
       });
 
-      // 5. Send FCM Push Notification
-      await sendPushNotification(recipientId, {
-        title: notifTitle,
-        body: textPreview,
-        data: {
-          type: "chat",
-          requestId: requestId,
-        },
-      });
+      // 5. Send FCM Push Notification (only if enabled)
+      if (newMessagesEnabled) {
+        await sendPushNotification(recipientId, {
+          title: notifTitle,
+          body: textPreview,
+          data: {
+            type: "chat",
+            requestId: requestId,
+            route: "request_chat",
+          },
+        });
+      } else {
+        logger.info(`Emanetly FCM: Suppressed message push notification because newMessages preference is disabled for user ${recipientId}.`);
+      }
     });
   }
 );
@@ -168,9 +282,10 @@ export const onRequestStatusChanged = onDocumentUpdated(
       let statusText = "";
 
       switch (status) {
+        case "pendingDiscussion":
         case "pendingApproval":
           recipients.push(ownerId);
-          statusText = `"${itemTitle}" için yeni bir ödünç alma talebiniz var.`;
+          statusText = `"${itemTitle}" ilanınız için yeni bir ödünç talebi var.`;
           break;
         case "accepted":
           recipients.push(requesterId);
@@ -226,9 +341,119 @@ export const onRequestStatusChanged = onDocumentUpdated(
           data: {
             type: status,
             requestId: requestId,
+            route: "request_chat",
           },
         });
       }
     });
   }
 );
+
+/**
+ * Triggered when a new borrow request is created.
+ */
+export const onRequestCreated = onDocumentCreated(
+  {
+    document: "borrowRequests/{requestId}",
+    ...triggerRuntimeOptions,
+  },
+  async (event) => {
+    const requestSnap = event.data;
+    if (!requestSnap) return;
+    const request = requestSnap.data();
+    if (!request) return;
+
+    const requestId = event.params.requestId;
+    const idempotentId = `request_created_${requestId}`;
+
+    await runIdempotent(idempotentId, async () => {
+      const status = request.status;
+      const itemId = request.itemId;
+      const recipientUid = request.ownerId; // Owner of item receives notification
+      const senderUid = request.requesterId; // Requester is the sender of activity
+
+      if (!status || !itemId || !recipientUid || !senderUid) return;
+
+      // 1. Fetch item title
+      const db = admin.firestore();
+      let itemTitle = "Eşya";
+      try {
+        const itemDoc = await db.collection("items").doc(itemId).get();
+        if (itemDoc.exists) {
+          itemTitle = itemDoc.data()?.title || "Eşya";
+        }
+      } catch (_) {}
+
+      // 2. Fetch requester's display name
+      let requesterName = "Bir BANÜ Üyesi";
+      try {
+        const requesterDoc = await db.collection("users").doc(senderUid).get();
+        if (requesterDoc.exists) {
+          requesterName = requesterDoc.data()?.name || "Bir BANÜ Üyesi";
+        }
+      } catch (_) {}
+
+      // 3. Check block suppression between requester and owner
+      const isBlocked = await checkMutualBlock(senderUid, recipientUid);
+      if (isBlocked) {
+        logger.info("Emanetly FCM: Suppressing new request notification due to block.");
+        await markSuppressed(idempotentId, "mutual_block");
+        return;
+      }
+
+      // Check notification preferences for newBorrowRequests
+      const recipientDoc = await db.collection("users").doc(recipientUid).get();
+      const recipientData = recipientDoc.data();
+      const preferences = recipientData?.notificationPreferences || {};
+      const newBorrowRequestsEnabled = preferences.newBorrowRequests !== false;
+
+      logger.info(`Emanetly Trigger Log [${requestId}]: ownerId=${recipientUid}, requesterId=${senderUid}, status=${status}, newBorrowRequestsEnabled=${newBorrowRequestsEnabled}, fcmTokensCount=${recipientData?.fcmTokens?.length || 0}`);
+
+      // 4. Resolve notification texts based on status
+      let notifTitle = "";
+      let statusText = "";
+      let notifType = "";
+
+      if (status === "onlyInquiry") {
+        notifTitle = "İlanınız hakkında yeni soru";
+        statusText = `${requesterName}, "${itemTitle}" ilanı hakkında soru sordu.`;
+        notifType = "listing_question_received";
+      } else if (status === "pendingDiscussion") {
+        notifTitle = "Yeni ödünç talebi";
+        statusText = `${requesterName}, "${itemTitle}" ilanını ödünç almak istiyor.`;
+        notifType = "borrow_request_received";
+      } else {
+        notifTitle = "Yeni ödünç talebi";
+        statusText = `"${itemTitle}" için yeni bir talep oluşturuldu.`;
+        notifType = "borrow_request_received";
+      }
+
+      // 5. Create In-App Notification (always occurs)
+      await createInAppNotification(recipientUid, `${idempotentId}_${recipientUid}`, {
+        type: notifType,
+        title: notifTitle,
+        body: statusText,
+        requestId: requestId,
+        itemId: itemId,
+        senderId: senderUid,
+      });
+
+      // 6. Send FCM Push Notification (if preference is enabled)
+      if (newBorrowRequestsEnabled) {
+        await sendPushNotification(recipientUid, {
+          title: notifTitle,
+          body: statusText,
+          data: {
+            type: notifType,
+            requestId: requestId,
+            itemId: itemId,
+            route: "request_chat",
+          },
+        });
+      } else {
+        logger.info(`Emanetly FCM: Suppressed newBorrowRequests push notification because preferences are disabled for user ${recipientUid}.`);
+      }
+    });
+  }
+);
+

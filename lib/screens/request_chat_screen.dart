@@ -8,7 +8,7 @@ import '../providers/app_state_provider.dart';
 import 'widgets/chat_message_bubble.dart';
 import 'widgets/report_dialog.dart';
 import 'widgets/borrow_request_status_card.dart';
-import 'mock_route_screen.dart';
+import 'handover_screen.dart';
 import 'item_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../services/notification_service.dart';
@@ -36,6 +36,12 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    AppStateProvider.of(context).setActiveChatRoom(widget.requestId);
+  }
+
+  @override
   void dispose() {
     if (NotificationService.instance.activeChatRequestId == widget.requestId) {
       NotificationService.instance.activeChatRequestId = null;
@@ -57,46 +63,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     });
   }
 
-  void _showDurationSelectionSheet(BuildContext context, Function(String duration) onSelected) {
-    final theme = Theme.of(context);
-    final options = ['1 Saat', '2 Saat', '6 Saat', '1 Gün', '3 Gün', '1 Hafta'];
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Ödünç Alma Süresi Seçin',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ...options.map((option) {
-                  return ListTile(
-                    leading: const Icon(Icons.timer_outlined),
-                    title: Text(option),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onSelected(option);
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
@@ -118,7 +85,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     }
 
     // Fetch item from raw memory list (unfiltered by relation block so active transaction item is never hidden)
-    final item = appState.findItemInMemory(request!.itemId);
+    final item = appState.findItemInMemory(request.itemId);
 
     if (item == null) {
       return FutureBuilder<EmanetItem?>(
@@ -131,18 +98,30 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             );
           }
           final fetchedItem = snapshot.data;
-          if (fetchedItem == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Ürün Bulunamadı')),
-              body: const Center(child: Text('Talebe ait ürün veritabanında bulunamadı.')),
-            );
-          }
-          return _buildBodyWithItem(context, appState, theme, request!, fetchedItem);
+          final isOwner = appState.currentUser?.uid == request!.ownerId;
+          final fallbackItem = fetchedItem ?? EmanetItem(
+            id: request.itemId,
+            title: 'İlan artık mevcut değil',
+            description: 'Ürün bilgilerine erişilemiyor.',
+            category: 'Diğer',
+            lenderId: request.ownerId,
+            lenderName: isOwner ? 'Sen' : 'Eşya Sahibi',
+            location: 'Bilinmeyen Konum',
+            pickupLocationTitle: 'Bilinmeyen Konum',
+            pickupAddressText: '',
+            pickupLatitude: 0.0,
+            pickupLongitude: 0.0,
+            locationVisibility: false,
+            status: EmanetStatus.archived,
+            createdAt: DateTime.now(),
+            mockImageColorValue: 0xFF9E9E9E,
+          );
+          return _buildBodyWithItem(context, appState, theme, request, fallbackItem);
         },
       );
     }
 
-    return _buildBodyWithItem(context, appState, theme, request!, item);
+    return _buildBodyWithItem(context, appState, theme, request, item);
   }
 
   Widget _buildBodyWithItem(BuildContext context, AppState appState, ThemeData theme, BorrowRequestModel request, EmanetItem item) {
@@ -175,17 +154,17 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
           future: appState.getUserProfile(targetUserId),
           builder: (context, snapshot) {
             final profile = snapshot.data;
-            String partyName = 'Bilinmeyen Kullanıcı';
+            String partyName = 'Yükleniyor...';
             
             if (isBlockedRelation) {
               partyName = 'Gizli Kullanıcı';
             } else if (profile != null) {
               partyName = profile.name;
             } else {
-              partyName = isOwner ? 'Bilinmeyen Kullanıcı' : item.lenderName;
+              partyName = isOwner ? 'Yükleniyor...' : item.lenderName;
             }
             
-            final canNavigate = !isBlockedRelation && partyName != 'Bilinmeyen Kullanıcı' && partyName != 'Gizli Kullanıcı' && profile != null;
+            final canNavigate = !isBlockedRelation && partyName != 'Yükleniyor...' && partyName != 'Gizli Kullanıcı' && profile != null;
             final showAvatar = !isBlockedRelation && profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty;
 
             return InkWell(
@@ -336,10 +315,10 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4))),
+              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -352,7 +331,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ItemDetailScreen(item: item!),
+                        builder: (context) => ItemDetailScreen(item: item),
                       ),
                     );
                   },
@@ -360,22 +339,27 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   child: Row(
                     children: [
                       // Small Image Representative
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(item.mockImageColorValue).withOpacity(0.8),
-                              Color(item.mockImageColorValue),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.inventory_2_outlined, size: 24, color: Colors.white),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: item.displayImages.isNotEmpty
+                              ? (item.displayImages.first.startsWith('http')
+                                  ? Image.network(
+                                      item.displayImages.first,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
+                                    )
+                                  : Image.file(
+                                      File(item.displayImages.first),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
+                                    ))
+                              : const Center(child: Icon(Icons.inventory_2_outlined, size: 24)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -424,21 +408,33 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         ),
                       ),
                       // Trust Rating representation
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
+                      FutureBuilder<UserProfile?>(
+                        future: appState.getUserProfile(targetUserId),
+                        builder: (context, snapshot) {
+                          final profile = snapshot.data;
+                          if (profile == null || profile.reviewCount == 0) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                              const SizedBox(width: 2),
-                              const Text('4.8', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    profile.averageRating.toStringAsFixed(1),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                isOwner ? 'Talep Eden' : 'Sahip Puanı',
+                                style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
+                              ),
                             ],
-                          ),
-                          Text(
-                            isOwner ? 'Talep Eden' : 'Sahip Puanı',
-                            style: theme.textTheme.bodySmall?.copyWith(fontSize: 8, color: theme.colorScheme.outline),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -463,16 +459,11 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 final message = messages[index];
                 final isMe = message.senderId == appState.currentUser?.uid;
                 
-                // İlan sahibi henüz yanıt vermediyse karşı tarafın adını baloncukta maskeliyoruz
-                String? senderNameOverride;
-                if (!isMe && isOwner && !lenderResponded) {
-                  senderNameOverride = 'Bilinmeyen Kullanıcı';
-                }
-
                 return ChatMessageBubble(
                   message: message,
                   isMe: isMe,
-                  senderNameOverride: senderNameOverride,
+                  isOwner: isOwner,
+                  senderNameOverride: null,
                   onLongPress: isMe ? null : () {
                     ReportDialog.show(
                       context,
@@ -493,7 +484,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
                   border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
                 ),
                 child: Center(
@@ -527,18 +518,16 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {
-                        _showDurationSelectionSheet(context, (selectedDuration) async {
-                          await appState.upgradeToOfficialRequest(widget.requestId, requestedDurationText: selectedDuration);
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Ödünç talebi başarıyla gönderildi!'),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
-                        });
+                      onPressed: () async {
+                        await appState.upgradeToOfficialRequest(widget.requestId);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ödünç talebi başarıyla gönderildi!'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.shopping_bag_outlined),
                       label: const Text('Ödünç Talep Et', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -610,7 +599,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -624,7 +613,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                           child: Text(
                             request.status == BorrowRequestStatus.borrowed
                                 ? 'Eşya teslim alındı! Ödünç süreci başladı.'
-                                : 'Talep kabul edildi! Teslimat süreci başladı.',
+                                : 'Talep kabul edildi! Buluşma detaylarını konuşabilirsiniz.',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.onSurface,
@@ -639,7 +628,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => MockRouteScreen(item: item!),
+                            builder: (context) => HandoverScreen(item: item),
                           ),
                         );
                       },
@@ -665,7 +654,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: Row(
                   children: [
@@ -693,15 +682,15 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                  border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                 ),
                 child: appState.isUserBlocked(targetUserId)
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
+                          color: Colors.red.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -721,9 +710,9 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                         ? Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.08),
+                              color: Colors.red.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.red.withOpacity(0.2)),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               children: [
@@ -809,8 +798,11 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                 final targetUser = snapshot.data;
                 if (targetUser == null) return const SizedBox.shrink();
 
-                final hasReviewed = targetUser.reviews.any((r) => r.requestId == widget.requestId);
-                final targetName = isOwner ? (request!.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
+                final hasReviewed = targetUser.reviews.any(
+                  (r) => r.requestId == widget.requestId &&
+                         r.authorName == (appState.currentUser?.name ?? ''),
+                );
+                final targetName = isOwner ? (request.requesterId == 'user_1' ? 'Ahmet Öz' : targetUser.name) : targetUser.name;
 
                 return SafeArea(
                   top: false,
@@ -818,7 +810,7 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface,
-                      border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5))),
+                      border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                     ),
                     child: hasReviewed
                         ? Row(
@@ -998,16 +990,18 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
                       finalComment,
                       currentRating,
                       widget.requestId,
-                    );
+                    ).then((_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    });
 
                     Navigator.pop(context); // Close dialog
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Değerlendirmeniz başarıyla eklendi, güven puanı güncellendi!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,

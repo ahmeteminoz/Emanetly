@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../models/item.dart';
 import '../models/user_profile.dart';
 import '../models/borrow_request.dart';
-import 'mock_route_screen.dart';
+import 'handover_screen.dart';
 import 'request_chat_screen.dart';
 import 'public_profile_screen.dart';
 
@@ -54,8 +54,18 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
     final outgoingChats = allDiscussionRequests.where((r) => r.requesterId == currentUser.uid).toList();
     final outgoingDeliveries = allActiveItems.where((i) => i.borrowerId == currentUser.uid).toList();
 
-    // Active arrays for rendering
-    final activeChats = _selectedTab == 0 ? incomingChats : outgoingChats;
+    // Active arrays for rendering (filtered to hide orphaned inactive inquiries)
+    final activeChats = (_selectedTab == 0 ? incomingChats : outgoingChats).where((request) {
+      final matchingItem = appState.findItemInMemory(request.itemId);
+      if (matchingItem == null) {
+        final isInactiveOrphan = request.status == BorrowRequestStatus.onlyInquiry ||
+                                 request.status == BorrowRequestStatus.rejected ||
+                                 request.status == BorrowRequestStatus.cancelled ||
+                                 request.status == BorrowRequestStatus.expired;
+        return !isInactiveOrphan;
+      }
+      return true;
+    }).toList();
     final activeDeliveries = _selectedTab == 0 ? incomingDeliveries : outgoingDeliveries;
 
     final isListEmpty = activeChats.isEmpty && activeDeliveries.isEmpty;
@@ -74,7 +84,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -91,7 +101,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                           boxShadow: _selectedTab == 0
                               ? [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary.withOpacity(0.2),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   )
@@ -123,7 +133,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                           boxShadow: _selectedTab == 1
                               ? [
                                   BoxShadow(
-                                    color: theme.colorScheme.primary.withOpacity(0.2),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
                                   )
@@ -229,19 +239,16 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               future: appState.getUserProfile(targetUserId),
                               builder: (context, snapshot) {
                                 final profile = snapshot.data;
-                                
-                                String partyName = 'Bilinmeyen Kullanıcı';
+                                String partyName = 'Yükleniyor...';
                                 String roleLabel = '';
                                 if (isLender) {
                                   roleLabel = 'Alıcı Adayı';
-                                  if (lenderResponded && profile != null) {
+                                  if (profile != null) {
                                     partyName = profile.name;
-                                  } else {
-                                    partyName = 'Bilinmeyen Kullanıcı';
                                   }
                                 } else {
                                   roleLabel = 'Eşya Sahibi';
-                                  partyName = matchingItem!.lenderName;
+                                  partyName = matchingItem?.lenderName ?? 'Yükleniyor...';
                                 }
 
                                 return Card(
@@ -249,9 +256,8 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                                    side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                                   ),
-                                  color: Colors.orange.shade50.withOpacity(0.08),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
                                     onTap: () {
@@ -268,7 +274,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                         children: [
                                           // Avatar (Dokunulduğunda Profil Sayfasına Geçiş)
                                           GestureDetector(
-                                            onTap: (partyName != 'Bilinmeyen Kullanıcı' && profile != null)
+                                            onTap: (profile != null)
                                                 ? () {
                                                     Navigator.push(
                                                       context,
@@ -281,12 +287,12 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                             child: CircleAvatar(
                                               radius: 24,
                                               backgroundColor: theme.colorScheme.primaryContainer,
-                                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                              backgroundImage: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
                                                    ? (profile.avatarUrl!.startsWith('http')
                                                        ? NetworkImage(profile.avatarUrl!)
                                                        : FileImage(File(profile.avatarUrl!)) as ImageProvider)
                                                    : null,
-                                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty && partyName != 'Bilinmeyen Kullanıcı')
+                                              child: (profile != null && profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
                                                   ? null
                                                   : Text(
                                                       partyName.isNotEmpty ? partyName[0].toUpperCase() : '?',
@@ -472,7 +478,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                               ),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
@@ -499,7 +505,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => MockRouteScreen(item: item),
+                                        builder: (context) => HandoverScreen(item: item),
                                       ),
                                     );
                                   }
@@ -515,9 +521,9 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                             decoration: BoxDecoration(
-                                              color: stageColor.withOpacity(0.1),
+                                              color: stageColor.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: stageColor.withOpacity(0.3)),
+                                              border: Border.all(color: stageColor.withValues(alpha: 0.3)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
@@ -603,7 +609,7 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => MockRouteScreen(item: item),
+                                                    builder: (context) => HandoverScreen(item: item),
                                                   ),
                                                 );
                                               }

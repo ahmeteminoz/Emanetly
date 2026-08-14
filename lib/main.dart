@@ -5,13 +5,14 @@ import 'providers/app_state.dart';
 import 'providers/app_state_provider.dart';
 import 'services/auth_service.dart';
 import 'services/item_service.dart';
-import 'services/qr_service.dart';
 import 'services/borrow_request_service.dart';
 import 'services/chat_message_service.dart';
 import 'services/storage_service.dart';
 import 'services/navigation_service.dart';
 import 'screens/auth/auth_gate.dart';
 import 'theme/app_theme.dart';
+import 'services/notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'services/analytics_service.dart';
 import 'services/crashlytics_service.dart';
@@ -32,6 +33,15 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    try {
+      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('Emanetly main: Found initial message: ${initialMessage.data}');
+        NotificationService.instance.setPendingClick(initialMessage.data);
+      }
+    } catch (e) {
+      debugPrint('Emanetly main: getInitialMessage error: $e');
+    }
     authService = FirebaseAuthService();
     itemService = FirestoreItemService();
     borrowRequestService = FirestoreBorrowRequestService();
@@ -52,14 +62,10 @@ void main() async {
     debugPrint('Emanetly: Firebase config fallback to Mock. Notice: $e');
   }
 
-  // Instantiate services
-  final qrService = MockQrService();
-
   // Instantiate application state controller
   final appState = AppState(
     authService: authService,
     itemService: itemService,
-    qrService: qrService,
     borrowRequestService: borrowRequestService,
     chatMessageService: chatMessageService,
     storageService: storageService,

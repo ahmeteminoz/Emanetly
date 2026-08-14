@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Kampüs Paylaşım Topluluğu',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -149,9 +149,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.errorContainer.withOpacity(0.5),
+                                color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                                border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: [

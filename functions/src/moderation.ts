@@ -57,6 +57,9 @@ export const createReport = onCall(callableRuntimeOptions, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Rapor oluşturmak için giriş yapmış olmalısınız.");
   }
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "E-posta adresi doğrulanmamış kullanıcılar rapor oluşturamaz.");
+  }
 
   const reporterId = request.auth.uid;
   const data = request.data || {};

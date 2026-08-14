@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/item.dart';
 import '../models/borrow_request.dart';
 import '../providers/app_state.dart';
 import '../providers/app_state_provider.dart';
 import 'transaction_success_screen.dart';
 
-class MockRouteScreen extends StatefulWidget {
+class HandoverScreen extends StatefulWidget {
   final EmanetItem item;
-  const MockRouteScreen({super.key, required this.item});
+  const HandoverScreen({super.key, required this.item});
 
   @override
-  State<MockRouteScreen> createState() => _MockRouteScreenState();
+  State<HandoverScreen> createState() => _HandoverScreenState();
 }
 
-class _MockRouteScreenState extends State<MockRouteScreen> {
+class _HandoverScreenState extends State<HandoverScreen> {
   final _meetingLocationController = TextEditingController();
   final _meetingNoteController = TextEditingController();
+  String? _requesterName;
   bool _isProcessing = false;
 
   @override
@@ -29,6 +31,20 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     } else {
       _meetingLocationController.text = rawMeeting;
     }
+    _fetchRequesterName();
+  }
+
+  Future<void> _fetchRequesterName() async {
+    final borrowerId = widget.item.borrowerId;
+    if (borrowerId == null || borrowerId.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(borrowerId).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _requesterName = doc.data()?['name'] as String?;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -68,8 +84,16 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
     if (activeRequest?.status == BorrowRequestStatus.completed || currentItem.status == EmanetStatus.archived) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // Trigger review dialog for borrower or lender before pushing success screen
-        final counterpartyName = isLender ? (currentItem.borrowerName ?? 'Ödünç Alan') : currentItem.lenderName;
-        final counterpartyId = isLender ? (currentItem.borrowerId ?? '') : currentItem.lenderId;
+        final rawBorrowerName = _requesterName 
+            ?? (currentItem.borrowerName != null && currentItem.borrowerName!.isNotEmpty && currentItem.borrowerName != 'Ödünç Alan'
+                ? currentItem.borrowerName!
+                : null);
+        final borrowerId = currentItem.borrowerId ?? activeRequest?.requesterId ?? '';
+        
+        final counterpartyId = isLender ? borrowerId : currentItem.lenderId;
+        final counterpartyName = isLender 
+            ? (rawBorrowerName ?? activeRequest?.requesterId ?? 'Kullanıcı') 
+            : currentItem.lenderName;
         
         Navigator.pushReplacement(
           context,
@@ -97,44 +121,15 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Description Banner
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: theme.colorScheme.primaryContainer.withOpacity(0.12),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Buluşma yerini, notları ve teslimat sürecini buradan yönetebilirsiniz.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 8),
                   Text(
-                    'Emanet Eşya: ${currentItem.title}',
+                    currentItem.title,
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rolünüz: ${isLender ? "Eşya Sahibi (Veren)" : "Ödünç Alan"}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -219,29 +214,19 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
             ),
             const Divider(height: 28),
 
-            Row(
-              children: [
-                const Icon(Icons.timer_outlined, size: 18, color: Colors.blue),
-                const SizedBox(width: 6),
-                Text(
-                  'Talep Süresi: ${activeRequest?.requestedDurationText ?? "1 Gün"}',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on, color: Colors.red, size: 20),
+                const Icon(Icons.location_on_outlined, color: Colors.red, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '📍 Buluşma Yeri',
+                        'Buluşma Yeri',
                         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
@@ -271,7 +256,7 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '📝 Buluşma Notu',
+                          'Not',
                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
@@ -385,10 +370,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -505,10 +490,10 @@ class _MockRouteScreenState extends State<MockRouteScreen> {
 
     return Card(
       elevation: 0,
-      color: theme.colorScheme.primaryContainer.withOpacity(0.06),
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.06),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.15)),
+        side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),

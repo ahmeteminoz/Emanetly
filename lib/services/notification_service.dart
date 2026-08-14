@@ -1,7 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+/// Bildirime tıklanınca yayınlanan event
+class NotificationClickEvent {
+  final String route;
+  final String requestId;
+  const NotificationClickEvent({required this.route, required this.requestId});
+}
 
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
@@ -9,95 +19,162 @@ class NotificationService {
   NotificationService._internal();
 
   FirebaseMessaging? _fcm;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
-  // Tracks the ID of the chat room the user is currently viewing to silence in-app pushes
+  // Reactive click stream — MainLayout veya herhangi bir widget dinleyebilir
+  final _clickController =
+      StreamController<NotificationClickEvent>.broadcast();
+  Stream<NotificationClickEvent> get onNotificationClick =>
+      _clickController.stream;
+
+  /// Kullanıcı hangi chat ekranındaysa push sessize alınır
   String? activeChatRequestId;
 
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _onMessageSubscription;
   StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
 
+  bool _initialized = false;
+
   Future<void> initialize({
     required Function(String token) onTokenReceived,
   }) async {
-    if (Firebase.apps.isEmpty) {
-      return;
-    }
+    if (Firebase.apps.isEmpty || _initialized) return;
+    _initialized = true;
 
     try {
       _fcm ??= FirebaseMessaging.instance;
       final fcm = _fcm!;
 
-      // 1. Request Permission
-      final settings = await fcm.requestPermission(
+      // 1. İzin İste
+      try {
+        await fcm.requestPermission(alert: true, badge: true, sound: true);
+      } catch (_) {}
+
+      // 2. iOS foreground bildirimlerini göster
+      await fcm.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,
       );
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-          settings.authorizationStatus == AuthorizationStatus.provisional) {
-        // 2. Initialize Local Notifications for Foreground
-        await _initLocalNotifications();
+      // 3. Local Notifications başlat (foreground tap için)
+      await _initLocalNotifications();
 
-        // 3. Get FCM Token
-        try {
-          final token = await fcm.getToken();
-          if (token != null) {
-            onTokenReceived(token);
-          }
-        } catch (_) {}
+      // 4. FCM Token al
+      try {
+        final token = await fcm.getToken();
+        if (token != null) onTokenReceived(token);
+      } catch (_) {}
 
-        // 4. Token Refresh Listener
-        _tokenRefreshSubscription = fcm.onTokenRefresh.listen((newToken) {
-          onTokenReceived(newToken);
-        });
+      // 5. Token yenileme dinleyicisi
+      _tokenRefreshSubscription = fcm.onTokenRefresh.listen(onTokenReceived);
 
-        // 5. Foreground Message Listener
-        _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          // Skip showing local push notification if user is already viewing this chat
-          final payloadRequestId = message.data["requestId"];
-          if (payloadRequestId != null && payloadRequestId == activeChatRequestId) {
-            return;
-          }
-          _showLocalNotification(message);
-        });
-
-        // 6. Background Message Clicked Listener
-        _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-          _handleNotificationClick(message.data);
-        });
-
-        // 7. Initial Message Check (App opened from terminated state)
-        final initialMessage = await fcm.getInitialMessage();
-        if (initialMessage != null) {
-          _handleNotificationClick(initialMessage.data);
+      // 6. FOREGROUND: FCM mesajı gelince local notification göster
+      _onMessageSubscription =
+          FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final payloadRequestId = message.data['requestId'] as String?;
+        if (payloadRequestId != null &&
+            payloadRequestId == activeChatRequestId) {
+          return; // Zaten o chat ekranındayız
         }
-      }
-    } catch (_) {}
+        _showLocalNotification(message);
+      });
+
+      // 7. BACKGROUND: Bildirime tıklanınca (uygulama arka planda)
+      _onMessageOpenedAppSubscription =
+          FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Emanetly NS: onMessageOpenedApp → ${message.data}');
+        _emitClickEvent(message.data);
+      });
+
+      // 8. TERMINATED: main.dart'ta getInitialMessage ile alındı,
+      //    pendingClick set edildi, checkPendingClick() ile işlenecek.
+
+    } catch (e) {
+      debugPrint('Emanetly NS: initialize error: $e');
+    }
+  }
+
+  // Terminated state'ten gelen click — main.dart bunu set eder
+  Map<String, dynamic>? _pendingClickData;
+
+  void setPendingClick(Map<String, dynamic> data) {
+    _pendingClickData = data;
+  }
+
+  /// MainLayout.initState'den çağrılır — navigator hazırsa bekleyen click'i işle
+  void checkPendingClick() {
+    if (_pendingClickData != null) {
+      final data = _pendingClickData!;
+      _pendingClickData = null;
+      debugPrint('Emanetly NS: processing pendingClick → $data');
+      _emitClickEvent(data);
+    }
+  }
+
+  void _emitClickEvent(Map<String, dynamic> data) {
+    debugPrint('Emanetly NS: _emitClickEvent data=$data');
+    final route = data['route'] as String?;
+    final type = data['type'] as String?;
+    final requestId = data['requestId'] as String?;
+
+    final isChatRoute = route == 'request_chat' || type == 'chat' || (requestId != null && requestId.isNotEmpty);
+
+    if (isChatRoute && requestId != null && requestId.isNotEmpty) {
+      _clickController.add(
+        NotificationClickEvent(route: route ?? 'request_chat', requestId: requestId),
+      );
+    } else {
+      debugPrint(
+          'Emanetly NS: unhandled payload — route=$route, type=$type, requestId=$requestId');
+    }
   }
 
   Future<void> _initLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
-
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+    const initSettings =
+        InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle local notification tap
+        debugPrint(
+            'Emanetly NS: local notification tapped payload=${response.payload}');
+        if (response.payload != null) {
+          try {
+            final Map<String, dynamic> data = jsonDecode(response.payload!);
+            _emitClickEvent(data);
+          } catch (e) {
+            debugPrint('Emanetly NS: payload parse error: $e');
+          }
+        }
       },
     );
+
+    // Android bildirim kanalını oluştur
+    const channel = AndroidNotificationChannel(
+      'emanetly_channel',
+      'Emanetly Bildirimleri',
+      description: 'Emanetly kampüs bildirimleri',
+      importance: Importance.max,
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
-    if (notification == null) return;
+    final title = notification?.title ??
+        message.data['title'] as String? ??
+        'Emanetly';
+    final body =
+        notification?.body ?? message.data['body'] as String? ?? '';
 
     const androidDetails = AndroidNotificationDetails(
       'emanetly_channel',
@@ -105,26 +182,25 @@ class NotificationService {
       channelDescription: 'Emanetly kampüs bildirimleri',
       importance: Importance.max,
       priority: Priority.high,
+      showWhen: true,
     );
     const iosDetails = DarwinNotificationDetails();
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    const details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
+      message.hashCode,
+      title,
+      body,
       details,
-      payload: message.data['type'],
+      payload: jsonEncode(message.data),
     );
-  }
-
-  void _handleNotificationClick(Map<String, dynamic> data) {
-    // NavigationService routing can be triggered based on payload
   }
 
   void dispose() {
     _tokenRefreshSubscription?.cancel();
     _onMessageSubscription?.cancel();
     _onMessageOpenedAppSubscription?.cancel();
+    _initialized = false;
   }
 }

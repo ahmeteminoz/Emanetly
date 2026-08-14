@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 
 abstract class AuthService {
@@ -15,6 +16,7 @@ abstract class AuthService {
   bool get isEmailVerified;
   Future<void> reloadUser();
   Future<void> sendPasswordResetEmail(String email);
+  Future<void> reauthenticateWithPassword(String password);
 
   // Unified mock management
   List<UserProfile> get availableMockUsers;
@@ -34,6 +36,9 @@ class MockAuthService implements AuthService {
       uid: 'user_1',
       name: 'Ahmet Öz',
       username: '@ahmetoz',
+      usernameNormalized: 'ahmetoz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220101001',
       email: 'ahmet@kampus.edu.tr',
       department: 'Bilgisayar Mühendisliği',
@@ -73,6 +78,9 @@ class MockAuthService implements AuthService {
       uid: 'user_2',
       name: 'Ayşe Yılmaz',
       username: '@ayseyilmaz',
+      usernameNormalized: 'ayseyilmaz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220202002',
       email: 'ayse@kampus.edu.tr',
       department: 'Endüstriyel Tasarım',
@@ -100,6 +108,9 @@ class MockAuthService implements AuthService {
       uid: 'user_3',
       name: 'Can Demir',
       username: '@candemir',
+      usernameNormalized: 'candemir',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20210303003',
       email: 'can@kampus.edu.tr',
       department: 'Elektrik-Elektronik Mühendisliği',
@@ -152,7 +163,10 @@ class MockAuthService implements AuthService {
     final newUser = UserProfile(
       uid: 'user_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
-      username: '@${email.split('@')[0]}',
+      username: null,
+      usernameNormalized: null,
+      usernameSource: 'unset',
+      onboardingComplete: false,
       studentId: '20220${DateTime.now().millisecondsSinceEpoch % 100000}',
       email: email,
       department: 'Kampüs Üyesi',
@@ -203,7 +217,10 @@ class MockAuthService implements AuthService {
     // Mock action
   }
 
-  // Helper method for the prototype to swap users easily
+  @override
+  Future<void> reauthenticateWithPassword(String password) async {
+    // Mock reauthentication is always successful
+  }
   void switchUser(String uid) {
     final user = _mockUsers.firstWhere((u) => u.uid == uid, orElse: () => _mockUsers[0]);
     _currentUser = user;
@@ -308,6 +325,7 @@ class FirebaseAuthService implements AuthService {
   final fb.FirebaseAuth _firebaseAuth = fb.FirebaseAuth.instance;
   final StreamController<UserProfile?> _controller = StreamController<UserProfile?>.broadcast();
   UserProfile? _currentUser;
+  StreamSubscription<DocumentSnapshot>? _profileSubscription;
   
   // Mutable cache list to support interactive evaluation in real-auth sessions
   final List<UserProfile> _mappedMockUsers = [
@@ -315,6 +333,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_1',
       name: 'Ahmet Öz',
       username: '@ahmetoz',
+      usernameNormalized: 'ahmetoz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220101001',
       email: 'ahmet@kampus.edu.tr',
       department: 'Bilgisayar Mühendisliği',
@@ -335,6 +356,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_2',
       name: 'Ayşe Yılmaz',
       username: '@ayseyilmaz',
+      usernameNormalized: 'ayseyilmaz',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20220202002',
       email: 'ayse@kampus.edu.tr',
       department: 'Endüstriyel Tasarım',
@@ -355,6 +379,9 @@ class FirebaseAuthService implements AuthService {
       uid: 'user_3',
       name: 'Can Demir',
       username: '@candemir',
+      usernameNormalized: 'candemir',
+      usernameSource: 'custom',
+      onboardingComplete: true,
       studentId: '20210303003',
       email: 'can@kampus.edu.tr',
       department: 'Elektrik-Elektronik Mühendisliği',
@@ -375,11 +402,33 @@ class FirebaseAuthService implements AuthService {
 
   FirebaseAuthService() {
     _firebaseAuth.authStateChanges().listen((fb.User? user) async {
+      _profileSubscription?.cancel();
       if (user == null) {
         _currentUser = null;
         _controller.add(null);
       } else {
         _loadUserProfileFromFirestore(user);
+        
+        // Listen to Firestore profile updates reactively
+        _profileSubscription = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .snapshots()
+            .listen((doc) {
+              if (doc.exists && doc.data() != null) {
+                _currentUser = UserProfile.fromMap(doc.data()!);
+                // Update local mapped cache
+                final index = _mappedMockUsers.indexWhere((u) => u.uid == user.uid);
+                if (index != -1) {
+                  _mappedMockUsers[index] = _currentUser!;
+                } else {
+                  _mappedMockUsers.add(_currentUser!);
+                }
+                _controller.add(_currentUser);
+              }
+            }, onError: (e) {
+              debugPrint('Emanetly: Error listening to profile snapshots: $e');
+            });
       }
     });
   }
@@ -398,7 +447,7 @@ class FirebaseAuthService implements AuthService {
       }
       _controller.add(_currentUser);
     } catch (e) {
-      print('Emanetly: Error loading user profile from Firestore: $e');
+      debugPrint('Emanetly: Error loading user profile from Firestore: $e');
       // Offline fallback: map user from in-memory template
       _currentUser = _mapFirebaseUser(user);
       _controller.add(_currentUser);
@@ -414,6 +463,9 @@ class FirebaseAuthService implements AuthService {
         uid: user.uid,
         name: user.displayName ?? matched.name,
         username: matched.username,
+        usernameNormalized: matched.usernameNormalized,
+        usernameSource: matched.usernameSource,
+        onboardingComplete: matched.onboardingComplete,
         studentId: matched.studentId,
         email: email,
         department: matched.department,
@@ -436,7 +488,10 @@ class FirebaseAuthService implements AuthService {
     return UserProfile(
       uid: user.uid,
       name: user.displayName ?? email.split('@')[0],
-      username: '@${email.split('@')[0]}',
+      username: null,
+      usernameNormalized: null,
+      usernameSource: 'unset',
+      onboardingComplete: false,
       studentId: '10000000000',
       email: email,
       department: 'Kampüs Üyesi',
@@ -495,14 +550,15 @@ class FirebaseAuthService implements AuthService {
       final freshUser = _firebaseAuth.currentUser ?? credential.user!;
       
       // Write profile directly to Firestore on registration success
-      final defaultProfile = _mapFirebaseUser(freshUser);
+      var defaultProfile = _mapFirebaseUser(freshUser);
+      defaultProfile = defaultProfile.copyWith(name: name.trim());
       try {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(freshUser.uid)
             .set(defaultProfile.toMap());
       } catch (e) {
-        print('Emanetly: Error writing user profile on signUp: $e');
+        debugPrint('Emanetly: Error writing user profile on signUp: $e');
       }
       
       _currentUser = defaultProfile;
@@ -543,12 +599,30 @@ class FirebaseAuthService implements AuthService {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
       await user.reload();
+      final freshUser = _firebaseAuth.currentUser;
+      if (freshUser != null) {
+        await freshUser.getIdToken(true);
+        await _loadUserProfileFromFirestore(freshUser);
+      }
     }
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  @override
+  Future<void> reauthenticateWithPassword(String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null && user.email != null) {
+      final credential = fb.EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.getIdToken(true); // Force token refresh to sync with Functions client
+    }
   }
 
   @override
@@ -570,7 +644,7 @@ class FirebaseAuthService implements AuthService {
         return profile;
       }
     } catch (e) {
-      print('Emanetly: Error getting user profile from Firestore: $e');
+      debugPrint('Emanetly: Error getting user profile from Firestore: $e');
     }
 
     // Fallback to cache if database read fails or profile is not found
@@ -625,7 +699,7 @@ class FirebaseAuthService implements AuthService {
     try {
       await docRef.set(profileWithBadges.toMap(), SetOptions(merge: true));
     } catch (e) {
-      print('Emanetly: Error updating user profile in Firestore: $e');
+      debugPrint('Emanetly: Error updating user profile in Firestore: $e');
       rethrow;
     }
     if (_currentUser?.uid == profileWithBadges.uid) {

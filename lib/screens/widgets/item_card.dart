@@ -43,20 +43,14 @@ class ItemCard extends StatelessWidget {
     final primaryColor = Color(item.mockImageColorValue);
     final gradient = LinearGradient(
       colors: [
-        primaryColor.withOpacity(0.85),
+        primaryColor.withValues(alpha: 0.85),
         primaryColor,
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
 
-    // Determine trust score mock rating
-    String rating = '4.9';
-    if (item.lenderId == 'user_1') {
-      rating = '4.8';
-    } else if (item.lenderId == 'user_3') {
-      rating = '4.7';
-    }
+
 
     // Determine status badge color
     Color statusColor = Colors.green;
@@ -145,7 +139,7 @@ class ItemCard extends StatelessWidget {
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
         ),
         child: InkWell(
           onTap: () => _navigateToDetails(context),
@@ -179,35 +173,12 @@ class ItemCard extends StatelessWidget {
                           color: statusColor,
                           borderRadius: BorderRadius.circular(6),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4),
                           ],
                         ),
                         child: Text(
                           statusText,
                           style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    // Trust Rating Badge (Bottom-Right)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.65),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 12),
-                            const SizedBox(width: 2),
-                            Text(
-                              rating,
-                              style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -257,15 +228,6 @@ class ItemCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Maks: 3g',
-                              style: TextStyle(
-                                      fontSize: 9,
-                                color: theme.colorScheme.outline,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                           ],
                         ),
                       ],
@@ -285,7 +247,7 @@ class ItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: InkWell(
         onTap: () => _navigateToDetails(context),
@@ -332,7 +294,7 @@ class ItemCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -359,26 +321,6 @@ class ItemCard extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ),
-                      // Trust Rating Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -430,7 +372,7 @@ class ItemCard extends StatelessWidget {
     final isFavorited = appState.isFavorite(item.id);
     return ClipOval(
       child: Container(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -474,7 +416,7 @@ class ItemCard extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: BoxDecoration(gradient: gradient),
             child: Center(
-              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         );
@@ -487,7 +429,7 @@ class ItemCard extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: BoxDecoration(gradient: gradient),
             child: Center(
-              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+              child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
             ),
           ),
         );
@@ -497,7 +439,7 @@ class ItemCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(gradient: gradient),
       child: Center(
-        child: Icon(categoryIcon, size: iconSize, color: Colors.white.withOpacity(0.9)),
+        child: Icon(categoryIcon, size: iconSize, color: Colors.white.withValues(alpha: 0.9)),
       ),
     );
   }
