@@ -10,6 +10,7 @@ abstract class AuthService {
   Future<UserProfile?> signUp(String email, String password, String name);
   Future<void> signOut();
   Stream<UserProfile?> get onAuthStateChanged;
+  bool get isProfileLoaded;
 
   // Firebase Auth additions
   Future<void> sendEmailVerification();
@@ -29,6 +30,9 @@ abstract class AuthService {
 class MockAuthService implements AuthService {
   final _controller = StreamController<UserProfile?>.broadcast();
   UserProfile? _currentUser;
+
+  @override
+  bool get isProfileLoaded => true;
 
   // Pre-configured mock students with extended trust data
   final List<UserProfile> _mockUsers = [
@@ -326,6 +330,10 @@ class FirebaseAuthService implements AuthService {
   final StreamController<UserProfile?> _controller = StreamController<UserProfile?>.broadcast();
   UserProfile? _currentUser;
   StreamSubscription<DocumentSnapshot>? _profileSubscription;
+  bool _isProfileLoaded = false;
+
+  @override
+  bool get isProfileLoaded => _firebaseAuth.currentUser == null || _isProfileLoaded;
   
   // Mutable cache list to support interactive evaluation in real-auth sessions
   final List<UserProfile> _mappedMockUsers = [
@@ -350,47 +358,54 @@ class FirebaseAuthService implements AuthService {
       lateReturnsCount: 0,
       verificationBadges: ['E-posta doğrulandı', 'Telefon doğrulandı', 'Öğrenci profili'],
       userBadges: ['Güvenilir ödünç veren', 'Zamanında iade', 'Hızlı yanıt'],
-      reviews: [],
+      reviews: [
+        UserReview(
+          authorName: 'Ayşe Yılmaz',
+          rating: '5.0',
+          comment: 'HDMI dönüştürücüyü zamanında ve sorunsuz teslim etti.',
+          dateText: '2 gün önce',
+        ),
+      ],
     ),
     UserProfile(
       uid: 'user_2',
-      name: 'Ayşe Yılmaz',
-      username: '@ayseyilmaz',
-      usernameNormalized: 'ayseyilmaz',
+      name: 'Mehmet Demir',
+      username: '@mehmetd',
+      usernameNormalized: 'mehmetd',
       usernameSource: 'custom',
       onboardingComplete: true,
-      studentId: '20220202002',
-      email: 'ayse@kampus.edu.tr',
-      department: 'Endüstriyel Tasarım',
-      bio: 'Tasarım öğrencisiyim. Çizim aletleri ve prototip malzemeleri paylaşabilirim.',
+      studentId: '20210202002',
+      email: 'mehmet@kampus.edu.tr',
+      department: 'Elektrik-Elektronik Müh.',
+      bio: 'Gereksiz tüketim yerine paylaşım ekonomisi! Elektronik aletlerimi güvenle emanet edebilirim.',
       trustScore: 98,
       averageRating: 4.9,
-      reviewCount: 8,
-      successfulBorrows: 4,
-      successfulLends: 9,
-      onTimeReturnRate: 100.0,
-      avgResponseTime: '8 dk',
+      reviewCount: 19,
+      successfulBorrows: 5,
+      successfulLends: 14,
+      onTimeReturnRate: 98.0,
+      avgResponseTime: '5 dk',
       lateReturnsCount: 0,
-      verificationBadges: ['E-posta doğrulandı', 'Öğrenci profili'],
-      userBadges: ['Hızlı İletişim', 'Cömert Paylaşım'],
+      verificationBadges: ['E-posta doğrulandı', 'Telefon doğrulandı', 'Onaylı Paylaşımcı'],
+      userBadges: ['Süper Ödünç Veren', 'Ultra Hızlı Yanıt', 'Kusursuz İade'],
       reviews: [],
     ),
     UserProfile(
       uid: 'user_3',
-      name: 'Can Demir',
-      username: '@candemir',
-      usernameNormalized: 'candemir',
+      name: 'Zeynep Kaya',
+      username: '@zeynepk',
+      usernameNormalized: 'zeynepk',
       usernameSource: 'custom',
       onboardingComplete: true,
-      studentId: '20210303003',
-      email: 'can@kampus.edu.tr',
-      department: 'Elektrik-Elektronik Mühendisliği',
-      bio: 'Elektronik kitleri ve ölçüm aletleri konusunda destek olabilirim.',
-      trustScore: 90,
+      studentId: '20230303003',
+      email: 'zeynep@kampus.edu.tr',
+      department: 'Endüstri Mühendisliği',
+      bio: 'Kampüste dayanışma kültürünü büyütüyoruz. Kitap ve ders materyallerimi paylaşıyorum.',
+      trustScore: 91,
       averageRating: 4.7,
-      reviewCount: 15,
-      successfulBorrows: 10,
-      successfulLends: 6,
+      reviewCount: 8,
+      successfulBorrows: 6,
+      successfulLends: 2,
       onTimeReturnRate: 95.0,
       avgResponseTime: '15 dk',
       lateReturnsCount: 1,
@@ -405,8 +420,10 @@ class FirebaseAuthService implements AuthService {
       _profileSubscription?.cancel();
       if (user == null) {
         _currentUser = null;
+        _isProfileLoaded = true;
         _controller.add(null);
       } else {
+        _isProfileLoaded = false;
         _loadUserProfileFromFirestore(user);
         
         // Listen to Firestore profile updates reactively
@@ -424,6 +441,7 @@ class FirebaseAuthService implements AuthService {
                 } else {
                   _mappedMockUsers.add(_currentUser!);
                 }
+                _isProfileLoaded = true;
                 _controller.add(_currentUser);
               }
             }, onError: (e) {
@@ -445,11 +463,13 @@ class FirebaseAuthService implements AuthService {
         await docRef.set(defaultProfile.toMap());
         _currentUser = defaultProfile;
       }
+      _isProfileLoaded = true;
       _controller.add(_currentUser);
     } catch (e) {
       debugPrint('Emanetly: Error loading user profile from Firestore: $e');
       // Offline fallback: map user from in-memory template
       _currentUser = _mapFirebaseUser(user);
+      _isProfileLoaded = true;
       _controller.add(_currentUser);
     }
   }
@@ -516,7 +536,6 @@ class FirebaseAuthService implements AuthService {
     if (user != null) {
       // Async loading fallback trigger
       if (_currentUser == null || _currentUser!.uid != user.uid) {
-        _currentUser = _mapFirebaseUser(user);
         _loadUserProfileFromFirestore(user);
       }
     } else {
@@ -572,6 +591,7 @@ class FirebaseAuthService implements AuthService {
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
     _currentUser = null;
+    _isProfileLoaded = true;
   }
 
   @override

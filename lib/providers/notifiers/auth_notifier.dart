@@ -83,6 +83,7 @@ class AuthNotifier extends ChangeNotifier {
   UserProfile? get currentUser => _authService.currentUser;
   AuthService get authService => _authService;
   List<UserProfile> get availableMockUsers => _authService.availableMockUsers;
+  bool get isProfileLoaded => _authService.isProfileLoaded;
 
   ThemeMode get themeMode => _themeMode;
   int get selectedPaletteIndex => _selectedPaletteIndex;

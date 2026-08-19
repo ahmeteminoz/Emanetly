@@ -11,6 +11,20 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateProvider.of(context);
+
+    // If an auth session exists but Firestore profile is still loading in background,
+    // wait cleanly instead of flashing the UsernameSetupScreen.
+    if (!appState.isProfileLoaded) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
     final user = appState.currentUser;
 
     if (user == null) {

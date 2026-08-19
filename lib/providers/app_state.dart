@@ -130,6 +130,7 @@ class AppState extends ChangeNotifier {
   UserProfile? get currentUser => _authNotifier.currentUser;
   AuthService get authService => _authNotifier.authService;
   List<UserProfile> get availableMockUsers => _authNotifier.availableMockUsers;
+  bool get isProfileLoaded => _authNotifier.isProfileLoaded;
 
   ThemeMode get themeMode => _authNotifier.themeMode;
   int get selectedPaletteIndex => _authNotifier.selectedPaletteIndex;
