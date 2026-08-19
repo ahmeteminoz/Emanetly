@@ -223,9 +223,11 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.dividerColor)),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            children: [
-              Text('Canlı Bildirim Durumu', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const Divider(height: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Canlı Bildirim Durumu', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const Divider(height: 20),
               _buildKeyValueRow(
                 'FCM Token:',
                 _maskToken(_fcmToken),
@@ -251,6 +253,7 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
             ],
           ),
         ),
+      ),
         const SizedBox(height: 20),
 
         // Test Triggers
@@ -355,40 +358,43 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.dividerColor)),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: theme.colorScheme.primary,
-                    child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        Text(user.email, style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
-                      ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: theme.colorScheme.primary,
+                      child: Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white)),
                     ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              _buildKeyValueRow('UID:', user.uid, trailing: IconButton(
-                icon: const Icon(Icons.copy_rounded, size: 16),
-                onPressed: () => _copyToClipboard(user.uid, 'UID'),
-                tooltip: 'UID Kopyala',
-              )),
-              _buildKeyValueRow('Kullanıcı Adı:', user.username ?? 'Tanımsız (null)'),
-              _buildKeyValueRow('Kullanıcı Adı Kaynağı:', user.usernameSource),
-              _buildKeyValueRow('Onboarding Tamam mı?:', user.onboardingComplete ? '✅ Evet' : '❌ Hayır'),
-              _buildKeyValueRow('E-posta Doğrulandı mı?:', appState.isEmailVerified ? '✅ Evet' : '❌ Hayır'),
-              _buildKeyValueRow('Güven Skoru (Trust):', '${user.trustScore} / 100'),
-              _buildKeyValueRow('Ortalama Puan:', '${user.averageRating} (${user.reviewCount} yorum)'),
-              _buildKeyValueRow('Kayıtlı FCM Token Sayısı:', '${user.fcmTokens.length} adet'),
-              _buildKeyValueRow('Favori Eşya Sayısı:', '${user.favoriteItemIds.length} adet'),
-            ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(user.email, style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildKeyValueRow('UID:', user.uid, trailing: IconButton(
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  onPressed: () => _copyToClipboard(user.uid, 'UID'),
+                  tooltip: 'UID Kopyala',
+                )),
+                _buildKeyValueRow('Kullanıcı Adı:', user.username ?? 'Tanımsız (null)'),
+                _buildKeyValueRow('Kullanıcı Adı Kaynağı:', user.usernameSource),
+                _buildKeyValueRow('Onboarding Tamam mı?:', user.onboardingComplete ? '✅ Evet' : '❌ Hayır'),
+                _buildKeyValueRow('E-posta Doğrulandı mı?:', appState.isEmailVerified ? '✅ Evet' : '❌ Hayır'),
+                _buildKeyValueRow('Güven Skoru (Trust):', '${user.trustScore} / 100'),
+                _buildKeyValueRow('Ortalama Puan:', '${user.averageRating} (${user.reviewCount} yorum)'),
+                _buildKeyValueRow('Kayıtlı FCM Token Sayısı:', '${user.fcmTokens.length} adet'),
+                _buildKeyValueRow('Favori Eşya Sayısı:', '${user.favoriteItemIds.length} adet'),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
