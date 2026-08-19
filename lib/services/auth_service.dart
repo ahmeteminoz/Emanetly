@@ -726,7 +726,7 @@ class FirebaseAuthService implements AuthService {
             : FieldValue.arrayRemove([itemId])
       });
     } catch (e) {
-      print('Emanetly: Error toggling favorite in Firestore: $e');
+      debugPrint('Emanetly: Error toggling favorite in Firestore: $e');
       
       // Fallback: If document doesn't exist yet, create it with merge
       if (e is FirebaseException && (e.code == 'not-found' || e.message?.contains('NOT_FOUND') == true)) {

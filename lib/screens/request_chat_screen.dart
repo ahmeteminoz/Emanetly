@@ -145,7 +145,6 @@ class _RequestChatScreenState extends State<RequestChatScreen> {
     final otherUserId = targetUserId;
     final isBlockedRelation = appState.isRelationBlocked(otherUserId);
     final iBlockedThem = appState.isUserBlocked(otherUserId);
-    final lenderResponded = messages.any((msg) => msg.senderId == request.ownerId);
 
     return Scaffold(
       appBar: AppBar(

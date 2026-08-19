@@ -102,10 +102,14 @@ export const addReview = onCall(
       updatedReviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) /
       updatedReviews.length;
 
+    // Calculate trustScore: base from rating average (max 100)
+    const newTrustScore = Math.min(100, Math.max(0, Math.round(avgRating * 20)));
+
     await targetRef.update({
       reviews: updatedReviews,
       averageRating: parseFloat(avgRating.toFixed(2)),
       reviewCount: updatedReviews.length,
+      trustScore: newTrustScore,
     });
 
     logger.info(`Emanetly addReview: ${auth.uid} reviewed ${targetUserId} for request ${requestId}`);
@@ -460,6 +464,13 @@ export const onRequestCreated = onDocumentCreated(
 import { onRequest } from "firebase-functions/v2/https";
 
 export const restoreStats = onRequest(async (req: any, res: any) => {
+  // Admin-only endpoint — requires secret header to prevent public abuse
+  const adminSecret = process.env.ADMIN_SECRET ?? "emanetly-admin-2024";
+  if (req.headers["x-admin-secret"] !== adminSecret) {
+    res.status(403).send("Forbidden");
+    return;
+  }
+
   try {
     const db = admin.firestore();
     const usersSnap = await db.collection("users").get();
@@ -477,15 +488,25 @@ export const restoreStats = onRequest(async (req: any, res: any) => {
         .where("requesterId", "==", uid)
         .where("status", "==", "completed")
         .get();
+
+      // Recalculate trustScore from existing reviews
+      const userData = userDoc.data();
+      const reviews: Array<{ rating: string }> = userData.reviews ?? [];
+      let trustScore = 100;
+      if (reviews.length > 0) {
+        const avg = reviews.reduce((sum, r) => sum + parseFloat(r.rating), 0) / reviews.length;
+        trustScore = Math.min(100, Math.max(0, Math.round(avg * 20)));
+      }
         
       await userDoc.ref.update({
         successfulLends: lendsSnap.size,
         successfulBorrows: borrowsSnap.size,
-        onboardingComplete: true
+        trustScore,
+        onboardingComplete: true,
       });
       
       restoredCount++;
-      logger.info(`Restored stats for ${uid}: Lends=${lendsSnap.size}, Borrows=${borrowsSnap.size}`);
+      logger.info(`Restored stats for ${uid}: Lends=${lendsSnap.size}, Borrows=${borrowsSnap.size}, TrustScore=${trustScore}`);
     }
     
     res.status(200).send(`Successfully restored stats for ${restoredCount} users.`);

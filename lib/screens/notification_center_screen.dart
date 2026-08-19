@@ -133,7 +133,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         }
       }
     } catch (e) {
-      print('Emanetly: NotificationCenter _dismissAll error: $e');
+      debugPrint('Emanetly: NotificationCenter _dismissAll error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -157,7 +157,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         .doc(notificationId)
         .update({'dismissedAt': FieldValue.serverTimestamp()})
         .catchError((e) {
-          print('Emanetly: NotificationCenter _dismissNotification error: $e');
+          debugPrint('Emanetly: NotificationCenter _dismissNotification error: $e');
         });
   }
 
@@ -280,7 +280,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  print('Emanetly: NotificationCenter Stream error: ${snapshot.error}');
+                  debugPrint('Emanetly: NotificationCenter Stream error: ${snapshot.error}');
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/item.dart';
 import '../models/comment.dart';
 
@@ -357,7 +358,7 @@ class FirestoreItemService implements ItemService {
         .listen((snapshot) {
       if (snapshot.docs.isEmpty) {
         // Database is empty, auto-population disabled for production.
-        print('Emanetly: Firestore database items collection is empty.');
+        debugPrint('Emanetly: Firestore database items collection is empty.');
       } else {
         final List<EmanetItem> firestoreItems = snapshot.docs.map((doc) {
           final data = doc.data();
@@ -372,7 +373,7 @@ class FirestoreItemService implements ItemService {
         _mergeWithLocalCache(firestoreItems);
       }
     }, onError: (e) {
-      print('Emanetly: Firestore items listen error: $e');
+      debugPrint('Emanetly: Firestore items listen error: $e');
     });
   }
 
@@ -397,7 +398,7 @@ class FirestoreItemService implements ItemService {
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         _cachedItems = list;
       } catch (e) {
-        print('Emanetly: Firestore getItems error: $e');
+        debugPrint('Emanetly: Firestore getItems error: $e');
       }
     }
     return _cachedItems;
@@ -412,7 +413,7 @@ class FirestoreItemService implements ItemService {
       final finalItem = item.id.isNotEmpty ? item : item.copyWith(id: docRef.id);
       await docRef.set(finalItem.toMap());
     } catch (e) {
-      print('Emanetly: Firestore addItem error: $e');
+      debugPrint('Emanetly: Firestore addItem error: $e');
       rethrow;
     }
   }
@@ -425,7 +426,7 @@ class FirestoreItemService implements ItemService {
           .doc(item.id)
           .set(item.toMap(), SetOptions(merge: true));
     } catch (e) {
-      print('Emanetly: Firestore updateItem error: $e');
+      debugPrint('Emanetly: Firestore updateItem error: $e');
     }
   }
 
@@ -434,7 +435,7 @@ class FirestoreItemService implements ItemService {
     try {
       await _firestore.collection('items').doc(itemId).delete();
     } catch (e) {
-      print('Emanetly: Firestore deleteItem error: $e');
+      debugPrint('Emanetly: Firestore deleteItem error: $e');
     }
   }
 
@@ -448,7 +449,7 @@ class FirestoreItemService implements ItemService {
         'deliveryStatus': DeliveryStatus.requestSent.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore requestBorrow error: $e');
+      debugPrint('Emanetly: Firestore requestBorrow error: $e');
     }
   }
 
@@ -460,7 +461,7 @@ class FirestoreItemService implements ItemService {
         'deliveryStatus': DeliveryStatus.delivered.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore approveBorrow error: $e');
+      debugPrint('Emanetly: Firestore approveBorrow error: $e');
     }
   }
 
@@ -475,7 +476,7 @@ class FirestoreItemService implements ItemService {
         'meetingPoint': FieldValue.delete(),
       });
     } catch (e) {
-      print('Emanetly: Firestore rejectBorrow error: $e');
+      debugPrint('Emanetly: Firestore rejectBorrow error: $e');
     }
   }
 
@@ -486,7 +487,7 @@ class FirestoreItemService implements ItemService {
         'status': EmanetStatus.pendingReturn.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore requestReturn error: $e');
+      debugPrint('Emanetly: Firestore requestReturn error: $e');
     }
   }
 
@@ -501,7 +502,7 @@ class FirestoreItemService implements ItemService {
         'meetingPoint': FieldValue.delete(),
       });
     } catch (e) {
-      print('Emanetly: Firestore approveReturn error: $e');
+      debugPrint('Emanetly: Firestore approveReturn error: $e');
     }
   }
 
@@ -513,7 +514,7 @@ class FirestoreItemService implements ItemService {
         'deliveryStatus': DeliveryStatus.meetingPointSet.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore setMeetingPoint error: $e');
+      debugPrint('Emanetly: Firestore setMeetingPoint error: $e');
     }
   }
 
@@ -524,7 +525,7 @@ class FirestoreItemService implements ItemService {
         'deliveryStatus': DeliveryStatus.routingStarted.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore startRouting error: $e');
+      debugPrint('Emanetly: Firestore startRouting error: $e');
     }
   }
 
@@ -536,7 +537,7 @@ class FirestoreItemService implements ItemService {
         'deliveryStatus': DeliveryStatus.completed.name,
       });
     } catch (e) {
-      print('Emanetly: Firestore completeDelivery error: $e');
+      debugPrint('Emanetly: Firestore completeDelivery error: $e');
     }
   }
 
@@ -547,7 +548,7 @@ class FirestoreItemService implements ItemService {
       if (!doc.exists || doc.data() == null) return null;
       return EmanetItem.fromMap(doc.data()!);
     } catch (e) {
-      print('Emanetly: Firestore getItemById error: $e');
+      debugPrint('Emanetly: Firestore getItemById error: $e');
       return null;
     }
   }

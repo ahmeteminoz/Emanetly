@@ -55,7 +55,6 @@ class AuthNotifier extends ChangeNotifier {
   })  : _authService = authService,
         _analyticsService = analyticsService ?? AnalyticsService(),
         _crashlyticsService = crashlyticsService ?? CrashlyticsService() {
-    loadPreferences();
     _authSubscription = _authService.onAuthStateChanged.listen((user) {
       if (user != null) {
         if (!_favoritesInitialized) {
@@ -294,18 +293,15 @@ class AuthNotifier extends ChangeNotifier {
 
   void updateFcmToken(String userId, String token) async {
     final user = _authService.currentUser;
-    if (user != null) {
-      if (!user.fcmTokens.contains(token)) {
-        final updatedTokens = List<String>.from(user.fcmTokens)..add(token);
-        final updatedUser = user.copyWith(fcmTokens: updatedTokens);
-        _authService.updateUserProfile(updatedUser);
-      }
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(userId).update({
-          'fcmTokens': FieldValue.arrayUnion([token])
-        });
-      } catch (_) {}
-    }
+    if (user == null) return;
+    // Skip if already stored locally
+    if (user.fcmTokens.contains(token)) return;
+    try {
+      // Use arrayUnion to safely add token without overwriting any other fields
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'fcmTokens': FieldValue.arrayUnion([token])
+      });
+    } catch (_) {}
   }
 
   // ─── Private Subscriptions ───────────────────────────────────────────────

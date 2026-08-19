@@ -231,7 +231,6 @@ class _ActiveTransactionsScreenState extends State<ActiveTransactionsScreen> {
                               lastMessageTime = lastMsg.createdAt.toLocal().toString().substring(11, 16);
                             }
 
-                            final lenderResponded = messages.any((msg) => msg.senderId == request.ownerId);
                             final unreadCount = appState.getUnreadCountForRequest(request.id);
                             final hasUnread = unreadCount > 0;
 
