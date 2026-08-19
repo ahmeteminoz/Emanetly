@@ -22,7 +22,6 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
 
   String? _fcmToken;
   String _permissionStatus = 'Bilinmiyor';
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -38,13 +37,13 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
   }
 
   Future<void> _loadDiagnosticInfo() async {
-    setState(() => _isLoading = true);
     _fcmToken = _notificationService.currentFcmToken;
     final settings = await _notificationService.getNotificationSettings();
-    if (settings != null) {
-      _permissionStatus = settings.authorizationStatus.name;
+    if (settings != null && mounted) {
+      setState(() {
+        _permissionStatus = settings.authorizationStatus.name;
+      });
     }
-    setState(() => _isLoading = false);
   }
 
   String _maskToken(String? token) {
@@ -68,7 +67,6 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appState = AppStateProvider.of(context);
-    final user = appState.currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -400,14 +398,11 @@ class _DebugLabScreenState extends State<DebugLabScreen> with SingleTickerProvid
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: () async {
-            setState(() => _isLoading = true);
             await appState.reloadUser();
-            setState(() => _isLoading = false);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🔄 Profil Firestore\'dan yeniden yüklendi.')),
-              );
-            }
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('🔄 Profil Firestore\'dan yeniden yüklendi.')),
+            );
           },
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Profili Firestore\'dan Yeniden Çek'),
