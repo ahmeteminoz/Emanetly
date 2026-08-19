@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/app_state_provider.dart';
 import 'settings/delete_account_dialog.dart';
 import 'settings/legal_document_screen.dart';
 import 'settings/edit_profile_screen.dart';
+import 'debug/debug_lab_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +19,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoaded = false;
   bool _notifyRequests = true;
   bool _notifyMessages = true;
+
+  // Dev mode trigger
+  int _devTapCount = 0;
+  DateTime? _lastTapTime;
 
   @override
   void didChangeDependencies() {
@@ -256,7 +262,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+
+          // ─── Geliştirici Araçları (Debug Mode) ───────────────────────────
+          if (kDebugMode) ...[
+            const SizedBox(height: 24),
+            _buildSectionHeader(context, 'Geliştirici Araçları', Icons.developer_mode_rounded),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              color: Colors.amber.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.science_outlined, color: Colors.amber),
+                title: const Text('Debug Lab (Test Laboratuvarı)', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Bildirim, Auth, Log ve Teşhis araçları'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DebugLabScreen()),
+                  );
+                },
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // ─── Version & Easter Egg Footer ─────────────────────────────────
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                final now = DateTime.now();
+                if (_lastTapTime == null || now.difference(_lastTapTime!) > const Duration(seconds: 2)) {
+                  _devTapCount = 1;
+                } else {
+                  _devTapCount++;
+                }
+                _lastTapTime = now;
+
+                if (_devTapCount >= 5) {
+                  _devTapCount = 0;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DebugLabScreen()),
+                  );
+                } else if (_devTapCount >= 3) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('🛠️ Geliştirici laboratuvarına ${5 - _devTapCount} tık kaldı...'),
+                      duration: const Duration(milliseconds: 600),
+                    ),
+                  );
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Text(
+                  'Emanetly v0.9.4',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

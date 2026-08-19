@@ -31,11 +31,30 @@ class NotificationService {
   /// Kullanıcı hangi chat ekranındaysa push sessize alınır
   String? activeChatRequestId;
 
+  String? _lastToken;
+  String? get currentFcmToken => _lastToken;
+
+  Map<String, dynamic>? _lastReceivedPayload;
+  Map<String, dynamic>? get lastReceivedPayload => _lastReceivedPayload;
+
+  Map<String, dynamic>? get pendingClickData => _pendingClickData;
+
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _onMessageSubscription;
   StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
 
   bool _initialized = false;
+  bool get isInitialized => _initialized;
+
+  Future<NotificationSettings?> getNotificationSettings() async {
+    if (Firebase.apps.isEmpty) return null;
+    try {
+      _fcm ??= FirebaseMessaging.instance;
+      return await _fcm!.getNotificationSettings();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> initialize({
     required Function(String token) onTokenReceived,
@@ -65,11 +84,17 @@ class NotificationService {
       // 4. FCM Token al
       try {
         final token = await fcm.getToken();
-        if (token != null) onTokenReceived(token);
+        if (token != null) {
+          _lastToken = token;
+          onTokenReceived(token);
+        }
       } catch (_) {}
 
       // 5. Token yenileme dinleyicisi
-      _tokenRefreshSubscription = fcm.onTokenRefresh.listen(onTokenReceived);
+      _tokenRefreshSubscription = fcm.onTokenRefresh.listen((token) {
+        _lastToken = token;
+        onTokenReceived(token);
+      });
 
       // 6. FOREGROUND: FCM mesajı gelince local notification göster
       _onMessageSubscription =
@@ -115,6 +140,7 @@ class NotificationService {
   }
 
   void _emitClickEvent(Map<String, dynamic> data) {
+    _lastReceivedPayload = Map<String, dynamic>.from(data);
     debugPrint('Emanetly NS: _emitClickEvent data=$data');
     final route = data['route'] as String?;
     final type = data['type'] as String?;
@@ -194,6 +220,34 @@ class NotificationService {
       body,
       details,
       payload: jsonEncode(message.data),
+    );
+  }
+
+  /// [DEBUG LAB] Simüle edilmiş yerel bildirim fırlatır ve tıklama payload'ını test eder
+  Future<void> showSimulatedNotification({
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'emanetly_channel',
+      'Emanetly Bildirimleri',
+      channelDescription: 'Emanetly kampüs bildirimleri',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    const details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await _localNotifications.show(
+      notificationId,
+      title,
+      body,
+      details,
+      payload: jsonEncode(data),
     );
   }
 
